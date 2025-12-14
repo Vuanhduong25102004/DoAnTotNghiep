@@ -1,7 +1,8 @@
 package com.example.petlorshop.controllers;
 
 import com.example.petlorshop.dto.NguoiDungResponse;
-import com.example.petlorshop.dto.UpdateNguoiDungRequest;
+import com.example.petlorshop.dto.NguoiDungUpdateRequest;
+import com.example.petlorshop.dto.UnifiedCreateUserRequest;
 import com.example.petlorshop.models.NguoiDung;
 import com.example.petlorshop.services.NguoiDungService;
 import jakarta.validation.Valid;
@@ -25,7 +26,19 @@ public class NguoiDungController {
     @Autowired
     private PasswordEncoder passwordEncoder;
 
+    // --- API THỐNG NHẤT ĐỂ TẠO USER/NHÂN VIÊN ---
+    @PostMapping("/create-unified")
+    public ResponseEntity<?> createUnifiedUser(@RequestBody UnifiedCreateUserRequest request) {
+        try {
+            NguoiDungResponse response = nguoiDungService.createUnifiedUser(request);
+            return new ResponseEntity<>(response, HttpStatus.CREATED);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
     private NguoiDungResponse toNguoiDungResponse(NguoiDung user) {
+        Integer nhanVienId = (user.getNhanVien() != null) ? user.getNhanVien().getNhanVienId() : null;
         return new NguoiDungResponse(
                 user.getUserId(),
                 user.getHoTen(),
@@ -33,21 +46,9 @@ public class NguoiDungController {
                 user.getSoDienThoai(),
                 user.getDiaChi(),
                 user.getNgayTao(),
-                user.getRole()
+                user.getRole(),
+                nhanVienId
         );
-    }
-
-    @PostMapping
-    public ResponseEntity<?> createNguoiDung(@RequestBody NguoiDung nguoiDung) {
-        try {
-            if (nguoiDung.getMatKhau() != null && !nguoiDung.getMatKhau().isEmpty()) {
-                nguoiDung.setMatKhau(passwordEncoder.encode(nguoiDung.getMatKhau()));
-            }
-            NguoiDung savedNguoiDung = nguoiDungService.createNguoiDung(nguoiDung);
-            return new ResponseEntity<>(toNguoiDungResponse(savedNguoiDung), HttpStatus.CREATED);
-        } catch (RuntimeException e) {
-            return ResponseEntity.badRequest().body(e.getMessage());
-        }
     }
 
     @GetMapping
@@ -65,7 +66,7 @@ public class NguoiDungController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<NguoiDungResponse> updateNguoiDung(@PathVariable Integer id, @Valid @RequestBody UpdateNguoiDungRequest request) {
+    public ResponseEntity<NguoiDungResponse> updateNguoiDung(@PathVariable Integer id, @Valid @RequestBody NguoiDungUpdateRequest request) {
         try {
             NguoiDung updatedNguoiDung = nguoiDungService.updateNguoiDung(id, request);
             return ResponseEntity.ok(toNguoiDungResponse(updatedNguoiDung));

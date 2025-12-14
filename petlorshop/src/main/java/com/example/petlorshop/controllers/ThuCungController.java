@@ -2,6 +2,7 @@ package com.example.petlorshop.controllers;
 
 import com.example.petlorshop.dto.ThuCungRequest;
 import com.example.petlorshop.dto.ThuCungResponse;
+import com.example.petlorshop.dto.ThuCungUpdateRequest;
 import com.example.petlorshop.models.ThuCung;
 import com.example.petlorshop.services.ThuCungService;
 import jakarta.validation.Valid;
@@ -60,7 +61,7 @@ public class ThuCungController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<ThuCungResponse> updateThuCung(@PathVariable Integer id, @Valid @RequestBody ThuCungRequest request) {
+    public ResponseEntity<ThuCungResponse> updateThuCung(@PathVariable Integer id, @Valid @RequestBody ThuCungUpdateRequest request) {
         try {
             ThuCung updatedThuCung = thuCungService.updateThuCung(id, request);
             return ResponseEntity.ok(toThuCungResponse(updatedThuCung));

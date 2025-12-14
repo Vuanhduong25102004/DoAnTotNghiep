@@ -1,7 +1,6 @@
 package com.example.petlorshop.dto;
 
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
 import java.time.LocalDate;
@@ -21,6 +20,10 @@ public class ThuCungRequest {
 
     private String ghiChuSucKhoe;
 
-    @NotNull(message = "ID người dùng (chủ sở hữu) là bắt buộc")
+    // userId không còn bắt buộc nếu có số điện thoại
     private Integer userId;
+
+    // Thông tin chủ sở hữu (dùng khi không có userId)
+    private String tenChuSoHuu;
+    private String soDienThoaiChuSoHuu;
 }

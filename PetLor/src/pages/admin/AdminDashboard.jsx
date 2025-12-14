@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import authService from "../../services/authService";
 
 // Dữ liệu Thống kê (Stats)
 const statsData = [
@@ -95,6 +94,16 @@ const upcomingAppointments = [
 ];
 
 const AdminDashboard = () => {
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    // Lấy user từ localStorage thay vì gọi service để tránh lỗi
+    const user = JSON.parse(localStorage.getItem("user"));
+    if (user && user.role === "DOCTOR") {
+      navigate("/admin/appointments");
+    }
+  }, [navigate]);
+
   return (
     <>
       {/* Page Heading */}

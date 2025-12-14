@@ -7,6 +7,8 @@ const userService = {
   getUserById: (id) => apiClient.get(`/nguoi-dung/${id}`),
   
   createUser: (data) => apiClient.post('/nguoi-dung', data),
+
+  createUnifiedUser: (data) => apiClient.post('/nguoi-dung/create-unified', data),
   
   updateUser: (id, data) => apiClient.put(`/nguoi-dung/${id}`, data),
   

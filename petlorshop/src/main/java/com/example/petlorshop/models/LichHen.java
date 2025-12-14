@@ -41,8 +41,9 @@ public class LichHen {
     @JsonIgnore
     private NguoiDung nguoiDung;
 
+    // Cho phép null
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "thu_cung_id", nullable = false)
+    @JoinColumn(name = "thu_cung_id") 
     @JsonIgnore
     private ThuCung thuCung;
 

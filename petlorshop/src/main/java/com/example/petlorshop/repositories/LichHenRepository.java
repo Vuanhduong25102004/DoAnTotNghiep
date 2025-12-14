@@ -16,4 +16,8 @@ public interface LichHenRepository extends JpaRepository<LichHen, Integer> {
     List<LichHen> findOverlappingAppointments(@Param("nhanVienId") Integer nhanVienId,
                                             @Param("newStart") LocalDateTime newStart,
                                             @Param("newEnd") LocalDateTime newEnd);
+
+    @Query("SELECT lh FROM LichHen lh WHERE lh.nhanVien.id = :nhanVienId AND FUNCTION('DATE', lh.thoiGianBatDau) = :date ORDER BY lh.thoiGianBatDau")
+    List<LichHen> findByNhanVienIdAndDate(@Param("nhanVienId") Integer nhanVienId,
+                                        @Param("date") java.time.LocalDate date);
 }

@@ -24,6 +24,21 @@ const AdminPets = () => {
   // 1. State
   const [pets, setPets] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [selectedPet, setSelectedPet] = useState(null);
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+  const [editingPet, setEditingPet] = useState(null);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [newPet, setNewPet] = useState({
+    tenThuCung: "",
+    chungLoai: "Chó",
+    giongLoai: "",
+    ngaySinh: "",
+    gioiTinh: "Đực",
+    ghiChuSucKhoe: "",
+    tenChuSoHuu: "",
+    soDienThoaiChuSoHuu: "",
+  });
 
   // Filter States
   const [searchTerm, setSearchTerm] = useState("");
@@ -61,7 +76,12 @@ const AdminPets = () => {
                 ? pet.user.userId || pet.user.id
                 : pet.nguoiDungId),
             // Ảnh: Nếu null thì dùng ảnh mặc định
-            img: pet.hinhAnhUrl || "https://placehold.co/100x100?text=Pet",
+            img:
+              pet.hinhAnhUrl &&
+              pet.hinhAnhUrl !== "null" &&
+              pet.hinhAnhUrl !== "undefined"
+                ? pet.hinhAnhUrl
+                : "https://placehold.co/100x100?text=Pet",
             // Các trường khác map thẳng
             tenThuCung: pet.tenThuCung || "Chưa đặt tên",
             chungLoai: pet.chungLoai || "Khác",
@@ -89,6 +109,78 @@ const AdminPets = () => {
   useEffect(() => {
     setCurrentPage(1);
   }, [searchTerm, filterSpecies, filterGender]);
+
+  const handleViewDetail = (pet) => {
+    setSelectedPet(pet);
+    setIsDetailModalOpen(true);
+  };
+
+  const handleEditClick = (pet) => {
+    let formattedDate = "";
+    if (pet.ngaySinh) {
+      const d = new Date(pet.ngaySinh);
+      if (!isNaN(d)) {
+        formattedDate = d.toISOString().split("T")[0];
+      }
+    }
+    setEditingPet({ ...pet, ngaySinh: formattedDate });
+    setIsEditModalOpen(true);
+  };
+
+  const handleSavePet = async () => {
+    if (!editingPet) return;
+    try {
+      const payload = {
+        tenThuCung: editingPet.tenThuCung,
+        chungLoai: editingPet.chungLoai,
+        giongLoai: editingPet.giongLoai,
+        ngaySinh: editingPet.ngaySinh,
+        gioiTinh: editingPet.gioiTinh,
+        ghiChuSucKhoe: editingPet.ghiChuSucKhoe,
+      };
+      await petService.updatePet(editingPet.thuCungId, payload);
+      setPets((prev) =>
+        prev.map((p) =>
+          p.thuCungId === editingPet.thuCungId ? { ...p, ...payload } : p
+        )
+      );
+      setIsEditModalOpen(false);
+      alert("Cập nhật thành công!");
+    } catch (error) {
+      console.error("Lỗi cập nhật:", error);
+      alert("Cập nhật thất bại.");
+    }
+  };
+
+  const handleCreatePet = async () => {
+    try {
+      if (
+        !newPet.tenThuCung ||
+        !newPet.tenChuSoHuu ||
+        !newPet.soDienThoaiChuSoHuu
+      ) {
+        alert("Vui lòng nhập đầy đủ thông tin bắt buộc (*)");
+        return;
+      }
+      await petService.createPet(newPet);
+      alert("Thêm mới thành công!");
+      setIsAddModalOpen(false);
+      setNewPet({
+        tenThuCung: "",
+        chungLoai: "Chó",
+        giongLoai: "",
+        ngaySinh: "",
+        gioiTinh: "Đực",
+        ghiChuSucKhoe: "",
+        tenChuSoHuu: "",
+        soDienThoaiChuSoHuu: "",
+      });
+      fetchPets();
+    } catch (error) {
+      console.error("Lỗi thêm mới:", error);
+      alert("Thêm mới thất bại.");
+    }
+  };
 
   // 3. Handle Actions (Xóa)
   const handleDelete = async (id) => {
@@ -274,7 +366,7 @@ const AdminPets = () => {
             <button
               className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-primary hover:bg-green-600 focus:outline-none"
               type="button"
-              onClick={() => alert("Chức năng thêm mới")}
+              onClick={() => setIsAddModalOpen(true)}
             >
               <span className="material-symbols-outlined text-sm mr-2">
                 add
@@ -431,6 +523,7 @@ const AdminPets = () => {
                         <button
                           title="Xem chi tiết"
                           className="text-gray-400 hover:text-green-600 transition-colors"
+                          onClick={() => handleViewDetail(pet)}
                         >
                           <span className="material-symbols-outlined text-base">
                             visibility
@@ -439,8 +532,9 @@ const AdminPets = () => {
                         <button
                           title="Chỉnh sửa"
                           className="text-gray-400 hover:text-blue-500 transition-colors"
+                          onClick={() => handleEditClick(pet)}
                         >
-                          <span class="material-symbols-outlined text-base">
+                          <span className="material-symbols-outlined text-base">
                             edit_note
                           </span>
                         </button>
@@ -544,6 +638,395 @@ const AdminPets = () => {
           </div>
         </div>
       </div>
+
+      {/* Modal Chi tiết Pet */}
+      {isDetailModalOpen && selectedPet && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-lg p-6 max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-4 border-b pb-2">
+              <h3 className="text-xl font-bold text-gray-900">
+                Chi tiết Thú cưng #{selectedPet.thuCungId}
+              </h3>
+              <button
+                onClick={() => setIsDetailModalOpen(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <span className="material-symbols-outlined">close</span>
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div className="flex justify-center mb-4">
+                <img
+                  src={selectedPet.img}
+                  alt={selectedPet.tenThuCung}
+                  className="h-32 w-32 rounded-full object-cover border-4 border-gray-100 shadow-sm"
+                  onError={(e) => {
+                    e.target.src = "https://via.placeholder.com/150?text=Pet";
+                  }}
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm text-gray-500">Tên thú cưng</p>
+                  <p className="font-medium text-gray-900">
+                    {selectedPet.tenThuCung}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">Chủ nuôi</p>
+                  <p className="font-medium text-gray-900">
+                    {selectedPet.ownerName}
+                  </p>
+                  <p className="text-xs text-gray-500">
+                    ID: #{selectedPet.ownerId}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">Chủng loại</p>
+                  <p className="font-medium text-gray-900">
+                    {selectedPet.chungLoai}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">Giống</p>
+                  <p className="font-medium text-gray-900">
+                    {selectedPet.giongLoai}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">Giới tính</p>
+                  <span
+                    className={`px-2 py-1 text-xs font-medium rounded-full ${
+                      selectedPet.gioiTinh === "Đực"
+                        ? "bg-blue-100 text-blue-800"
+                        : selectedPet.gioiTinh === "Cái"
+                        ? "bg-pink-100 text-pink-800"
+                        : "bg-gray-100 text-gray-800"
+                    }`}
+                  >
+                    {selectedPet.gioiTinh}
+                  </span>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">Ngày sinh / Tuổi</p>
+                  <p className="font-medium text-gray-900">
+                    {formatDate(selectedPet.ngaySinh)} (
+                    {calculateAge(selectedPet.ngaySinh)})
+                  </p>
+                </div>
+                <div className="col-span-2">
+                  <p className="text-sm text-gray-500">Ghi chú sức khỏe</p>
+                  <div className="mt-1 p-3 bg-gray-50 rounded-md text-sm text-gray-700 border border-gray-100">
+                    {selectedPet.ghiChuSucKhoe}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex justify-end mt-6">
+              <button
+                onClick={() => setIsDetailModalOpen(false)}
+                className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 font-medium"
+              >
+                Đóng
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Chỉnh sửa Pet */}
+      {isEditModalOpen && editingPet && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-lg p-6 max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-4 border-b pb-2">
+              <h3 className="text-xl font-bold text-gray-900">
+                Chỉnh sửa Thú cưng #{editingPet.thuCungId}
+              </h3>
+              <button
+                onClick={() => setIsEditModalOpen(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <span className="material-symbols-outlined">close</span>
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700">
+                  Tên thú cưng
+                </label>
+                <input
+                  type="text"
+                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary focus:border-primary sm:text-sm"
+                  value={editingPet.tenThuCung || ""}
+                  onChange={(e) =>
+                    setEditingPet({ ...editingPet, tenThuCung: e.target.value })
+                  }
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">
+                    Chủng loại
+                  </label>
+                  <select
+                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary focus:border-primary sm:text-sm"
+                    value={editingPet.chungLoai || "Khác"}
+                    onChange={(e) =>
+                      setEditingPet({
+                        ...editingPet,
+                        chungLoai: e.target.value,
+                      })
+                    }
+                  >
+                    <option value="Chó">Chó</option>
+                    <option value="Mèo">Mèo</option>
+                    <option value="Khác">Khác</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">
+                    Giới tính
+                  </label>
+                  <select
+                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary focus:border-primary sm:text-sm"
+                    value={editingPet.gioiTinh || "Chưa rõ"}
+                    onChange={(e) =>
+                      setEditingPet({ ...editingPet, gioiTinh: e.target.value })
+                    }
+                  >
+                    <option value="Đực">Đực</option>
+                    <option value="Cái">Cái</option>
+                    <option value="Chưa rõ">Chưa rõ</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700">
+                  Giống loài
+                </label>
+                <input
+                  type="text"
+                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary focus:border-primary sm:text-sm"
+                  value={editingPet.giongLoai || ""}
+                  onChange={(e) =>
+                    setEditingPet({ ...editingPet, giongLoai: e.target.value })
+                  }
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700">
+                  Ngày sinh
+                </label>
+                <input
+                  type="date"
+                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary focus:border-primary sm:text-sm"
+                  value={editingPet.ngaySinh || ""}
+                  onChange={(e) =>
+                    setEditingPet({ ...editingPet, ngaySinh: e.target.value })
+                  }
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700">
+                  Ghi chú sức khỏe
+                </label>
+                <textarea
+                  rows={3}
+                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary focus:border-primary sm:text-sm"
+                  value={editingPet.ghiChuSucKhoe || ""}
+                  onChange={(e) =>
+                    setEditingPet({
+                      ...editingPet,
+                      ghiChuSucKhoe: e.target.value,
+                    })
+                  }
+                />
+              </div>
+            </div>
+
+            <div className="flex justify-end mt-6 space-x-3">
+              <button
+                onClick={() => setIsEditModalOpen(false)}
+                className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 font-medium"
+              >
+                Hủy
+              </button>
+              <button
+                onClick={handleSavePet}
+                className="px-4 py-2 bg-primary text-white rounded-md hover:bg-green-600 font-medium"
+              >
+                Lưu thay đổi
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Thêm mới Pet */}
+      {isAddModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-lg p-6 max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-4 border-b pb-2">
+              <h3 className="text-xl font-bold text-gray-900">
+                Thêm Thú cưng mới
+              </h3>
+              <button
+                onClick={() => setIsAddModalOpen(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <span className="material-symbols-outlined">close</span>
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700">
+                  Tên thú cưng <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary focus:border-primary sm:text-sm"
+                  value={newPet.tenThuCung}
+                  onChange={(e) =>
+                    setNewPet({ ...newPet, tenThuCung: e.target.value })
+                  }
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">
+                    Chủng loại
+                  </label>
+                  <select
+                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary focus:border-primary sm:text-sm"
+                    value={newPet.chungLoai}
+                    onChange={(e) =>
+                      setNewPet({ ...newPet, chungLoai: e.target.value })
+                    }
+                  >
+                    <option value="Chó">Chó</option>
+                    <option value="Mèo">Mèo</option>
+                    <option value="Khác">Khác</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">
+                    Giới tính
+                  </label>
+                  <select
+                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary focus:border-primary sm:text-sm"
+                    value={newPet.gioiTinh}
+                    onChange={(e) =>
+                      setNewPet({ ...newPet, gioiTinh: e.target.value })
+                    }
+                  >
+                    <option value="Đực">Đực</option>
+                    <option value="Cái">Cái</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700">
+                  Giống loài
+                </label>
+                <input
+                  type="text"
+                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary focus:border-primary sm:text-sm"
+                  value={newPet.giongLoai}
+                  onChange={(e) =>
+                    setNewPet({ ...newPet, giongLoai: e.target.value })
+                  }
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700">
+                  Ngày sinh
+                </label>
+                <input
+                  type="date"
+                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary focus:border-primary sm:text-sm"
+                  value={newPet.ngaySinh}
+                  onChange={(e) =>
+                    setNewPet({ ...newPet, ngaySinh: e.target.value })
+                  }
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">
+                    Tên chủ sở hữu <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary focus:border-primary sm:text-sm"
+                    value={newPet.tenChuSoHuu}
+                    onChange={(e) =>
+                      setNewPet({ ...newPet, tenChuSoHuu: e.target.value })
+                    }
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">
+                    SĐT chủ sở hữu <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary focus:border-primary sm:text-sm"
+                    value={newPet.soDienThoaiChuSoHuu}
+                    onChange={(e) =>
+                      setNewPet({
+                        ...newPet,
+                        soDienThoaiChuSoHuu: e.target.value,
+                      })
+                    }
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700">
+                  Ghi chú sức khỏe
+                </label>
+                <textarea
+                  rows={3}
+                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary focus:border-primary sm:text-sm"
+                  value={newPet.ghiChuSucKhoe}
+                  onChange={(e) =>
+                    setNewPet({ ...newPet, ghiChuSucKhoe: e.target.value })
+                  }
+                />
+              </div>
+            </div>
+
+            <div className="flex justify-end mt-6 space-x-3">
+              <button
+                onClick={() => setIsAddModalOpen(false)}
+                className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 font-medium"
+              >
+                Hủy
+              </button>
+              <button
+                onClick={handleCreatePet}
+                className="px-4 py-2 bg-primary text-white rounded-md hover:bg-green-600 font-medium"
+              >
+                Thêm mới
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 };

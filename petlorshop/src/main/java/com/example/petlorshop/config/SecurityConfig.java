@@ -50,29 +50,42 @@ public class SecurityConfig {
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+        String admin = "ROLE_" + Role.ADMIN.name();
+
         http
                 .cors(Customizer.withDefaults())
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        // Public endpoints
+                        // == PUBLIC ENDPOINTS ==
                         .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/san-pham/**", "/api/dich-vu/**", "/api/danh-muc-san-pham/**").permitAll()
 
-                        // Admin-only endpoints
-                        .requestMatchers(HttpMethod.POST, "/api/san-pham", "/api/dich-vu", "/api/nhan-vien", "/api/danh-muc-san-pham").hasRole(Role.ADMIN.name())
-                        .requestMatchers(HttpMethod.PUT, "/api/san-pham/**", "/api/dich-vu/**", "/api/nhan-vien/**", "/api/danh-muc-san-pham/**").hasRole(Role.ADMIN.name())
-                        .requestMatchers(HttpMethod.DELETE, "/api/san-pham/**", "/api/dich-vu/**", "/api/nhan-vien/**", "/api/danh-muc-san-pham/**").hasRole(Role.ADMIN.name())
-                        .requestMatchers("/api/nhan-vien/**").hasRole(Role.ADMIN.name())
+                        // == SPECIFIC RULES FIRST ==
+                        .requestMatchers(HttpMethod.GET, "/api/nhan-vien/*/lich-trong").authenticated() // Cho phép xem lịch trống
 
-                        // User and Admin endpoints
-                        .requestMatchers("/api/don-hang/**", "/api/lich-hen/**", "/api/thu-cung/**").authenticated()
-                        
-                        // **FIX: Add rule for Cart API**
-                        .requestMatchers("/api/gio-hang/**").authenticated()
+                        // == ADMIN ONLY ==
+                        .requestMatchers("/api/nguoi-dung/**").hasAuthority(admin)
+                        .requestMatchers(HttpMethod.POST, "/api/nhan-vien/**").hasAuthority(admin)
+                        .requestMatchers(HttpMethod.PUT, "/api/nhan-vien/**").hasAuthority(admin)
+                        .requestMatchers(HttpMethod.DELETE, "/api/nhan-vien/**").hasAuthority(admin)
+                        .requestMatchers(HttpMethod.POST, "/api/san-pham", "/api/dich-vu", "/api/danh-muc-san-pham").hasAuthority(admin)
+                        .requestMatchers(HttpMethod.PUT, "/api/san-pham/**", "/api/dich-vu/**", "/api/danh-muc-san-pham/**").hasAuthority(admin)
+                        .requestMatchers(HttpMethod.DELETE, "/api/san-pham/**", "/api/dich-vu/**", "/api/danh-muc-san-pham/**").hasAuthority(admin)
+                        .requestMatchers(HttpMethod.PUT, "/api/don-hang/**").hasAuthority(admin)
+                        .requestMatchers(HttpMethod.GET, "/api/lich-hen/**").hasAuthority(admin)
+                        .requestMatchers(HttpMethod.PUT, "/api/lich-hen/**").hasAuthority(admin)
 
-                        // Any other request must be authenticated
-                        .anyRequest().authenticated())
+                        // == ANY AUTHENTICATED USER ==
+                        .requestMatchers(HttpMethod.GET, "/api/nhan-vien/**").authenticated() // Xem thông tin nhân viên
+                        .requestMatchers("/api/thu-cung/**").authenticated()
+                        .requestMatchers(HttpMethod.POST, "/api/don-hang").authenticated()
+                        .requestMatchers(HttpMethod.POST, "/api/lich-hen").authenticated()
+                        .requestMatchers(HttpMethod.GET, "/api/don-hang/user/**").authenticated()
+
+                        // Deny all other requests by default
+                        .anyRequest().authenticated()
+                )
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();

@@ -48,7 +48,8 @@ public class AuthenticationService {
             savedUser.getSoDienThoai(),
             savedUser.getDiaChi(),
             savedUser.getNgayTao(),
-            savedUser.getRole()
+            savedUser.getRole(),
+            null // nhanVienId is null for new users
         );
     }
 

@@ -14,6 +14,10 @@ const AdminServices = () => {
   const [services, setServices] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
+  const [editingService, setEditingService] = useState(null);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [selectedService, setSelectedService] = useState(null);
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
 
   // 2. Fetch Data
   const fetchServices = async () => {
@@ -29,7 +33,7 @@ const AdminServices = () => {
             tenDichVu: svc.tenDichVu || "Chưa đặt tên",
             moTa: svc.moTa || "Không có mô tả",
             giaDichVu: svc.giaDichVu || svc.gia || 0,
-            thoiLuong: svc.thoiLuong || 0, // Phút
+            thoiLuongUocTinhPhut: svc.thoiLuongUocTinhPhut || 0, // Phút
             trangThai: svc.trangThai || "Hoạt động",
           }))
         : [];
@@ -57,6 +61,47 @@ const AdminServices = () => {
     } catch (error) {
       console.error(error);
       alert("Xóa thất bại! Có thể dịch vụ đã được sử dụng trong lịch hẹn.");
+    }
+  };
+
+  const handleViewDetail = async (id) => {
+    try {
+      const data = await petService.getServiceById(id);
+      setSelectedService(data);
+      setIsDetailModalOpen(true);
+    } catch (error) {
+      console.error("Lỗi tải chi tiết dịch vụ:", error);
+      alert("Không thể tải chi tiết dịch vụ.");
+    }
+  };
+
+  const handleEditClick = (service) => {
+    setEditingService({ ...service });
+    setIsEditModalOpen(true);
+  };
+
+  const handleSaveService = async () => {
+    if (!editingService) return;
+    try {
+      const payload = {
+        tenDichVu: editingService.tenDichVu,
+        moTa: editingService.moTa,
+        giaDichVu: Number(editingService.giaDichVu),
+        thoiLuongUocTinhPhut: Number(editingService.thoiLuongUocTinhPhut),
+      };
+
+      await petService.updateService(editingService.dichVuId, payload);
+
+      setServices((prev) =>
+        prev.map((s) =>
+          s.dichVuId === editingService.dichVuId ? { ...s, ...payload } : s
+        )
+      );
+      setIsEditModalOpen(false);
+      alert("Cập nhật thành công!");
+    } catch (error) {
+      console.error("Lỗi cập nhật:", error);
+      alert("Cập nhật thất bại.");
     }
   };
 
@@ -255,8 +300,8 @@ const AdminServices = () => {
 
                     {/* Thời lượng */}
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {service.thoiLuong > 0
-                        ? `${service.thoiLuong} phút`
+                      {service.thoiLuongUocTinhPhut > 0
+                        ? `${service.thoiLuongUocTinhPhut} phút`
                         : "---"}
                     </td>
 
@@ -264,11 +309,18 @@ const AdminServices = () => {
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       <div className="flex items-center justify-end space-x-2">
                         <button
+                          className="text-gray-400 hover:text-green-600 transition-colors"
+                          title="Xem chi tiết"
+                          onClick={() => handleViewDetail(service.dichVuId)}
+                        >
+                          <span className="material-symbols-outlined text-base">
+                            visibility
+                          </span>
+                        </button>
+                        <button
                           className="text-gray-400 hover:text-blue-500 transition-colors"
                           title="Chỉnh sửa"
-                          onClick={() =>
-                            alert(`Sửa dịch vụ ID: ${service.dichVuId}`)
-                          }
+                          onClick={() => handleEditClick(service)}
                         >
                           <span className="material-symbols-outlined text-base">
                             edit_note
@@ -301,6 +353,164 @@ const AdminServices = () => {
           </table>
         </div>
       </div>
+
+      {/* Modal Chỉnh sửa Dịch vụ */}
+      {isEditModalOpen && editingService && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-lg p-6 max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-4 border-b pb-2">
+              <h3 className="text-xl font-bold text-gray-900">
+                Chỉnh sửa Dịch vụ #{editingService.dichVuId}
+              </h3>
+              <button
+                onClick={() => setIsEditModalOpen(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <span className="material-symbols-outlined">close</span>
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700">
+                  Tên dịch vụ
+                </label>
+                <input
+                  type="text"
+                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary focus:border-primary sm:text-sm"
+                  value={editingService.tenDichVu || ""}
+                  onChange={(e) =>
+                    setEditingService({
+                      ...editingService,
+                      tenDichVu: e.target.value,
+                    })
+                  }
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700">
+                  Mô tả
+                </label>
+                <textarea
+                  rows={3}
+                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary focus:border-primary sm:text-sm"
+                  value={editingService.moTa || ""}
+                  onChange={(e) =>
+                    setEditingService({
+                      ...editingService,
+                      moTa: e.target.value,
+                    })
+                  }
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">
+                    Giá dịch vụ (VNĐ)
+                  </label>
+                  <input
+                    type="number"
+                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary focus:border-primary sm:text-sm"
+                    value={editingService.giaDichVu || 0}
+                    onChange={(e) =>
+                      setEditingService({
+                        ...editingService,
+                        giaDichVu: e.target.value,
+                      })
+                    }
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">
+                    Thời lượng (Phút)
+                  </label>
+                  <input
+                    type="number"
+                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary focus:border-primary sm:text-sm"
+                    value={editingService.thoiLuongUocTinhPhut || 0}
+                    onChange={(e) =>
+                      setEditingService({
+                        ...editingService,
+                        thoiLuongUocTinhPhut: e.target.value,
+                      })
+                    }
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="flex justify-end mt-6 space-x-3">
+              <button
+                onClick={() => setIsEditModalOpen(false)}
+                className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 font-medium"
+              >
+                Hủy
+              </button>
+              <button
+                onClick={handleSaveService}
+                className="px-4 py-2 bg-primary text-white rounded-md hover:bg-green-600 font-medium"
+              >
+                Lưu thay đổi
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Chi tiết Dịch vụ */}
+      {isDetailModalOpen && selectedService && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-lg p-6 max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-4 border-b pb-2">
+              <h3 className="text-xl font-bold text-gray-900">
+                Chi tiết Dịch vụ #{selectedService.dichVuId}
+              </h3>
+              <button
+                onClick={() => setIsDetailModalOpen(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <span className="material-symbols-outlined">close</span>
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <p className="text-sm text-gray-500">Tên dịch vụ</p>
+                <p className="font-medium text-gray-900">
+                  {selectedService.tenDichVu}
+                </p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-500">Mô tả</p>
+                <p className="text-gray-900">{selectedService.moTa}</p>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm text-gray-500">Giá dịch vụ</p>
+                  <p className="font-bold text-primary">
+                    {formatCurrency(selectedService.giaDichVu)}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">Thời lượng</p>
+                  <p className="font-medium text-gray-900">
+                    {selectedService.thoiLuongUocTinhPhut} phút
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex justify-end mt-6">
+              <button
+                onClick={() => setIsDetailModalOpen(false)}
+                className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 font-medium"
+              >
+                Đóng
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 };

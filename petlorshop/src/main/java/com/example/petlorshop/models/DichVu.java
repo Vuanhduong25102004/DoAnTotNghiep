@@ -37,6 +37,11 @@ public class DichVu {
 
     // --- Relationships ---
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "danh_muc_dv_id")
+    @JsonIgnore
+    private DanhMucDichVu danhMucDichVu;
+
     @JsonIgnore
     @OneToMany(mappedBy = "dichVu")
     private List<LichHen> danhSachLichHen;

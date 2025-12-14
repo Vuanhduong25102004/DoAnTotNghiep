@@ -1,5 +1,8 @@
 package com.example.petlorshop.controllers;
 
+import com.example.petlorshop.dto.LichHenRequest;
+import com.example.petlorshop.dto.LichHenResponse;
+import com.example.petlorshop.dto.LichHenUpdateRequest;
 import com.example.petlorshop.models.LichHen;
 import com.example.petlorshop.services.LichHenService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -17,21 +20,21 @@ public class LichHenController {
     private LichHenService lichHenService;
 
     @GetMapping
-    public List<LichHen> getAllLichHen() {
+    public List<LichHenResponse> getAllLichHen() {
         return lichHenService.getAllLichHen();
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<LichHen> getLichHenById(@PathVariable Integer id) {
+    public ResponseEntity<LichHenResponse> getLichHenById(@PathVariable Integer id) {
         return lichHenService.getLichHenById(id)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
 
     @PostMapping
-    public ResponseEntity<?> createLichHen(@RequestBody LichHen lichHen) {
+    public ResponseEntity<?> createLichHen(@RequestBody LichHenRequest request) {
         try {
-            LichHen createdLichHen = lichHenService.createLichHen(lichHen);
+            LichHenResponse createdLichHen = lichHenService.createLichHen(request);
             return ResponseEntity.ok(createdLichHen);
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
@@ -39,9 +42,9 @@ public class LichHenController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<LichHen> updateLichHen(@PathVariable Integer id, @RequestBody LichHen lichHenDetails) {
+    public ResponseEntity<LichHen> updateLichHen(@PathVariable Integer id, @RequestBody LichHenUpdateRequest request) {
         try {
-            LichHen updatedLichHen = lichHenService.updateLichHen(id, lichHenDetails);
+            LichHen updatedLichHen = lichHenService.updateLichHen(id, request);
             return ResponseEntity.ok(updatedLichHen);
         } catch (RuntimeException e) {
             return ResponseEntity.notFound().build();

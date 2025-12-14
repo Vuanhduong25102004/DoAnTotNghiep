@@ -104,4 +104,9 @@ public class NguoiDung implements UserDetails {
     @JsonIgnore
     @OneToMany(mappedBy = "nguoiDung")
     private List<LichHen> danhSachLichHen;
+
+    // Thêm mối quan hệ ngược với NhanVien
+    @JsonIgnore
+    @OneToOne(mappedBy = "nguoiDung")
+    private NhanVien nhanVien;
 }

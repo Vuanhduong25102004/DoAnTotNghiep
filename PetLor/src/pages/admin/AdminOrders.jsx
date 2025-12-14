@@ -68,6 +68,10 @@ const AdminOrders = () => {
   const [statusFilter, setStatusFilter] = useState("");
   const [dateFilter, setDateFilter] = useState("");
 
+  // State phân trang
+  const [currentPage, setCurrentPage] = useState(1);
+  const ITEMS_PER_PAGE = 5;
+
   // 2. Fetch Data
   const fetchOrders = async () => {
     setLoading(true);
@@ -110,6 +114,11 @@ const AdminOrders = () => {
   useEffect(() => {
     fetchOrders();
   }, []);
+
+  // Reset trang về 1 khi thay đổi bộ lọc
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, statusFilter, dateFilter]);
 
   // 3. Handle Actions
   const handleDelete = async (id) => {
@@ -219,6 +228,16 @@ const AdminOrders = () => {
 
     return matchSearch && matchStatus && matchDate;
   });
+
+  // Logic Phân trang
+  const indexOfLastItem = currentPage * ITEMS_PER_PAGE;
+  const indexOfFirstItem = indexOfLastItem - ITEMS_PER_PAGE;
+  const currentItems = filteredOrders.slice(indexOfFirstItem, indexOfLastItem);
+  const totalPages = Math.ceil(filteredOrders.length / ITEMS_PER_PAGE);
+
+  const handlePageChange = (pageNumber) => {
+    setCurrentPage(pageNumber);
+  };
 
   // 5. Tính toán Stats
   const totalOrders = orders.length;
@@ -419,8 +438,8 @@ const AdminOrders = () => {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {filteredOrders.length > 0 ? (
-                filteredOrders.map((order, index) => (
+              {currentItems.length > 0 ? (
+                currentItems.map((order, index) => (
                   <tr
                     key={order.donHangId || index}
                     className="hover:bg-gray-50 transition-colors"
@@ -519,9 +538,75 @@ const AdminOrders = () => {
 
         {/* Pagination Info */}
         <div className="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6">
-          <p className="text-sm text-gray-700">
-            Tổng cộng: {filteredOrders.length} đơn hàng
-          </p>
+          <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+            <div>
+              <p className="text-sm text-gray-700">
+                Hiển thị{" "}
+                <span className="font-medium">
+                  {filteredOrders.length > 0 ? indexOfFirstItem + 1 : 0}
+                </span>{" "}
+                đến{" "}
+                <span className="font-medium">
+                  {Math.min(indexOfLastItem, filteredOrders.length)}
+                </span>{" "}
+                trong số{" "}
+                <span className="font-medium">{filteredOrders.length}</span> kết
+                quả
+              </p>
+            </div>
+            <div>
+              <nav
+                className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px"
+                aria-label="Pagination"
+              >
+                <button
+                  onClick={() => handlePageChange(currentPage - 1)}
+                  disabled={currentPage === 1}
+                  className={`relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium ${
+                    currentPage === 1
+                      ? "text-gray-300 cursor-not-allowed"
+                      : "text-gray-500 hover:bg-gray-50"
+                  }`}
+                >
+                  <span className="sr-only">Previous</span>
+                  <span className="material-symbols-outlined text-base">
+                    chevron_left
+                  </span>
+                </button>
+
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map(
+                  (number) => (
+                    <button
+                      key={number}
+                      onClick={() => handlePageChange(number)}
+                      className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${
+                        currentPage === number
+                          ? "z-10 bg-primary border-primary text-white"
+                          : "bg-white border-gray-300 text-gray-500 hover:bg-gray-50"
+                      }`}
+                    >
+                      {number}
+                    </button>
+                  )
+                )}
+
+                <button
+                  onClick={() => handlePageChange(currentPage + 1)}
+                  disabled={currentPage === totalPages || totalPages === 0}
+                  className={`relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium ${
+                    currentPage === totalPages || totalPages === 0
+                      ? "text-gray-300 cursor-not-allowed"
+                      : "text-gray-500 hover:bg-gray-50"
+                  }`}
+                >
+                  <span className="sr-only">Next</span>
+                  <span className="material-symbols-outlined text-base">
+                    chevron_right
+                  </span>
+                </button>
+              </nav>
+            </div>
+          </div>
         </div>
       </div>
 

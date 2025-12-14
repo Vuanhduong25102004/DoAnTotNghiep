@@ -6,19 +6,21 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-import java.time.LocalDateTime;
-
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-public class NguoiDungResponse {
-    private Integer userId;
+public class UnifiedCreateUserRequest {
+    // Thông tin bắt buộc cho mọi User
     private String hoTen;
     private String email;
+    private String password;
     private String soDienThoai;
     private String diaChi;
-    private LocalDateTime ngayTao;
     private Role role;
-    private Integer nhanVienId; // Thêm trường này
+
+    // Thông tin chỉ dành cho Nhân viên (Optional)
+    private String chucVu;
+    private String chuyenKhoa;
+    private String kinhNghiem;
 }

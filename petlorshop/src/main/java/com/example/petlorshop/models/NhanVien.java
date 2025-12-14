@@ -34,7 +34,18 @@ public class NhanVien {
     @Column(unique = true, length = 255)
     private String email;
 
+    @Column(name = "chuyen_khoa", length = 255)
+    private String chuyenKhoa; // Ví dụ: "Cắt tỉa Poodle", "Chăm sóc mèo lông dài"
+
+    @Column(name = "kinh_nghiem", columnDefinition = "TEXT")
+    private String kinhNghiem; // Ví dụ: "5 năm kinh nghiệm tại PetCare"
+
     // --- Relationships ---
+
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", referencedColumnName = "user_id")
+    @JsonIgnore // Thêm JsonIgnore để tránh lỗi tuần hoàn khi trả về Entity
+    private NguoiDung nguoiDung;
 
     @JsonIgnore
     @OneToMany(mappedBy = "nhanVien")

@@ -8,7 +8,14 @@ const getPositionBadge = (position) => {
 
   if (pos.includes("bác sĩ") || pos.includes("doctor"))
     return "bg-green-100 text-green-800 border-green-200";
-  if (pos.includes("làm đẹp") || pos.includes("groomer"))
+  if (
+    pos.includes("làm đẹp") ||
+    pos.includes("groomer") ||
+    pos.includes("grooming") ||
+    pos.includes("spa") ||
+    pos.includes("cắt tỉa") ||
+    pos.includes("chăm sóc")
+  )
     return "bg-pink-100 text-pink-800 border-pink-200";
   if (pos.includes("huấn luyện") || pos.includes("trainer"))
     return "bg-orange-100 text-orange-800 border-orange-200";
@@ -22,6 +29,10 @@ const AdminEmployees = () => {
   // 1. State
   const [employees, setEmployees] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [selectedEmployee, setSelectedEmployee] = useState(null);
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+  const [editingEmployee, setEditingEmployee] = useState(null);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
   // Filter States
   const [searchTerm, setSearchTerm] = useState("");
@@ -45,7 +56,13 @@ const AdminEmployees = () => {
             chuyenKhoa: emp.chuyenKhoa || "---",
             kinhNghiem: emp.kinhNghiem || "---",
             // Ảnh đại diện
-            img: emp.hinhAnhUrl || "https://placehold.co/100x100?text=Staff",
+            img:
+              emp.hinhAnhUrl &&
+              emp.hinhAnhUrl !== "null" &&
+              emp.hinhAnhUrl !== "undefined"
+                ? emp.hinhAnhUrl
+                : "https://placehold.co/100x100?text=Staff",
+            userId: emp.userId || (emp.user ? emp.user.id : null),
           }))
         : [];
 
@@ -78,6 +95,50 @@ const AdminEmployees = () => {
     }
   };
 
+  const handleViewDetail = async (id) => {
+    try {
+      const data = await userService.getStaffById(id);
+      setSelectedEmployee(data);
+      setIsDetailModalOpen(true);
+    } catch (error) {
+      console.error("Lỗi tải chi tiết nhân viên:", error);
+      alert("Không thể tải chi tiết nhân viên.");
+    }
+  };
+
+  const handleEditClick = (emp) => {
+    setEditingEmployee({ ...emp });
+    setIsEditModalOpen(true);
+  };
+
+  const handleSaveEmployee = async () => {
+    if (!editingEmployee) return;
+    try {
+      const payload = {
+        hoTen: editingEmployee.hoTen,
+        chucVu: editingEmployee.chucVu,
+        soDienThoai: editingEmployee.soDienThoai,
+        email: editingEmployee.email,
+        chuyenKhoa: editingEmployee.chuyenKhoa,
+        kinhNghiem: editingEmployee.kinhNghiem,
+        userId: editingEmployee.userId,
+      };
+
+      await userService.updateStaff(editingEmployee.nhanVienId, payload);
+
+      setEmployees((prev) =>
+        prev.map((e) =>
+          e.nhanVienId === editingEmployee.nhanVienId ? { ...e, ...payload } : e
+        )
+      );
+      setIsEditModalOpen(false);
+      alert("Cập nhật thành công!");
+    } catch (error) {
+      console.error("Lỗi cập nhật:", error);
+      alert("Cập nhật thất bại.");
+    }
+  };
+
   // 4. Filter Logic
   const filteredEmployees = employees.filter((emp) => {
     // Tìm kiếm: Tên, Email hoặc SĐT
@@ -102,8 +163,33 @@ const AdminEmployees = () => {
   // Đếm số lượng Groomer
   const countGroomers = employees.filter(
     (e) =>
-      e.chucVu && (e.chucVu.includes("Groomer") || e.chucVu.includes("Spa"))
+      e.chucVu &&
+      (e.chucVu.toLowerCase().includes("spa") ||
+        e.chucVu.toLowerCase().includes("grooming") ||
+        e.chucVu.toLowerCase().includes("chăm sóc"))
   ).length;
+
+  // State phân trang
+  const [currentPage, setCurrentPage] = useState(1);
+  const ITEMS_PER_PAGE = 5;
+
+  // Reset trang về 1 khi thay đổi bộ lọc
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, filterPosition]);
+
+  // Logic Phân trang
+  const indexOfLastItem = currentPage * ITEMS_PER_PAGE;
+  const indexOfFirstItem = indexOfLastItem - ITEMS_PER_PAGE;
+  const currentItems = filteredEmployees.slice(
+    indexOfFirstItem,
+    indexOfLastItem
+  );
+  const totalPages = Math.ceil(filteredEmployees.length / ITEMS_PER_PAGE);
+
+  const handlePageChange = (pageNumber) => {
+    setCurrentPage(pageNumber);
+  };
 
   const stats = [
     {
@@ -269,8 +355,8 @@ const AdminEmployees = () => {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {filteredEmployees.length > 0 ? (
-                filteredEmployees.map((emp, index) => (
+              {currentItems.length > 0 ? (
+                currentItems.map((emp, index) => (
                   <tr
                     key={emp.nhanVienId || index}
                     className="hover:bg-gray-50 transition-colors"
@@ -340,7 +426,7 @@ const AdminEmployees = () => {
                         <button
                           className="text-gray-400 hover:text-primary transition-colors"
                           title="Xem chi tiết"
-                          onClick={() => alert(`Xem chi tiết NV: ${emp.hoTen}`)}
+                          onClick={() => handleViewDetail(emp.nhanVienId)}
                         >
                           <span className="material-symbols-outlined text-base">
                             visibility
@@ -349,9 +435,7 @@ const AdminEmployees = () => {
                         <button
                           className="text-gray-400 hover:text-blue-500 transition-colors"
                           title="Chỉnh sửa"
-                          onClick={() =>
-                            alert(`Sửa thông tin NV: ${emp.hoTen}`)
-                          }
+                          onClick={() => handleEditClick(emp)}
                         >
                           <span className="material-symbols-outlined text-base">
                             edit_note
@@ -386,11 +470,300 @@ const AdminEmployees = () => {
 
         {/* Pagination */}
         <div className="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6">
-          <p className="text-sm text-gray-700">
-            Tổng cộng: {filteredEmployees.length} nhân viên
-          </p>
+          <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+            <div>
+              <p className="text-sm text-gray-700">
+                Hiển thị{" "}
+                <span className="font-medium">
+                  {filteredEmployees.length > 0 ? indexOfFirstItem + 1 : 0}
+                </span>{" "}
+                đến{" "}
+                <span className="font-medium">
+                  {Math.min(indexOfLastItem, filteredEmployees.length)}
+                </span>{" "}
+                trong số{" "}
+                <span className="font-medium">{filteredEmployees.length}</span>{" "}
+                kết quả
+              </p>
+            </div>
+            <div>
+              <nav
+                className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px"
+                aria-label="Pagination"
+              >
+                <button
+                  onClick={() => handlePageChange(currentPage - 1)}
+                  disabled={currentPage === 1}
+                  className={`relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium ${
+                    currentPage === 1
+                      ? "text-gray-300 cursor-not-allowed"
+                      : "text-gray-500 hover:bg-gray-50"
+                  }`}
+                >
+                  <span className="sr-only">Previous</span>
+                  <span className="material-symbols-outlined text-base">
+                    chevron_left
+                  </span>
+                </button>
+
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map(
+                  (number) => (
+                    <button
+                      key={number}
+                      onClick={() => handlePageChange(number)}
+                      className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${
+                        currentPage === number
+                          ? "z-10 bg-primary border-primary text-white"
+                          : "bg-white border-gray-300 text-gray-500 hover:bg-gray-50"
+                      }`}
+                    >
+                      {number}
+                    </button>
+                  )
+                )}
+
+                <button
+                  onClick={() => handlePageChange(currentPage + 1)}
+                  disabled={currentPage === totalPages || totalPages === 0}
+                  className={`relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium ${
+                    currentPage === totalPages || totalPages === 0
+                      ? "text-gray-300 cursor-not-allowed"
+                      : "text-gray-500 hover:bg-gray-50"
+                  }`}
+                >
+                  <span className="sr-only">Next</span>
+                  <span className="material-symbols-outlined text-base">
+                    chevron_right
+                  </span>
+                </button>
+              </nav>
+            </div>
+          </div>
         </div>
       </div>
+
+      {/* Modal Chi tiết Nhân viên */}
+      {isDetailModalOpen && selectedEmployee && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-lg p-6 max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-4 border-b pb-2">
+              <h3 className="text-xl font-bold text-gray-900">
+                Chi tiết Nhân viên #{selectedEmployee.nhanVienId}
+              </h3>
+              <button
+                onClick={() => setIsDetailModalOpen(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <span className="material-symbols-outlined">close</span>
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div className="flex justify-center mb-4">
+                <img
+                  src={
+                    selectedEmployee.hinhAnhUrl ||
+                    "https://placehold.co/100x100?text=Staff"
+                  }
+                  alt={selectedEmployee.hoTen}
+                  className="h-32 w-32 rounded-full object-cover border-4 border-gray-100 shadow-sm"
+                  onError={(e) => {
+                    e.target.src = "https://via.placeholder.com/150?text=NV";
+                  }}
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="col-span-2">
+                  <p className="text-sm text-gray-500">Họ và tên</p>
+                  <p className="font-medium text-gray-900 text-lg">
+                    {selectedEmployee.hoTen}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">Chức vụ</p>
+                  <span
+                    className={`px-2 py-1 text-xs font-medium rounded-full border ${getPositionBadge(
+                      selectedEmployee.chucVu
+                    )}`}
+                  >
+                    {selectedEmployee.chucVu}
+                  </span>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">Số điện thoại</p>
+                  <p className="font-medium text-gray-900">
+                    {selectedEmployee.soDienThoai}
+                  </p>
+                </div>
+                <div className="col-span-2">
+                  <p className="text-sm text-gray-500">Email</p>
+                  <p className="font-medium text-gray-900">
+                    {selectedEmployee.email}
+                  </p>
+                </div>
+                <div className="col-span-2">
+                  <p className="text-sm text-gray-500">Chuyên khoa</p>
+                  <p className="font-medium text-gray-900">
+                    {selectedEmployee.chuyenKhoa}
+                  </p>
+                </div>
+                <div className="col-span-2">
+                  <p className="text-sm text-gray-500">Kinh nghiệm</p>
+                  <p className="text-gray-700 bg-gray-50 p-3 rounded-md border border-gray-100 text-sm">
+                    {selectedEmployee.kinhNghiem}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex justify-end mt-6">
+              <button
+                onClick={() => setIsDetailModalOpen(false)}
+                className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 font-medium"
+              >
+                Đóng
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Chỉnh sửa Nhân viên */}
+      {isEditModalOpen && editingEmployee && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-lg p-6 max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-4 border-b pb-2">
+              <h3 className="text-xl font-bold text-gray-900">
+                Chỉnh sửa Nhân viên #{editingEmployee.nhanVienId}
+              </h3>
+              <button
+                onClick={() => setIsEditModalOpen(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <span className="material-symbols-outlined">close</span>
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700">
+                  Họ và tên
+                </label>
+                <input
+                  type="text"
+                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary focus:border-primary sm:text-sm"
+                  value={editingEmployee.hoTen || ""}
+                  onChange={(e) =>
+                    setEditingEmployee({
+                      ...editingEmployee,
+                      hoTen: e.target.value,
+                    })
+                  }
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700">
+                  Chức vụ
+                </label>
+                <input
+                  type="text"
+                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary focus:border-primary sm:text-sm"
+                  value={editingEmployee.chucVu || ""}
+                  onChange={(e) =>
+                    setEditingEmployee({
+                      ...editingEmployee,
+                      chucVu: e.target.value,
+                    })
+                  }
+                  placeholder="VD: Bác sĩ thú y, Groomer..."
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">
+                    Số điện thoại
+                  </label>
+                  <input
+                    type="text"
+                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary focus:border-primary sm:text-sm"
+                    value={editingEmployee.soDienThoai || ""}
+                    onChange={(e) =>
+                      setEditingEmployee({
+                        ...editingEmployee,
+                        soDienThoai: e.target.value,
+                      })
+                    }
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">
+                    Email
+                  </label>
+                  <input
+                    type="email"
+                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary focus:border-primary sm:text-sm"
+                    value={editingEmployee.email || ""}
+                    onChange={(e) =>
+                      setEditingEmployee({
+                        ...editingEmployee,
+                        email: e.target.value,
+                      })
+                    }
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700">
+                  Chuyên khoa
+                </label>
+                <input
+                  type="text"
+                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary focus:border-primary sm:text-sm"
+                  value={editingEmployee.chuyenKhoa || ""}
+                  onChange={(e) =>
+                    setEditingEmployee({
+                      ...editingEmployee,
+                      chuyenKhoa: e.target.value,
+                    })
+                  }
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700">
+                  Kinh nghiệm
+                </label>
+                <textarea
+                  rows={3}
+                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary focus:border-primary sm:text-sm"
+                  value={editingEmployee.kinhNghiem || ""}
+                  onChange={(e) =>
+                    setEditingEmployee({
+                      ...editingEmployee,
+                      kinhNghiem: e.target.value,
+                    })
+                  }
+                />
+              </div>
+            </div>
+
+            <div className="flex justify-end mt-6 space-x-3">
+              <button
+                onClick={() => setIsEditModalOpen(false)}
+                className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 font-medium"
+              >
+                Hủy
+              </button>
+              <button
+                onClick={handleSaveEmployee}
+                className="px-4 py-2 bg-primary text-white rounded-md hover:bg-green-600 font-medium"
+              >
+                Lưu thay đổi
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 };

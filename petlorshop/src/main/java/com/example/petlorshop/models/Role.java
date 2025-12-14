@@ -5,4 +5,6 @@ public enum Role {
     ADMIN,
     DOCTOR,
     RECEPTIONIST,
+    STAFF,
+    SPA // Thêm role SPA
 }

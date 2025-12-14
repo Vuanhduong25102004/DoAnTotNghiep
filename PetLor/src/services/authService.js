@@ -15,6 +15,11 @@ const authService = {
     localStorage.removeItem('accessToken');
     // Có thể thêm logic redirect về trang login ở đây nếu cần
   },
+
+  getAuthHeader: () => {
+    const token = localStorage.getItem('accessToken') || localStorage.getItem('token');
+    return token ? { Authorization: `Bearer ${token}` } : {};
+  },
 };
 
 export default authService;
