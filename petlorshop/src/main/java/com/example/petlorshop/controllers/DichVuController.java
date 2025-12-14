@@ -1,7 +1,7 @@
 package com.example.petlorshop.controllers;
 
+import com.example.petlorshop.dto.DichVuRequest;
 import com.example.petlorshop.dto.DichVuResponse;
-import com.example.petlorshop.models.DichVu;
 import com.example.petlorshop.services.DichVuService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -30,16 +30,14 @@ public class DichVuController {
     }
 
     @PostMapping
-    public DichVu createDichVu(@RequestBody DichVu dichVu) {
-        // Cần cập nhật để nhận DichVuRequest
-        return dichVuService.createDichVu(dichVu);
+    public DichVuResponse createDichVu(@RequestBody DichVuRequest request) {
+        return dichVuService.createDichVu(request);
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<DichVu> updateDichVu(@PathVariable Integer id, @RequestBody DichVu dichVuDetails) {
-        // Cần cập nhật để nhận DichVuRequest
+    public ResponseEntity<DichVuResponse> updateDichVu(@PathVariable Integer id, @RequestBody DichVuRequest request) {
         try {
-            DichVu updatedDichVu = dichVuService.updateDichVu(id, dichVuDetails);
+            DichVuResponse updatedDichVu = dichVuService.updateDichVu(id, request);
             return ResponseEntity.ok(updatedDichVu);
         } catch (RuntimeException e) {
             return ResponseEntity.notFound().build();

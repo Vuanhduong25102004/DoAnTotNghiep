@@ -1,16 +1,14 @@
 package com.example.petlorshop.controllers;
 
-import com.example.petlorshop.dto.NhanVienLichTrongResponse;
 import com.example.petlorshop.dto.NhanVienRequest;
 import com.example.petlorshop.dto.NhanVienResponse;
-import com.example.petlorshop.models.NhanVien;
 import com.example.petlorshop.services.NhanVienService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 
@@ -21,19 +19,15 @@ public class NhanVienController {
     @Autowired
     private NhanVienService nhanVienService;
 
-    // --- API KIỂM TRA LỊCH TRỐNG ---
-    @GetMapping("/{id}/lich-trong")
-    public ResponseEntity<NhanVienLichTrongResponse> getAvailableSlots(
-            @PathVariable Integer id,
-            @RequestParam("ngay") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
+    @PostMapping
+    public ResponseEntity<?> createNhanVien(@RequestBody NhanVienRequest request) {
         try {
-            NhanVienLichTrongResponse response = nhanVienService.getNhanVienWithAvailableSlots(id, date);
-            return ResponseEntity.ok(response);
-        } catch (RuntimeException e) {
-            return ResponseEntity.badRequest().body(null);
+            NhanVienResponse newStaff = nhanVienService.createNhanVien(request);
+            return ResponseEntity.ok(newStaff);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
         }
     }
-    // -------------------------------
 
     @GetMapping
     public List<NhanVienResponse> getAllNhanVien() {
@@ -48,12 +42,12 @@ public class NhanVienController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<NhanVien> updateNhanVien(@PathVariable Integer id, @RequestBody NhanVienRequest request) {
+    public ResponseEntity<?> updateNhanVien(@PathVariable Integer id, @RequestBody NhanVienRequest request) {
         try {
-            NhanVien updatedNhanVien = nhanVienService.updateNhanVien(id, request);
-            return ResponseEntity.ok(updatedNhanVien);
-        } catch (RuntimeException e) {
-            return ResponseEntity.notFound().build();
+            NhanVienResponse updatedStaff = nhanVienService.updateNhanVien(id, request);
+            return ResponseEntity.ok(updatedStaff);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
         }
     }
 
@@ -63,7 +57,20 @@ public class NhanVienController {
             nhanVienService.deleteNhanVien(id);
             return ResponseEntity.ok(Map.of("message", "Xóa nhân viên thành công"));
         } catch (RuntimeException e) {
-            return ResponseEntity.notFound().build();
+            return ResponseEntity.status(404).body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    @GetMapping("/{id}/check-availability")
+    public ResponseEntity<Map<String, Boolean>> checkAvailability(
+            @PathVariable Integer id,
+            @RequestParam("start") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime start,
+            @RequestParam("end") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime end) {
+        try {
+            boolean isAvailable = nhanVienService.isTimeSlotAvailable(id, start, end);
+            return ResponseEntity.ok(Map.of("available", isAvailable));
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(null);
         }
     }
 }

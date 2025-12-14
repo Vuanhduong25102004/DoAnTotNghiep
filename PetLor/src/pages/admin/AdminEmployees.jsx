@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import userService from "../../services/userservice"; // Sử dụng service đã có
+import userService from "../../services/userService"; // Sử dụng service đã có
 
 // Helper: Chọn màu badge cho Chức vụ
 const getPositionBadge = (position) => {
@@ -33,6 +33,18 @@ const AdminEmployees = () => {
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [editingEmployee, setEditingEmployee] = useState(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [newEmployeeData, setNewEmployeeData] = useState({
+    hoTen: "",
+    email: "",
+    password: "",
+    soDienThoai: "",
+    diaChi: "",
+    chucVu: "",
+    chuyenKhoa: "",
+    kinhNghiem: "",
+    role: "STAFF",
+  });
 
   // Filter States
   const [searchTerm, setSearchTerm] = useState("");
@@ -136,6 +148,46 @@ const AdminEmployees = () => {
     } catch (error) {
       console.error("Lỗi cập nhật:", error);
       alert("Cập nhật thất bại.");
+    }
+  };
+
+  const handleOpenCreateModal = () => {
+    setNewEmployeeData({
+      hoTen: "",
+      email: "",
+      password: "",
+      soDienThoai: "",
+      diaChi: "",
+      chucVu: "",
+      chuyenKhoa: "",
+      kinhNghiem: "",
+      role: "STAFF",
+    });
+    setIsAddModalOpen(true);
+  };
+
+  const handleCreateEmployee = async () => {
+    // Validation
+    if (
+      !newEmployeeData.hoTen ||
+      !newEmployeeData.email ||
+      !newEmployeeData.password
+    ) {
+      alert("Vui lòng điền các trường bắt buộc: Họ tên, Email, Mật khẩu.");
+      return;
+    }
+
+    try {
+      // Sử dụng endpoint chung để tạo user và nhân viên
+      await userService.createUnifiedUser(newEmployeeData);
+      alert("Tạo mới nhân viên thành công!");
+      setIsAddModalOpen(false);
+      fetchEmployees(); // Tải lại danh sách
+    } catch (error) {
+      console.error("Lỗi tạo nhân viên:", error);
+      alert(
+        "Tạo mới thất bại. Email có thể đã tồn tại hoặc dữ liệu không hợp lệ."
+      );
     }
   };
 
@@ -314,7 +366,7 @@ const AdminEmployees = () => {
             <button
               className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-primary hover:bg-green-600 focus:outline-none"
               type="button"
-              onClick={() => alert("Chức năng thêm mới")}
+              onClick={handleOpenCreateModal}
             >
               <span className="material-symbols-outlined text-sm mr-2">
                 person_add
@@ -447,7 +499,7 @@ const AdminEmployees = () => {
                           onClick={() => handleDelete(emp.nhanVienId)}
                         >
                           <span className="material-symbols-outlined text-base">
-                            delete
+                            cancel
                           </span>
                         </button>
                       </div>
@@ -759,6 +811,211 @@ const AdminEmployees = () => {
                 className="px-4 py-2 bg-primary text-white rounded-md hover:bg-green-600 font-medium"
               >
                 Lưu thay đổi
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Thêm mới Nhân viên */}
+      {isAddModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl p-6 max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-4 border-b pb-2">
+              <h3 className="text-xl font-bold text-gray-900">
+                Thêm mới Nhân viên
+              </h3>
+              <button
+                onClick={() => setIsAddModalOpen(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <span className="material-symbols-outlined">close</span>
+              </button>
+            </div>
+
+            <div className="space-y-6">
+              {/* User Account Info */}
+              <div className="p-4 border rounded-lg bg-gray-50/50">
+                <h4 className="font-semibold text-gray-800 mb-3">
+                  1. Thông tin Tài khoản
+                </h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">
+                      Họ và tên <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      className="mt-1 block w-full border-gray-300 rounded-md shadow-sm"
+                      value={newEmployeeData.hoTen}
+                      onChange={(e) =>
+                        setNewEmployeeData({
+                          ...newEmployeeData,
+                          hoTen: e.target.value,
+                        })
+                      }
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">
+                      Email <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="email"
+                      className="mt-1 block w-full border-gray-300 rounded-md shadow-sm"
+                      value={newEmployeeData.email}
+                      onChange={(e) =>
+                        setNewEmployeeData({
+                          ...newEmployeeData,
+                          email: e.target.value,
+                        })
+                      }
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">
+                      Mật khẩu <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="password"
+                      className="mt-1 block w-full border-gray-300 rounded-md shadow-sm"
+                      value={newEmployeeData.password}
+                      onChange={(e) =>
+                        setNewEmployeeData({
+                          ...newEmployeeData,
+                          password: e.target.value,
+                        })
+                      }
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">
+                      Số điện thoại
+                    </label>
+                    <input
+                      type="text"
+                      className="mt-1 block w-full border-gray-300 rounded-md shadow-sm"
+                      value={newEmployeeData.soDienThoai}
+                      onChange={(e) =>
+                        setNewEmployeeData({
+                          ...newEmployeeData,
+                          soDienThoai: e.target.value,
+                        })
+                      }
+                    />
+                  </div>
+                  <div className="col-span-2">
+                    <label className="block text-sm font-medium text-gray-700">
+                      Địa chỉ
+                    </label>
+                    <input
+                      type="text"
+                      className="mt-1 block w-full border-gray-300 rounded-md shadow-sm"
+                      value={newEmployeeData.diaChi}
+                      onChange={(e) =>
+                        setNewEmployeeData({
+                          ...newEmployeeData,
+                          diaChi: e.target.value,
+                        })
+                      }
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Employee Profile Info */}
+              <div className="p-4 border rounded-lg">
+                <h4 className="font-semibold text-gray-800 mb-3">
+                  2. Thông tin Hồ sơ Nhân viên
+                </h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">
+                      Chức vụ
+                    </label>
+                    <input
+                      type="text"
+                      className="mt-1 block w-full border-gray-300 rounded-md shadow-sm"
+                      value={newEmployeeData.chucVu}
+                      onChange={(e) =>
+                        setNewEmployeeData({
+                          ...newEmployeeData,
+                          chucVu: e.target.value,
+                        })
+                      }
+                      placeholder="VD: Bác sĩ thú y, Groomer..."
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">
+                      Vai trò (Role) <span className="text-red-500">*</span>
+                    </label>
+                    <select
+                      className="mt-1 block w-full border-gray-300 rounded-md shadow-sm"
+                      value={newEmployeeData.role}
+                      onChange={(e) =>
+                        setNewEmployeeData({
+                          ...newEmployeeData,
+                          role: e.target.value,
+                        })
+                      }
+                    >
+                      <option value="STAFF">Nhân viên (STAFF)</option>
+                      <option value="DOCTOR">Bác sĩ (DOCTOR)</option>
+                      <option value="SPA">Spa (SPA)</option>
+                      <option value="ADMIN">Quản trị (ADMIN)</option>
+                    </select>
+                  </div>
+                  <div className="col-span-2">
+                    <label className="block text-sm font-medium text-gray-700">
+                      Chuyên khoa
+                    </label>
+                    <input
+                      type="text"
+                      className="mt-1 block w-full border-gray-300 rounded-md shadow-sm"
+                      value={newEmployeeData.chuyenKhoa}
+                      onChange={(e) =>
+                        setNewEmployeeData({
+                          ...newEmployeeData,
+                          chuyenKhoa: e.target.value,
+                        })
+                      }
+                      placeholder="VD: Nội khoa, Chẩn đoán hình ảnh"
+                    />
+                  </div>
+                  <div className="col-span-2">
+                    <label className="block text-sm font-medium text-gray-700">
+                      Kinh nghiệm
+                    </label>
+                    <textarea
+                      rows={2}
+                      className="mt-1 block w-full border-gray-300 rounded-md shadow-sm"
+                      value={newEmployeeData.kinhNghiem}
+                      onChange={(e) =>
+                        setNewEmployeeData({
+                          ...newEmployeeData,
+                          kinhNghiem: e.target.value,
+                        })
+                      }
+                      placeholder="VD: 3 năm kinh nghiệm tại bệnh viện X..."
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex justify-end mt-6 space-x-3">
+              <button
+                onClick={() => setIsAddModalOpen(false)}
+                className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 font-medium"
+              >
+                Hủy
+              </button>
+              <button
+                onClick={handleCreateEmployee}
+                className="px-4 py-2 bg-primary text-white rounded-md hover:bg-green-600 font-medium"
+              >
+                Tạo mới
               </button>
             </div>
           </div>

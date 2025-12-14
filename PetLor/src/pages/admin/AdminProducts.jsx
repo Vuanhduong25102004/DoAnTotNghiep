@@ -547,7 +547,7 @@ const AdminProducts = () => {
                             onClick={() => handleDelete(product.sanPhamId)}
                           >
                             <span className="material-symbols-outlined text-base">
-                              delete
+                              cancel
                             </span>
                           </button>
                         </div>

@@ -515,7 +515,7 @@ const AdminOrders = () => {
                           onClick={() => handleDelete(order.donHangId)}
                         >
                           <span className="material-symbols-outlined text-base">
-                            delete
+                            cancel
                           </span>
                         </button>
                       </div>

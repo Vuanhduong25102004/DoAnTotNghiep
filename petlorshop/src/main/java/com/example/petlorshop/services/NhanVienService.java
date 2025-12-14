@@ -1,22 +1,21 @@
 package com.example.petlorshop.services;
 
-import com.example.petlorshop.dto.NhanVienLichTrongResponse;
 import com.example.petlorshop.dto.NhanVienRequest;
 import com.example.petlorshop.dto.NhanVienResponse;
 import com.example.petlorshop.models.LichHen;
 import com.example.petlorshop.models.NguoiDung;
 import com.example.petlorshop.models.NhanVien;
+import com.example.petlorshop.models.Role;
 import com.example.petlorshop.repositories.LichHenRepository;
 import com.example.petlorshop.repositories.NguoiDungRepository;
 import com.example.petlorshop.repositories.NhanVienRepository;
 import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 
-import java.time.LocalDate;
-import java.time.LocalTime;
-import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -24,95 +23,106 @@ import java.util.stream.Collectors;
 @Service
 public class NhanVienService {
 
-    @Autowired
-    private NhanVienRepository nhanVienRepository;
-    @Autowired
-    private LichHenRepository lichHenRepository;
-    @Autowired
-    private NguoiDungRepository nguoiDungRepository;
+    @Autowired private NhanVienRepository nhanVienRepository;
+    @Autowired private LichHenRepository lichHenRepository;
+    @Autowired private NguoiDungRepository nguoiDungRepository;
+    @Autowired private PasswordEncoder passwordEncoder;
 
-    public NhanVienLichTrongResponse getNhanVienWithAvailableSlots(Integer nhanVienId, LocalDate date) {
-        // 1. Lấy thông tin nhân viên
-        NhanVienResponse nhanVienResponse = this.getNhanVienById(nhanVienId)
-                .orElseThrow(() -> new RuntimeException("Không tìm thấy nhân viên với ID: " + nhanVienId));
+    @Transactional
+    public NhanVienResponse createNhanVien(NhanVienRequest request) {
+        if (nguoiDungRepository.findByEmail(request.getEmail()).isPresent()) {
+            throw new RuntimeException("Email đã được sử dụng.");
+        }
+        if (!StringUtils.hasText(request.getPassword())) {
+            throw new IllegalArgumentException("Mật khẩu là bắt buộc khi tạo nhân viên mới.");
+        }
+        Role role = request.getRole();
+        if (role == null || role == Role.USER || role == Role.ADMIN) {
+            throw new IllegalArgumentException("Vai trò không hợp lệ. Phải là DOCTOR, RECEPTIONIST, SPA hoặc STAFF.");
+        }
 
-        // 2. Lấy lịch trống
-        List<String> availableSlots = this.getAvailableSlots(nhanVienId, date);
+        // 1. Tạo NguoiDung
+        NguoiDung newUser = new NguoiDung();
+        newUser.setHoTen(request.getHoTen());
+        newUser.setEmail(request.getEmail());
+        newUser.setMatKhau(passwordEncoder.encode(request.getPassword()));
+        newUser.setSoDienThoai(request.getSoDienThoai());
+        newUser.setDiaChi(request.getDiaChi());
+        newUser.setRole(role);
+        NguoiDung savedUser = nguoiDungRepository.save(newUser);
 
-        // 3. Kết hợp lại và trả về
-        return new NhanVienLichTrongResponse(nhanVienResponse, availableSlots);
+        // 2. Tạo NhanVien
+        NhanVien newNhanVien = new NhanVien();
+        mapRequestToEntity(newNhanVien, request);
+        newNhanVien.setNguoiDung(savedUser);
+        NhanVien savedNhanVien = nhanVienRepository.save(newNhanVien);
+
+        return convertToResponse(savedNhanVien);
+    }
+
+    @Transactional
+    public NhanVienResponse updateNhanVien(Integer id, NhanVienRequest request) {
+        NhanVien nhanVien = nhanVienRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Nhân viên không tồn tại với id: " + id));
+        NguoiDung nguoiDung = nhanVien.getNguoiDung();
+        if (nguoiDung == null) {
+            throw new IllegalStateException("Nhân viên này không có tài khoản người dùng liên kết.");
+        }
+
+        // Cập nhật NguoiDung
+        nguoiDung.setHoTen(request.getHoTen());
+        nguoiDung.setSoDienThoai(request.getSoDienThoai());
+        nguoiDung.setDiaChi(request.getDiaChi());
+        if (StringUtils.hasText(request.getEmail()) && !request.getEmail().equals(nguoiDung.getEmail())) {
+            nguoiDungRepository.findByEmail(request.getEmail()).ifPresent(u -> {
+                throw new RuntimeException("Email đã được sử dụng.");
+            });
+            nguoiDung.setEmail(request.getEmail());
+        }
+        if (StringUtils.hasText(request.getPassword())) {
+            nguoiDung.setMatKhau(passwordEncoder.encode(request.getPassword()));
+        }
+        if (request.getRole() != null && request.getRole() != Role.USER && request.getRole() != Role.ADMIN) {
+            nguoiDung.setRole(request.getRole());
+        }
+        nguoiDungRepository.save(nguoiDung);
+
+        // Cập nhật NhanVien
+        mapRequestToEntity(nhanVien, request);
+        NhanVien updatedNhanVien = nhanVienRepository.save(nhanVien);
+        
+        return convertToResponse(updatedNhanVien);
     }
 
     public List<NhanVienResponse> getAllNhanVien() {
-        return nhanVienRepository.findAll().stream()
-                .map(this::convertToResponse)
-                .collect(Collectors.toList());
+        return nhanVienRepository.findAll().stream().map(this::convertToResponse).collect(Collectors.toList());
     }
 
     public Optional<NhanVienResponse> getNhanVienById(Integer id) {
         return nhanVienRepository.findById(id).map(this::convertToResponse);
     }
 
-    @Transactional
-    public NhanVien updateNhanVien(Integer id, NhanVienRequest request) {
-        NhanVien nhanVien = nhanVienRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Nhân viên không tồn tại với id: " + id));
-        NguoiDung nguoiDung = nguoiDungRepository.findById(request.getUserId())
-                .orElseThrow(() -> new RuntimeException("Người dùng không tồn tại với id: " + request.getUserId()));
-        if (nhanVien.getNguoiDung() != null && !nhanVien.getNguoiDung().getUserId().equals(request.getUserId())) {
-            throw new RuntimeException("UserId không khớp với nhân viên này.");
-        }
-        mapRequestToEntity(request, nhanVien, nguoiDung);
-        nguoiDung.setHoTen(request.getHoTen());
-        nguoiDung.setSoDienThoai(request.getSoDienThoai());
-        if (!nguoiDung.getEmail().equals(request.getEmail())) {
-            if (nguoiDungRepository.findByEmail(request.getEmail()).isPresent()) {
-                throw new RuntimeException("Email mới đã được sử dụng bởi người khác.");
-            }
-            nguoiDung.setEmail(request.getEmail());
-        }
-        nguoiDungRepository.save(nguoiDung);
-        return nhanVienRepository.save(nhanVien);
-    }
-
     public void deleteNhanVien(Integer id) {
         NhanVien nhanVien = nhanVienRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Nhân viên không tồn tại với id: " + id));
+        // Cân nhắc: Có nên xóa cả NguoiDung liên kết? Hiện tại là không.
         nhanVienRepository.delete(nhanVien);
     }
 
-    public List<String> getAvailableSlots(Integer nhanVienId, LocalDate date) {
-        List<LichHen> appointments = lichHenRepository.findByNhanVienIdAndDate(nhanVienId, date);
-        final LocalTime workStart = LocalTime.of(8, 0);
-        final LocalTime workEnd = LocalTime.of(17, 30);
-        final LocalTime lunchStart = LocalTime.of(12, 0);
-        final LocalTime lunchEnd = LocalTime.of(13, 30);
-        final int slotDurationMinutes = 30;
-        List<String> availableSlots = new ArrayList<>();
-        LocalTime currentTime = workStart;
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("HH:mm");
-        while (currentTime.isBefore(workEnd)) {
-            LocalTime slotStart = currentTime;
-            LocalTime slotEnd = currentTime.plusMinutes(slotDurationMinutes);
-            if (slotStart.isBefore(lunchEnd) && slotEnd.isAfter(lunchStart)) {
-                currentTime = currentTime.plusMinutes(slotDurationMinutes);
-                continue;
-            }
-            boolean isOverlapping = false;
-            for (LichHen appointment : appointments) {
-                LocalTime appointmentStart = appointment.getThoiGianBatDau().toLocalTime();
-                LocalTime appointmentEnd = appointment.getThoiGianKetThuc().toLocalTime();
-                if (slotStart.isBefore(appointmentEnd) && slotEnd.isAfter(appointmentStart)) {
-                    isOverlapping = true;
-                    break;
-                }
-            }
-            if (!isOverlapping) {
-                availableSlots.add(slotStart.format(formatter));
-            }
-            currentTime = currentTime.plusMinutes(slotDurationMinutes);
+    public boolean isTimeSlotAvailable(Integer nhanVienId, LocalDateTime start, LocalDateTime end) {
+        if (!nhanVienRepository.existsById(nhanVienId)) {
+            throw new RuntimeException("Không tìm thấy nhân viên với ID: " + nhanVienId);
         }
-        return availableSlots;
+        return lichHenRepository.findOverlappingAppointments(nhanVienId, start, end).isEmpty();
+    }
+
+    private void mapRequestToEntity(NhanVien nhanVien, NhanVienRequest request) {
+        nhanVien.setHoTen(request.getHoTen());
+        nhanVien.setEmail(request.getEmail());
+        nhanVien.setSoDienThoai(request.getSoDienThoai());
+        nhanVien.setChucVu(request.getChucVu());
+        nhanVien.setChuyenKhoa(request.getChuyenKhoa());
+        nhanVien.setKinhNghiem(request.getKinhNghiem());
     }
 
     private NhanVienResponse convertToResponse(NhanVien nhanVien) {
@@ -126,15 +136,5 @@ public class NhanVienService {
                 nhanVien.getKinhNghiem(),
                 nhanVien.getNguoiDung() != null ? nhanVien.getNguoiDung().getUserId() : null
         );
-    }
-
-    private void mapRequestToEntity(NhanVienRequest request, NhanVien nhanVien, NguoiDung nguoiDung) {
-        nhanVien.setHoTen(request.getHoTen());
-        nhanVien.setChucVu(request.getChucVu());
-        nhanVien.setSoDienThoai(request.getSoDienThoai());
-        nhanVien.setEmail(request.getEmail());
-        nhanVien.setChuyenKhoa(request.getChuyenKhoa());
-        nhanVien.setKinhNghiem(request.getKinhNghiem());
-        nhanVien.setNguoiDung(nguoiDung);
     }
 }

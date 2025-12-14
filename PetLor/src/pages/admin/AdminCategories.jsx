@@ -174,7 +174,7 @@ const AdminCategories = () => {
       <div className="bg-white shadow-sm rounded-xl border border-gray-200 p-6 mt-6">
         <div className="flex justify-end">
           <button
-            className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none"
+            className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-primary hover:bg-green-600 focus:outline-none"
             onClick={() => {
               setEditingId(null);
               setNewCategory({ tenDanhMuc: "", moTa: "" });
@@ -256,7 +256,7 @@ const AdminCategories = () => {
                           onClick={() => handleDelete(cat.danhMucId)}
                         >
                           <span className="material-symbols-outlined text-base">
-                            delete
+                            cancel
                           </span>
                         </button>
                       </div>

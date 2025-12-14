@@ -18,6 +18,16 @@ const AdminServices = () => {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [selectedService, setSelectedService] = useState(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [newService, setNewService] = useState({
+    tenDichVu: "",
+    moTa: "",
+    giaDichVu: 0,
+    thoiLuongUocTinhPhut: 30,
+    danhMucDvId: "",
+    roleCanThucHien: "SPA",
+  });
+  const [serviceCategories, setServiceCategories] = useState([]);
 
   // 2. Fetch Data
   const fetchServices = async () => {
@@ -39,6 +49,20 @@ const AdminServices = () => {
         : [];
 
       setServices(formattedData);
+
+      // Tự động trích xuất danh mục từ danh sách dịch vụ
+      if (Array.isArray(response)) {
+        const categoriesMap = new Map();
+        response.forEach((service) => {
+          if (service.danhMucDvId && service.tenDanhMucDv) {
+            categoriesMap.set(service.danhMucDvId, {
+              id: service.danhMucDvId,
+              tenDanhMucDv: service.tenDanhMucDv,
+            });
+          }
+        });
+        setServiceCategories(Array.from(categoriesMap.values()));
+      }
     } catch (error) {
       console.error("Lỗi tải dịch vụ:", error);
       alert("Không thể tải danh sách dịch vụ.");
@@ -102,6 +126,47 @@ const AdminServices = () => {
     } catch (error) {
       console.error("Lỗi cập nhật:", error);
       alert("Cập nhật thất bại.");
+    }
+  };
+
+  const handleOpenCreateModal = () => {
+    setNewService({
+      tenDichVu: "",
+      moTa: "",
+      giaDichVu: 0,
+      thoiLuongUocTinhPhut: 30,
+      danhMucDvId: "",
+      roleCanThucHien: "SPA",
+    });
+    setIsAddModalOpen(true);
+  };
+
+  const handleCreateService = async () => {
+    if (
+      !newService.tenDichVu ||
+      !newService.giaDichVu ||
+      !newService.danhMucDvId
+    ) {
+      alert("Vui lòng điền Tên dịch vụ, Giá và chọn Danh mục.");
+      return;
+    }
+
+    try {
+      const payload = {
+        ...newService,
+        giaDichVu: Number(newService.giaDichVu),
+        thoiLuongUocTinhPhut: Number(newService.thoiLuongUocTinhPhut),
+        danhMucDvId: Number(newService.danhMucDvId),
+      };
+
+      await petService.createService(payload);
+
+      alert("Thêm dịch vụ thành công!");
+      setIsAddModalOpen(false);
+      fetchServices(); // Refresh list
+    } catch (error) {
+      console.error("Lỗi tạo dịch vụ:", error);
+      alert("Thêm dịch vụ thất bại. Vui lòng kiểm tra lại thông tin.");
     }
   };
 
@@ -231,7 +296,7 @@ const AdminServices = () => {
             <button
               className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-primary hover:bg-green-600 focus:outline-none"
               type="button"
-              onClick={() => alert("Chức năng thêm mới")}
+              onClick={handleOpenCreateModal}
             >
               <span className="material-symbols-outlined text-sm mr-2">
                 add
@@ -332,7 +397,7 @@ const AdminServices = () => {
                           onClick={() => handleDelete(service.dichVuId)}
                         >
                           <span className="material-symbols-outlined text-base">
-                            delete
+                            cancel
                           </span>
                         </button>
                       </div>
@@ -506,6 +571,148 @@ const AdminServices = () => {
                 className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 font-medium"
               >
                 Đóng
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Thêm mới Dịch vụ */}
+      {isAddModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-lg p-6 max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-4 border-b pb-2">
+              <h3 className="text-xl font-bold text-gray-900">
+                Thêm Dịch vụ mới
+              </h3>
+              <button
+                onClick={() => setIsAddModalOpen(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <span className="material-symbols-outlined">close</span>
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700">
+                  Tên dịch vụ <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary focus:border-primary sm:text-sm"
+                  value={newService.tenDichVu}
+                  onChange={(e) =>
+                    setNewService({ ...newService, tenDichVu: e.target.value })
+                  }
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700">
+                  Mô tả
+                </label>
+                <textarea
+                  rows={3}
+                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary focus:border-primary sm:text-sm"
+                  value={newService.moTa}
+                  onChange={(e) =>
+                    setNewService({ ...newService, moTa: e.target.value })
+                  }
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">
+                    Giá dịch vụ (VNĐ) <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary focus:border-primary sm:text-sm"
+                    value={newService.giaDichVu}
+                    onChange={(e) =>
+                      setNewService({
+                        ...newService,
+                        giaDichVu: e.target.value,
+                      })
+                    }
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">
+                    Thời lượng (Phút)
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary focus:border-primary sm:text-sm"
+                    value={newService.thoiLuongUocTinhPhut}
+                    onChange={(e) =>
+                      setNewService({
+                        ...newService,
+                        thoiLuongUocTinhPhut: e.target.value,
+                      })
+                    }
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">
+                    Danh mục <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary focus:border-primary sm:text-sm"
+                    value={newService.danhMucDvId}
+                    onChange={(e) =>
+                      setNewService({
+                        ...newService,
+                        danhMucDvId: e.target.value,
+                      })
+                    }
+                  >
+                    <option value="">-- Chọn danh mục --</option>
+                    {serviceCategories.map((cat) => (
+                      <option key={cat.id} value={cat.id}>
+                        {cat.tenDanhMucDv}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">
+                    Role thực hiện
+                  </label>
+                  <select
+                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary focus:border-primary sm:text-sm"
+                    value={newService.roleCanThucHien}
+                    onChange={(e) =>
+                      setNewService({
+                        ...newService,
+                        roleCanThucHien: e.target.value,
+                      })
+                    }
+                  >
+                    <option value="SPA">Spa</option>
+                    <option value="DOCTOR">Bác sĩ</option>
+                    <option value="STAFF">Nhân viên</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex justify-end mt-6 space-x-3">
+              <button
+                onClick={() => setIsAddModalOpen(false)}
+                className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 font-medium"
+              >
+                Hủy
+              </button>
+              <button
+                onClick={handleCreateService}
+                className="px-4 py-2 bg-primary text-white rounded-md hover:bg-green-600 font-medium"
+              >
+                Thêm mới
               </button>
             </div>
           </div>

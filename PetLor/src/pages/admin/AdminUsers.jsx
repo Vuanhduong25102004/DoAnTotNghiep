@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import userService from "../../services/userservice";
+import userService from "../../services/userService";
 
 // Helper: Format ngày tháng từ chuỗi ISO
 const formatDate = (dateString) => {
@@ -477,7 +477,7 @@ const AdminUsers = () => {
                           onClick={() => handleDeleteUser(user.userId)}
                         >
                           <span className="material-symbols-outlined text-base">
-                            delete
+                            cancel
                           </span>
                         </button>
                       </div>

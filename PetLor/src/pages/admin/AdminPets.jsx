@@ -544,7 +544,7 @@ const AdminPets = () => {
                           onClick={() => handleDelete(pet.thuCungId)}
                         >
                           <span className="material-symbols-outlined text-base">
-                            delete
+                            cancel
                           </span>
                         </button>
                       </div>
