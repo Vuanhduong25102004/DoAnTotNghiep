@@ -46,7 +46,9 @@ const AdminProducts = () => {
   const [filterStock, setFilterStock] = useState("");
 
   // State phân trang
-  const [currentPage, setCurrentPage] = useState(1);
+  const [currentPage, setCurrentPage] = useState(1); // Component uses 1-based indexing
+  const [totalPages, setTotalPages] = useState(0);
+  const [totalElements, setTotalElements] = useState(0);
   const ITEMS_PER_PAGE = 5;
 
   // State cho Modal Thêm/Sửa
@@ -67,39 +69,38 @@ const AdminProducts = () => {
   const [selectedProduct, setSelectedProduct] = useState(null);
 
   // 2. Hàm tải dữ liệu
-  const fetchData = async () => {
+  const fetchProducts = async () => {
     setLoading(true);
     try {
-      // Tải dữ liệu sản phẩm và danh mục song song
-      const [productsRes, categoriesRes] = await Promise.all([
-        productService.getAllProducts(),
-        productService.getAllCategories(),
-      ]);
-      setCategories(categoriesRes || []);
+      // API page is 0-indexed, component state is 1-indexed
+      const page = currentPage - 1;
 
-      // Map dữ liệu sản phẩm
-      const formattedProducts = Array.isArray(productsRes)
-        ? productsRes.map((p) => {
-            // Map tên danh mục từ ID
-            const catName = p.danhMuc
-              ? p.danhMuc.tenDanhMuc
-              : (categoriesRes || []).find(
-                  (c) => (c.id || c.danhMucId) == p.danhMucId
-                )?.tenDanhMuc || "Chưa phân loại";
+      // Assuming productService.getAllProducts can now take parameters
+      // for pagination and filtering based on the new backend.
+      const response = await productService.getAllProducts({
+        page,
+        size: ITEMS_PER_PAGE,
+        search: searchTerm,
+        categoryId: filterCategory,
+        stockStatus: filterStock,
+      });
 
-            return {
-              ...p,
-              sanPhamId: p.id || p.sanPhamId,
-              tenSanPham: p.tenSanPham || p.name,
-              gia: p.gia || 0,
-              soLuongTonKho: p.soLuongTonKho || 0,
-              categoryName: catName,
-              hinhAnh: p.hinhAnh,
-            };
-          })
-        : [];
+      const productsData = response?.content || [];
+      const formattedProducts = productsData.map((p) => ({
+        ...p,
+        // The new API response already includes 'tenDanhMuc'.
+        // We'll just ensure the component uses a consistent property name.
+        sanPhamId: p.sanPhamId,
+        tenSanPham: p.tenSanPham,
+        gia: p.gia || 0,
+        soLuongTonKho: p.soLuongTonKho || 0,
+        categoryName: p.tenDanhMuc || "Chưa phân loại",
+        hinhAnh: p.hinhAnh,
+      }));
 
       setProducts(formattedProducts);
+      setTotalPages(response?.totalPages || 0);
+      setTotalElements(response?.totalElements || 0);
     } catch (error) {
       console.error("Lỗi tải dữ liệu sản phẩm:", error);
       alert("Không thể tải dữ liệu sản phẩm.");
@@ -108,14 +109,24 @@ const AdminProducts = () => {
     }
   };
 
+  // Fetch categories only once on component mount for filter/modal dropdowns
   useEffect(() => {
-    fetchData();
+    const fetchCategories = async () => {
+      try {
+        const categoriesRes = await productService.getAllCategories();
+        setCategories(categoriesRes || []);
+      } catch (error) {
+        console.error("Lỗi tải danh mục:", error);
+        alert("Không thể tải danh mục sản phẩm.");
+      }
+    };
+    fetchCategories();
   }, []);
 
-  // Reset trang về 1 khi thay đổi bộ lọc
+  // Fetch products when page or filters change
   useEffect(() => {
-    setCurrentPage(1);
-  }, [searchTerm, filterCategory, filterStock]);
+    fetchProducts();
+  }, [currentPage, searchTerm, filterCategory, filterStock]);
 
   // 3. Xử lý Xóa
   const handleDelete = async (id) => {
@@ -124,7 +135,8 @@ const AdminProducts = () => {
 
     try {
       await productService.deleteProduct(id);
-      setProducts((prev) => prev.filter((p) => p.sanPhamId !== id));
+      // Refetch data for the current page to reflect the deletion
+      fetchProducts();
       alert("Xóa sản phẩm thành công!");
     } catch (error) {
       console.error("Lỗi xóa:", error);
@@ -171,7 +183,8 @@ const AdminProducts = () => {
       }
       setIsModalOpen(false);
       setProductImageFile(null);
-      fetchData();
+      // Refetch data to show the new/updated product.
+      fetchProducts();
     } catch (error) {
       console.error("Lỗi lưu sản phẩm:", error);
       alert("Thao tác thất bại!");
@@ -197,47 +210,20 @@ const AdminProducts = () => {
     }
   };
 
-  // 4. Logic Lọc dữ liệu (Frontend Filter)
-  const filteredProducts = products.filter((product) => {
-    // Lọc theo từ khóa (Tên hoặc ID)
-    const matchSearch =
-      product.tenSanPham.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      product.sanPhamId.toString().includes(searchTerm);
-
-    // Lọc theo Danh mục
-    const matchCategory = filterCategory
-      ? product.danhMucId?.toString() === filterCategory ||
-        (product.danhMuc &&
-          (product.danhMuc.id || product.danhMuc.danhMucId)?.toString() ===
-            filterCategory)
-      : true;
-
-    // Lọc theo Trạng thái kho
-    let matchStock = true;
-    if (filterStock === "outstock") matchStock = product.soLuongTonKho === 0;
-    else if (filterStock === "lowstock")
-      matchStock = product.soLuongTonKho > 0 && product.soLuongTonKho < 10;
-    else if (filterStock === "instock")
-      matchStock = product.soLuongTonKho >= 10;
-
-    return matchSearch && matchCategory && matchStock;
-  });
-
-  // Logic Phân trang
-  const indexOfLastItem = currentPage * ITEMS_PER_PAGE;
-  const indexOfFirstItem = indexOfLastItem - ITEMS_PER_PAGE;
-  const currentItems = filteredProducts.slice(
-    indexOfFirstItem,
-    indexOfLastItem
-  );
-  const totalPages = Math.ceil(filteredProducts.length / ITEMS_PER_PAGE);
+  // 4. Logic Phân trang (dữ liệu đã được phân trang từ backend)
+  const currentItems = products;
+  const totalItems = totalElements;
+  const indexOfFirstItem = (currentPage - 1) * ITEMS_PER_PAGE;
 
   const handlePageChange = (pageNumber) => {
-    setCurrentPage(pageNumber);
+    if (pageNumber > 0 && pageNumber <= totalPages) {
+      setCurrentPage(pageNumber);
+    }
   };
 
   // 5. Tính toán Thống kê (Stats)
-  const totalProducts = products.length;
+  // Lưu ý: Các chỉ số thống kê bên dưới (Sắp hết, Giá trị kho) chỉ được tính cho các sản phẩm trên trang hiện tại.
+  // Để có số liệu toàn bộ, backend cần cung cấp API riêng cho thống kê.
   const lowStockCount = products.filter((p) => p.soLuongTonKho < 10).length;
   // Tính tổng giá trị kho = sum(giá * số lượng)
   const inventoryValue = products.reduce(
@@ -248,7 +234,7 @@ const AdminProducts = () => {
   const stats = [
     {
       title: "Tổng sản phẩm",
-      value: totalProducts,
+      value: totalElements, // SỬA LỖI: Lấy tổng số sản phẩm từ state
       icon: "inventory_2",
       color: "text-blue-600",
       bg: "bg-blue-100",
@@ -336,7 +322,10 @@ const AdminProducts = () => {
                 placeholder="Tìm tên SP, mã SP..."
                 type="text"
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                onChange={(e) => {
+                  setSearchTerm(e.target.value);
+                  setCurrentPage(1);
+                }}
               />
             </div>
 
@@ -345,7 +334,10 @@ const AdminProducts = () => {
               <select
                 className="block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-primary focus:border-primary sm:text-sm rounded-md h-10"
                 value={filterCategory}
-                onChange={(e) => setFilterCategory(e.target.value)}
+                onChange={(e) => {
+                  setFilterCategory(e.target.value);
+                  setCurrentPage(1);
+                }}
               >
                 <option value="">Tất cả danh mục</option>
                 {categories.map((cat) => (
@@ -364,7 +356,10 @@ const AdminProducts = () => {
               <select
                 className="block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-primary focus:border-primary sm:text-sm rounded-md h-10"
                 value={filterStock}
-                onChange={(e) => setFilterStock(e.target.value)}
+                onChange={(e) => {
+                  setFilterStock(e.target.value);
+                  setCurrentPage(1);
+                }}
               >
                 <option value="">Tất cả trạng thái kho</option>
                 <option value="instock">Còn hàng (&ge;10)</option>
@@ -601,15 +596,14 @@ const AdminProducts = () => {
               <p className="text-sm text-gray-700">
                 Hiển thị{" "}
                 <span className="font-medium">
-                  {filteredProducts.length > 0 ? indexOfFirstItem + 1 : 0}
+                  {totalItems > 0 ? indexOfFirstItem + 1 : 0}
                 </span>{" "}
                 đến{" "}
                 <span className="font-medium">
-                  {Math.min(indexOfLastItem, filteredProducts.length)}
+                  {indexOfFirstItem + currentItems.length}
                 </span>{" "}
-                trong số{" "}
-                <span className="font-medium">{filteredProducts.length}</span>{" "}
-                kết quả
+                trong số <span className="font-medium">{totalItems}</span> kết
+                quả
               </p>
             </div>
             <div>

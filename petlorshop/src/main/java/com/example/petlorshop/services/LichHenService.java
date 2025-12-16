@@ -7,6 +7,8 @@ import com.example.petlorshop.models.*;
 import com.example.petlorshop.repositories.*;
 import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
@@ -31,8 +33,8 @@ public class LichHenService {
     private static final LocalTime OPENING_TIME = LocalTime.of(8, 0);
     private static final LocalTime CLOSING_TIME = LocalTime.of(18, 0);
 
-    public List<LichHenResponse> getAllLichHen() {
-        return lichHenRepository.findAll().stream().map(this::convertToResponse).collect(Collectors.toList());
+    public Page<LichHenResponse> getAllLichHen(Pageable pageable) {
+        return lichHenRepository.findAll(pageable).map(this::convertToResponse);
     }
 
     public Optional<LichHenResponse> getLichHenById(Integer id) {

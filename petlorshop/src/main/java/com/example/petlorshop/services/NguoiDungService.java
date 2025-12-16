@@ -10,12 +10,13 @@ import com.example.petlorshop.repositories.NguoiDungRepository;
 import com.example.petlorshop.repositories.NhanVienRepository;
 import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.util.List;
 import java.util.Optional;
 
 @Service
@@ -107,13 +108,13 @@ public class NguoiDungService {
             case SPA: return "Nhân viên Spa/Grooming";
             case RECEPTIONIST: return "Lễ tân";
             case STAFF: return "Nhân viên cửa hàng";
-            case ADMIN: return "Quản trị viên";
+            case ADMIN: return "Admin";
             default: return "Nhân viên";
         }
     }
 
-    public List<NguoiDung> getAllNguoiDung() {
-        return nguoiDungRepository.findAll();
+    public Page<NguoiDung> getAllNguoiDung(Pageable pageable) {
+        return nguoiDungRepository.findAll(pageable);
     }
 
     public Optional<NguoiDung> getNguoiDungById(Integer id) {

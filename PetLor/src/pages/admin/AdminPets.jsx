@@ -48,49 +48,51 @@ const AdminPets = () => {
 
   // State phân trang
   const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(0);
+  const [totalElements, setTotalElements] = useState(0);
   const ITEMS_PER_PAGE = 5;
 
   // 2. Fetch Data
   const fetchPets = async () => {
     setLoading(true);
     try {
-      const response = await petService.getAllPets();
+      const page = currentPage - 1;
+      const params = {
+        page,
+        size: ITEMS_PER_PAGE,
+        search: searchTerm,
+        species: filterSpecies,
+        gender: filterGender,
+      };
+      if (!params.search) delete params.search;
+      if (!params.species) delete params.species;
+      if (!params.gender) delete params.gender;
+
+      const response = await petService.getAllPets(params);
+      const petsData = response?.content || [];
 
       // Map dữ liệu từ API sang format của UI
-      const formattedData = Array.isArray(response)
-        ? response.map((pet) => ({
-            ...pet,
-            thuCungId: pet.id || pet.thuCungId,
-            // Xử lý thông tin chủ nuôi (Tùy backend trả về 'nguoiDung', 'user' hay chỉ 'userId')
-            ownerName:
-              pet.tenChu ||
-              (pet.nguoiDung
-                ? pet.nguoiDung.hoTen || pet.nguoiDung.tenNguoiDung
-                : pet.user
-                ? pet.user.hoTen
-                : "Chưa rõ"),
-            ownerId:
-              pet.userId ||
-              (pet.nguoiDung
-                ? pet.nguoiDung.userId || pet.nguoiDung.id
-                : pet.user
-                ? pet.user.userId || pet.user.id
-                : pet.nguoiDungId),
-            // Ảnh: Nếu null thì dùng ảnh mặc định
-            img: pet.hinhAnh
-              ? `http://localhost:8080/uploads/${pet.hinhAnh}`
-              : "https://placehold.co/100x100?text=Pet",
-            // Các trường khác map thẳng
-            tenThuCung: pet.tenThuCung || "Chưa đặt tên",
-            chungLoai: pet.chungLoai || "Khác",
-            giongLoai: pet.giongLoai || "---",
-            ngaySinh: pet.ngaySinh,
-            gioiTinh: pet.gioiTinh || "Chưa rõ",
-            ghiChuSucKhoe: pet.ghiChuSucKhoe || "Bình thường",
-          }))
-        : [];
+      const formattedData = petsData.map((pet) => ({
+        ...pet,
+        thuCungId: pet.thuCungId,
+        ownerName: pet.tenChu || "Chưa rõ",
+        ownerId: pet.userId,
+        // Ảnh: Nếu null thì dùng ảnh mặc định
+        img: pet.hinhAnh
+          ? `http://localhost:8080/uploads/${pet.hinhAnh}`
+          : "https://placehold.co/100x100?text=Pet",
+        // Các trường khác map thẳng
+        tenThuCung: pet.tenThuCung || "Chưa đặt tên",
+        chungLoai: pet.chungLoai || "Khác",
+        giongLoai: pet.giongLoai || "---",
+        ngaySinh: pet.ngaySinh,
+        gioiTinh: pet.gioiTinh || "Chưa rõ",
+        ghiChuSucKhoe: pet.ghiChuSucKhoe || "Bình thường",
+      }));
 
       setPets(formattedData);
+      setTotalPages(response?.totalPages || 0);
+      setTotalElements(response?.totalElements || 0);
     } catch (error) {
       console.error("Lỗi tải danh sách thú cưng:", error);
       alert("Không thể tải dữ liệu thú cưng.");
@@ -101,12 +103,7 @@ const AdminPets = () => {
 
   useEffect(() => {
     fetchPets();
-  }, []);
-
-  // Reset trang về 1 khi thay đổi bộ lọc
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [searchTerm, filterSpecies, filterGender]);
+  }, [currentPage, searchTerm, filterSpecies, filterGender]);
 
   const handleViewDetail = (pet) => {
     setSelectedPet(pet);
@@ -222,8 +219,12 @@ const AdminPets = () => {
 
     try {
       await petService.deletePet(id);
-      setPets((prev) => prev.filter((p) => p.thuCungId !== id));
       alert("Xóa thành công!");
+      if (pets.length === 1 && currentPage > 1) {
+        setCurrentPage(currentPage - 1);
+      } else {
+        fetchPets();
+      }
     } catch (error) {
       console.error("Lỗi xóa:", error);
       alert(
@@ -232,37 +233,24 @@ const AdminPets = () => {
     }
   };
 
-  // 4. Filter Logic
-  const filteredPets = pets.filter((pet) => {
-    // Tìm kiếm: Tên thú cưng HOẶC Tên chủ
-    const matchSearch =
-      pet.tenThuCung.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (pet.ownerName &&
-        pet.ownerName.toLowerCase().includes(searchTerm.toLowerCase()));
-
-    // Lọc Chủng loại (Chó, Mèo...)
-    const matchSpecies = filterSpecies ? pet.chungLoai === filterSpecies : true;
-
-    // Lọc Giới tính
-    const matchGender = filterGender ? pet.gioiTinh === filterGender : true;
-
-    return matchSearch && matchSpecies && matchGender;
-  });
-
   // Logic Phân trang
-  const indexOfLastItem = currentPage * ITEMS_PER_PAGE;
-  const indexOfFirstItem = indexOfLastItem - ITEMS_PER_PAGE;
-  const currentItems = filteredPets.slice(indexOfFirstItem, indexOfLastItem);
-  const totalPages = Math.ceil(filteredPets.length / ITEMS_PER_PAGE);
-
   const handlePageChange = (pageNumber) => {
-    setCurrentPage(pageNumber);
+    if (pageNumber > 0 && pageNumber <= totalPages) {
+      setCurrentPage(pageNumber);
+    }
   };
+  const indexOfFirstItem = (currentPage - 1) * ITEMS_PER_PAGE;
 
   // 5. Stats Calculation (Động)
-  const totalPets = pets.length;
-  const countDogs = pets.filter((p) => p.chungLoai === "Chó").length;
-  const countCats = pets.filter((p) => p.chungLoai === "Mèo").length;
+  const totalPets = totalElements;
+  // These stats are now based on the current page's data.
+  // For global stats, a dedicated API endpoint would be better.
+  const countDogs = pets.filter(
+    (p) => p.chungLoai && p.chungLoai.toLowerCase() === "chó"
+  ).length;
+  const countCats = pets.filter(
+    (p) => p.chungLoai && p.chungLoai.toLowerCase() === "mèo"
+  ).length;
 
   const stats = [
     {
@@ -353,7 +341,10 @@ const AdminPets = () => {
                 placeholder="Tìm tên thú cưng, chủ nuôi..."
                 type="text"
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                onChange={(e) => {
+                  setSearchTerm(e.target.value);
+                  setCurrentPage(1);
+                }}
               />
             </div>
 
@@ -362,7 +353,10 @@ const AdminPets = () => {
               <select
                 className="block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-primary focus:border-primary sm:text-sm rounded-md h-10"
                 value={filterSpecies}
-                onChange={(e) => setFilterSpecies(e.target.value)}
+                onChange={(e) => {
+                  setFilterSpecies(e.target.value);
+                  setCurrentPage(1);
+                }}
               >
                 <option value="">Tất cả chủng loại</option>
                 <option value="Chó">Chó</option>
@@ -376,7 +370,10 @@ const AdminPets = () => {
               <select
                 className="block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-primary focus:border-primary sm:text-sm rounded-md h-10"
                 value={filterGender}
-                onChange={(e) => setFilterGender(e.target.value)}
+                onChange={(e) => {
+                  setFilterGender(e.target.value);
+                  setCurrentPage(1);
+                }}
               >
                 <option value="">Tất cả giới tính</option>
                 <option value="Đực">Đực</option>
@@ -464,8 +461,8 @@ const AdminPets = () => {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {currentItems.length > 0 ? (
-                currentItems.map((pet, index) => (
+              {pets.length > 0 ? (
+                pets.map((pet, index) => (
                   <tr
                     key={pet.thuCungId || index}
                     className="hover:bg-gray-50 transition-colors"
@@ -605,69 +602,62 @@ const AdminPets = () => {
               <p className="text-sm text-gray-700">
                 Hiển thị{" "}
                 <span className="font-medium">
-                  {filteredPets.length > 0 ? indexOfFirstItem + 1 : 0}
+                  {totalElements > 0 ? indexOfFirstItem + 1 : 0}
                 </span>{" "}
                 đến{" "}
                 <span className="font-medium">
-                  {Math.min(indexOfLastItem, filteredPets.length)}
+                  {indexOfFirstItem + pets.length}
                 </span>{" "}
-                trong số{" "}
-                <span className="font-medium">{filteredPets.length}</span> kết
-                quả
+                trong số <span className="font-medium">{totalElements}</span>{" "}
+                kết quả
               </p>
             </div>
-            <div>
-              <nav
-                className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px"
-                aria-label="Pagination"
-              >
-                <button
-                  onClick={() => handlePageChange(currentPage - 1)}
-                  disabled={currentPage === 1}
-                  className={`relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium ${
-                    currentPage === 1
-                      ? "text-gray-300 cursor-not-allowed"
-                      : "text-gray-500 hover:bg-gray-50"
-                  }`}
+            {totalPages > 1 && (
+              <div>
+                <nav
+                  className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px"
+                  aria-label="Pagination"
                 >
-                  <span className="sr-only">Previous</span>
-                  <span className="material-symbols-outlined text-base">
-                    chevron_left
-                  </span>
-                </button>
+                  <button
+                    onClick={() => handlePageChange(currentPage - 1)}
+                    disabled={currentPage === 1}
+                    className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50"
+                  >
+                    <span className="sr-only">Previous</span>
+                    <span className="material-symbols-outlined text-base">
+                      chevron_left
+                    </span>
+                  </button>
 
-                {Array.from({ length: totalPages }, (_, i) => i + 1).map(
-                  (number) => (
-                    <button
-                      key={number}
-                      onClick={() => handlePageChange(number)}
-                      className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${
-                        currentPage === number
-                          ? "z-10 bg-primary border-primary text-white"
-                          : "bg-white border-gray-300 text-gray-500 hover:bg-gray-50"
-                      }`}
-                    >
-                      {number}
-                    </button>
-                  )
-                )}
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map(
+                    (number) => (
+                      <button
+                        key={number}
+                        onClick={() => handlePageChange(number)}
+                        className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${
+                          currentPage === number
+                            ? "z-10 bg-primary border-primary text-white"
+                            : "bg-white border-gray-300 text-gray-500 hover:bg-gray-50"
+                        }`}
+                      >
+                        {number}
+                      </button>
+                    )
+                  )}
 
-                <button
-                  onClick={() => handlePageChange(currentPage + 1)}
-                  disabled={currentPage === totalPages || totalPages === 0}
-                  className={`relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium ${
-                    currentPage === totalPages || totalPages === 0
-                      ? "text-gray-300 cursor-not-allowed"
-                      : "text-gray-500 hover:bg-gray-50"
-                  }`}
-                >
-                  <span className="sr-only">Next</span>
-                  <span className="material-symbols-outlined text-base">
-                    chevron_right
-                  </span>
-                </button>
-              </nav>
-            </div>
+                  <button
+                    onClick={() => handlePageChange(currentPage + 1)}
+                    disabled={currentPage === totalPages || totalPages === 0}
+                    className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50"
+                  >
+                    <span className="sr-only">Next</span>
+                    <span className="material-symbols-outlined text-base">
+                      chevron_right
+                    </span>
+                  </button>
+                </nav>
+              </div>
+            )}
           </div>
         </div>
       </div>

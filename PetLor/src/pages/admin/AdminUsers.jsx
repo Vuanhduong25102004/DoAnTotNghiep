@@ -56,14 +56,31 @@ const AdminUsers = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [filterRole, setFilterRole] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(0);
+  const [totalElements, setTotalElements] = useState(0);
   const ITEMS_PER_PAGE = 5;
 
   const fetchUsers = async () => {
+    setLoading(true);
     try {
-      const data = await userService.getAllUsers();
-      setUsers(data);
+      const page = currentPage - 1; // API is 0-indexed
+      const params = {
+        page,
+        size: ITEMS_PER_PAGE,
+        search: searchTerm,
+        role: filterRole,
+      };
+      // Remove empty params to keep URL clean
+      if (!params.search) delete params.search;
+      if (!params.role) delete params.role;
+
+      const response = await userService.getAllUsers(params);
+      setUsers(response?.content || []);
+      setTotalPages(response?.totalPages || 0);
+      setTotalElements(response?.totalElements || 0);
     } catch (error) {
       console.error("Lỗi khi tải danh sách người dùng:", error);
+      alert("Không thể tải danh sách người dùng.");
     } finally {
       setLoading(false);
     }
@@ -71,12 +88,7 @@ const AdminUsers = () => {
 
   useEffect(() => {
     fetchUsers();
-  }, []);
-
-  // Reset trang về 1 khi thay đổi bộ lọc
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [searchTerm, filterRole]);
+  }, [currentPage, searchTerm, filterRole]);
 
   const handleViewDetail = (user) => {
     setSelectedUser(user);
@@ -193,8 +205,13 @@ const AdminUsers = () => {
 
     try {
       await userService.deleteUser(userId);
-      setUsers((prev) => prev.filter((u) => u.userId !== userId));
       alert("Xóa người dùng thành công!");
+      // After deletion, if the current page becomes empty, go to the previous page.
+      if (users.length === 1 && currentPage > 1) {
+        setCurrentPage(currentPage - 1);
+      } else {
+        fetchUsers(); // Otherwise, just refresh the current page.
+      }
     } catch (error) {
       console.error("Lỗi xóa người dùng:", error);
       alert(
@@ -203,31 +220,18 @@ const AdminUsers = () => {
     }
   };
 
-  // Filter Logic
-  const filteredUsers = users.filter((user) => {
-    const term = searchTerm.toLowerCase();
-    const matchSearch =
-      (user.hoTen && user.hoTen.toLowerCase().includes(term)) ||
-      (user.email && user.email.toLowerCase().includes(term)) ||
-      (user.soDienThoai && user.soDienThoai.includes(term));
-
-    const matchRole = filterRole ? user.role === filterRole : true;
-
-    return matchSearch && matchRole;
-  });
-
   // Pagination Logic
-  const indexOfLastItem = currentPage * ITEMS_PER_PAGE;
-  const indexOfFirstItem = indexOfLastItem - ITEMS_PER_PAGE;
-  const currentItems = filteredUsers.slice(indexOfFirstItem, indexOfLastItem);
-  const totalPages = Math.ceil(filteredUsers.length / ITEMS_PER_PAGE);
-
   const handlePageChange = (pageNumber) => {
-    setCurrentPage(pageNumber);
+    if (pageNumber > 0 && pageNumber <= totalPages) {
+      setCurrentPage(pageNumber);
+    }
   };
+  const indexOfFirstItem = (currentPage - 1) * ITEMS_PER_PAGE;
 
   // Stats Calculation
-  const totalUsers = users.length;
+  const totalUsers = totalElements;
+  // Note: The following stats are calculated based on the data of the current page only.
+  // For accurate global stats, dedicated backend APIs are needed.
   const newUsersCount = users.filter((u) => {
     if (!u.ngayTao) return false;
     const d = new Date(u.ngayTao);
@@ -326,7 +330,10 @@ const AdminUsers = () => {
                 placeholder="Tìm tên, email, sđt..."
                 type="text"
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                onChange={(e) => {
+                  setSearchTerm(e.target.value);
+                  setCurrentPage(1);
+                }}
               />
             </div>
             {/* Select Role */}
@@ -334,7 +341,10 @@ const AdminUsers = () => {
               <select
                 className="block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-primary focus:border-primary sm:text-sm rounded-md h-10"
                 value={filterRole}
-                onChange={(e) => setFilterRole(e.target.value)}
+                onChange={(e) => {
+                  setFilterRole(e.target.value);
+                  setCurrentPage(1);
+                }}
               >
                 <option value="">Tất cả vai trò</option>
                 <option value="USER">Khách hàng</option>
@@ -424,8 +434,8 @@ const AdminUsers = () => {
                     Đang tải dữ liệu...
                   </td>
                 </tr>
-              ) : currentItems.length > 0 ? (
-                currentItems.map((user, index) => (
+              ) : users.length > 0 ? (
+                users.map((user, index) => (
                   <tr
                     key={user.userId || index}
                     className="hover:bg-gray-50 transition-colors"
@@ -545,69 +555,62 @@ const AdminUsers = () => {
               <p className="text-sm text-gray-700">
                 Hiển thị{" "}
                 <span className="font-medium">
-                  {filteredUsers.length > 0 ? indexOfFirstItem + 1 : 0}
+                  {totalElements > 0 ? indexOfFirstItem + 1 : 0}
                 </span>{" "}
                 đến{" "}
                 <span className="font-medium">
-                  {Math.min(indexOfLastItem, filteredUsers.length)}
+                  {indexOfFirstItem + users.length}
                 </span>{" "}
-                trong số{" "}
-                <span className="font-medium">{filteredUsers.length}</span> kết
-                quả
+                trong số <span className="font-medium">{totalElements}</span>{" "}
+                kết quả
               </p>
             </div>
-            <div>
-              <nav
-                className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px"
-                aria-label="Pagination"
-              >
-                <button
-                  onClick={() => handlePageChange(currentPage - 1)}
-                  disabled={currentPage === 1}
-                  className={`relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium ${
-                    currentPage === 1
-                      ? "text-gray-300 cursor-not-allowed"
-                      : "text-gray-500 hover:bg-gray-50"
-                  }`}
+            {totalPages > 1 && (
+              <div>
+                <nav
+                  className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px"
+                  aria-label="Pagination"
                 >
-                  <span className="sr-only">Previous</span>
-                  <span className="material-symbols-outlined text-base">
-                    chevron_left
-                  </span>
-                </button>
+                  <button
+                    onClick={() => handlePageChange(currentPage - 1)}
+                    disabled={currentPage === 1}
+                    className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50"
+                  >
+                    <span className="sr-only">Previous</span>
+                    <span className="material-symbols-outlined text-base">
+                      chevron_left
+                    </span>
+                  </button>
 
-                {Array.from({ length: totalPages }, (_, i) => i + 1).map(
-                  (number) => (
-                    <button
-                      key={number}
-                      onClick={() => handlePageChange(number)}
-                      className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${
-                        currentPage === number
-                          ? "z-10 bg-primary border-primary text-white"
-                          : "bg-white border-gray-300 text-gray-500 hover:bg-gray-50"
-                      }`}
-                    >
-                      {number}
-                    </button>
-                  )
-                )}
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map(
+                    (number) => (
+                      <button
+                        key={number}
+                        onClick={() => handlePageChange(number)}
+                        className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${
+                          currentPage === number
+                            ? "z-10 bg-primary border-primary text-white"
+                            : "bg-white border-gray-300 text-gray-500 hover:bg-gray-50"
+                        }`}
+                      >
+                        {number}
+                      </button>
+                    )
+                  )}
 
-                <button
-                  onClick={() => handlePageChange(currentPage + 1)}
-                  disabled={currentPage === totalPages || totalPages === 0}
-                  className={`relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium ${
-                    currentPage === totalPages || totalPages === 0
-                      ? "text-gray-300 cursor-not-allowed"
-                      : "text-gray-500 hover:bg-gray-50"
-                  }`}
-                >
-                  <span className="sr-only">Next</span>
-                  <span className="material-symbols-outlined text-base">
-                    chevron_right
-                  </span>
-                </button>
-              </nav>
-            </div>
+                  <button
+                    onClick={() => handlePageChange(currentPage + 1)}
+                    disabled={currentPage === totalPages || totalPages === 0}
+                    className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50"
+                  >
+                    <span className="sr-only">Next</span>
+                    <span className="material-symbols-outlined text-base">
+                      chevron_right
+                    </span>
+                  </button>
+                </nav>
+              </div>
+            )}
           </div>
         </div>
       </div>

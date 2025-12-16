@@ -50,32 +50,44 @@ const AdminEmployees = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [filterPosition, setFilterPosition] = useState("");
 
+  // Pagination State
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(0);
+  const [totalElements, setTotalElements] = useState(0);
+  const ITEMS_PER_PAGE = 5;
+
   // 2. Fetch Data
   const fetchEmployees = async () => {
     setLoading(true);
     try {
-      const response = await userService.getAllStaff();
+      const page = currentPage - 1; // API is 0-indexed
+      const params = {
+        page,
+        size: ITEMS_PER_PAGE,
+        search: searchTerm,
+        position: filterPosition, // Assuming backend filters by 'position'
+      };
+      if (!params.search) delete params.search;
+      if (!params.position) delete params.position;
+
+      const response = await userService.getAllStaff(params);
 
       // Map dữ liệu từ API
-      const formattedData = Array.isArray(response)
-        ? response.map((emp) => ({
-            ...emp,
-            nhanVienId: emp.id || emp.nhanVienId || emp.maNhanVien,
-            hoTen: emp.hoTen || emp.tenNhanVien,
-            email: emp.email || "---",
-            soDienThoai: emp.soDienThoai || "---",
-            chucVu: emp.chucVu || emp.vaiTro || "Nhân viên",
-            chuyenKhoa: emp.chuyenKhoa || "---",
-            kinhNghiem: emp.kinhNghiem || "---",
-            // Ảnh đại diện
-            img: emp.anhDaiDien
-              ? `http://localhost:8080/uploads/${emp.anhDaiDien}`
-              : "https://placehold.co/100x100?text=Staff",
-            userId: emp.userId || (emp.user ? emp.user.id : null),
-          }))
-        : [];
-
+      const employeesData = response?.content || [];
+      const formattedData = employeesData.map((emp) => ({
+        ...emp,
+        nhanVienId: emp.nhanVienId,
+        hoTen: emp.hoTen || "Chưa có tên",
+        email: emp.email || "---",
+        soDienThoai: emp.soDienThoai || "---",
+        chucVu: emp.chucVu || "Nhân viên",
+        img: emp.anhDaiDien
+          ? `http://localhost:8080/uploads/${emp.anhDaiDien}`
+          : "https://placehold.co/100x100?text=Staff",
+      }));
       setEmployees(formattedData);
+      setTotalPages(response?.totalPages || 0);
+      setTotalElements(response?.totalElements || 0);
     } catch (error) {
       console.error("Lỗi tải danh sách nhân viên:", error);
       alert("Không thể tải dữ liệu nhân viên.");
@@ -86,7 +98,7 @@ const AdminEmployees = () => {
 
   useEffect(() => {
     fetchEmployees();
-  }, []);
+  }, [currentPage, searchTerm, filterPosition]);
 
   // 3. Actions
   const handleDelete = async (id) => {
@@ -94,8 +106,12 @@ const AdminEmployees = () => {
       return;
     try {
       await userService.deleteStaff(id);
-      setEmployees((prev) => prev.filter((e) => e.nhanVienId !== id));
       alert("Xóa thành công!");
+      if (employees.length === 1 && currentPage > 1) {
+        setCurrentPage(currentPage - 1);
+      } else {
+        fetchEmployees();
+      }
     } catch (error) {
       console.error(error);
       alert(
@@ -212,23 +228,10 @@ const AdminEmployees = () => {
     }
   };
 
-  // 4. Filter Logic
-  const filteredEmployees = employees.filter((emp) => {
-    // Tìm kiếm: Tên, Email hoặc SĐT
-    const matchSearch =
-      emp.hoTen.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      emp.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      emp.soDienThoai.includes(searchTerm);
-
-    // Lọc theo chức vụ
-    const matchPosition = filterPosition ? emp.chucVu === filterPosition : true;
-
-    return matchSearch && matchPosition;
-  });
-
   // 5. Stats Calculation
-  const totalStaff = employees.length;
+  const totalStaff = totalElements;
   // Đếm số lượng bác sĩ (tìm theo từ khóa 'Bác sĩ' hoặc 'Doctor')
+  // Note: these stats are calculated on the current page's data only.
   const countVets = employees.filter(
     (e) =>
       e.chucVu && (e.chucVu.includes("Bác sĩ") || e.chucVu.includes("Doctor"))
@@ -242,27 +245,12 @@ const AdminEmployees = () => {
         e.chucVu.toLowerCase().includes("chăm sóc"))
   ).length;
 
-  // State phân trang
-  const [currentPage, setCurrentPage] = useState(1);
-  const ITEMS_PER_PAGE = 5;
-
-  // Reset trang về 1 khi thay đổi bộ lọc
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [searchTerm, filterPosition]);
-
-  // Logic Phân trang
-  const indexOfLastItem = currentPage * ITEMS_PER_PAGE;
-  const indexOfFirstItem = indexOfLastItem - ITEMS_PER_PAGE;
-  const currentItems = filteredEmployees.slice(
-    indexOfFirstItem,
-    indexOfLastItem
-  );
-  const totalPages = Math.ceil(filteredEmployees.length / ITEMS_PER_PAGE);
-
   const handlePageChange = (pageNumber) => {
-    setCurrentPage(pageNumber);
+    if (pageNumber > 0 && pageNumber <= totalPages) {
+      setCurrentPage(pageNumber);
+    }
   };
+  const indexOfFirstItem = (currentPage - 1) * ITEMS_PER_PAGE;
 
   const stats = [
     {
@@ -355,7 +343,10 @@ const AdminEmployees = () => {
                 placeholder="Tìm tên, email, sđt..."
                 type="text"
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                onChange={(e) => {
+                  setSearchTerm(e.target.value);
+                  setCurrentPage(1);
+                }}
               />
             </div>
             {/* Select Position */}
@@ -363,7 +354,10 @@ const AdminEmployees = () => {
               <select
                 className="block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-primary focus:border-primary sm:text-sm rounded-md h-10"
                 value={filterPosition}
-                onChange={(e) => setFilterPosition(e.target.value)}
+                onChange={(e) => {
+                  setFilterPosition(e.target.value);
+                  setCurrentPage(1);
+                }}
               >
                 <option value="">Tất cả chức vụ</option>
                 <option value="Bác sĩ thú y">Bác sĩ thú y</option>
@@ -428,8 +422,8 @@ const AdminEmployees = () => {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {currentItems.length > 0 ? (
-                currentItems.map((emp, index) => (
+              {employees.length > 0 ? (
+                employees.map((emp, index) => (
                   <tr
                     key={emp.nhanVienId || index}
                     className="hover:bg-gray-50 transition-colors"
@@ -548,69 +542,62 @@ const AdminEmployees = () => {
               <p className="text-sm text-gray-700">
                 Hiển thị{" "}
                 <span className="font-medium">
-                  {filteredEmployees.length > 0 ? indexOfFirstItem + 1 : 0}
+                  {totalElements > 0 ? indexOfFirstItem + 1 : 0}
                 </span>{" "}
                 đến{" "}
                 <span className="font-medium">
-                  {Math.min(indexOfLastItem, filteredEmployees.length)}
+                  {indexOfFirstItem + employees.length}
                 </span>{" "}
-                trong số{" "}
-                <span className="font-medium">{filteredEmployees.length}</span>{" "}
+                trong số <span className="font-medium">{totalElements}</span>{" "}
                 kết quả
               </p>
             </div>
-            <div>
-              <nav
-                className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px"
-                aria-label="Pagination"
-              >
-                <button
-                  onClick={() => handlePageChange(currentPage - 1)}
-                  disabled={currentPage === 1}
-                  className={`relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium ${
-                    currentPage === 1
-                      ? "text-gray-300 cursor-not-allowed"
-                      : "text-gray-500 hover:bg-gray-50"
-                  }`}
+            {totalPages > 1 && (
+              <div>
+                <nav
+                  className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px"
+                  aria-label="Pagination"
                 >
-                  <span className="sr-only">Previous</span>
-                  <span className="material-symbols-outlined text-base">
-                    chevron_left
-                  </span>
-                </button>
+                  <button
+                    onClick={() => handlePageChange(currentPage - 1)}
+                    disabled={currentPage === 1}
+                    className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50"
+                  >
+                    <span className="sr-only">Previous</span>
+                    <span className="material-symbols-outlined text-base">
+                      chevron_left
+                    </span>
+                  </button>
 
-                {Array.from({ length: totalPages }, (_, i) => i + 1).map(
-                  (number) => (
-                    <button
-                      key={number}
-                      onClick={() => handlePageChange(number)}
-                      className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${
-                        currentPage === number
-                          ? "z-10 bg-primary border-primary text-white"
-                          : "bg-white border-gray-300 text-gray-500 hover:bg-gray-50"
-                      }`}
-                    >
-                      {number}
-                    </button>
-                  )
-                )}
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map(
+                    (number) => (
+                      <button
+                        key={number}
+                        onClick={() => handlePageChange(number)}
+                        className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${
+                          currentPage === number
+                            ? "z-10 bg-primary border-primary text-white"
+                            : "bg-white border-gray-300 text-gray-500 hover:bg-gray-50"
+                        }`}
+                      >
+                        {number}
+                      </button>
+                    )
+                  )}
 
-                <button
-                  onClick={() => handlePageChange(currentPage + 1)}
-                  disabled={currentPage === totalPages || totalPages === 0}
-                  className={`relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium ${
-                    currentPage === totalPages || totalPages === 0
-                      ? "text-gray-300 cursor-not-allowed"
-                      : "text-gray-500 hover:bg-gray-50"
-                  }`}
-                >
-                  <span className="sr-only">Next</span>
-                  <span className="material-symbols-outlined text-base">
-                    chevron_right
-                  </span>
-                </button>
-              </nav>
-            </div>
+                  <button
+                    onClick={() => handlePageChange(currentPage + 1)}
+                    disabled={currentPage === totalPages || totalPages === 0}
+                    className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50"
+                  >
+                    <span className="sr-only">Next</span>
+                    <span className="material-symbols-outlined text-base">
+                      chevron_right
+                    </span>
+                  </button>
+                </nav>
+              </div>
+            )}
           </div>
         </div>
       </div>

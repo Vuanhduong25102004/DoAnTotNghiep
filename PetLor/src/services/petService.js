@@ -1,8 +1,8 @@
 import apiClient from './apiClient';
 
 const petService = {
-  // --- THÚ CƯNG ---
-  getAllPets: () => apiClient.get('/thu-cung'),
+  // --- THÚ CƯNG --- // Updated for pagination
+  getAllPets: (params) => apiClient.get('/thu-cung', { params }),
   
   getPetById: (id) => apiClient.get(`/thu-cung/${id}`),
   
@@ -19,7 +19,7 @@ const petService = {
   deletePet: (id) => apiClient.delete(`/thu-cung/${id}`),
 
   // --- DỊCH VỤ (SPA, KHÁM...) ---
-  getAllServices: () => apiClient.get('/dich-vu'),
+  getAllServices: (params) => apiClient.get('/dich-vu', { params }),
   
   getServiceById: (id) => apiClient.get(`/dich-vu/${id}`),
   
@@ -36,7 +36,7 @@ const petService = {
   deleteService: (id) => apiClient.delete(`/dich-vu/${id}`),
 
   // --- LỊCH HẸN ---
-  getAllAppointments: () => apiClient.get('/lich-hen'),
+  getAllAppointments: (params) => apiClient.get('/lich-hen', { params }),
   
   getAppointmentById: (id) => apiClient.get(`/lich-hen/${id}`),
   

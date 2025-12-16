@@ -8,6 +8,8 @@ import com.example.petlorshop.services.NguoiDungService;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -16,9 +18,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/nguoi-dung")
@@ -54,10 +54,8 @@ public class NguoiDungController {
     }
 
     @GetMapping
-    public List<NguoiDungResponse> getAllNguoiDung() {
-        return nguoiDungService.getAllNguoiDung().stream()
-                .map(this::toNguoiDungResponse)
-                .collect(Collectors.toList());
+    public Page<NguoiDungResponse> getAllNguoiDung(Pageable pageable) {
+        return nguoiDungService.getAllNguoiDung(pageable).map(this::toNguoiDungResponse);
     }
 
     @GetMapping("/{id}")

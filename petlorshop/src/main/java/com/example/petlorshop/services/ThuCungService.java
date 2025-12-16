@@ -9,12 +9,13 @@ import com.example.petlorshop.repositories.NguoiDungRepository;
 import com.example.petlorshop.repositories.ThuCungRepository;
 import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.util.List;
 import java.util.Optional;
 
 @Service
@@ -32,8 +33,8 @@ public class ThuCungService {
     @Autowired
     private FileStorageService fileStorageService;
 
-    public List<ThuCung> getAllThuCung() {
-        return thuCungRepository.findAll();
+    public Page<ThuCung> getAllThuCung(Pageable pageable) {
+        return thuCungRepository.findAll(pageable);
     }
 
     public Optional<ThuCung> getThuCungById(Integer id) {

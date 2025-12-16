@@ -7,12 +7,12 @@ import com.example.petlorshop.models.DichVu;
 import com.example.petlorshop.repositories.DanhMucDichVuRepository;
 import com.example.petlorshop.repositories.DichVuRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.util.List;
 import java.util.Optional;
-import java.util.stream.Collectors;
 
 @Service
 public class DichVuService {
@@ -26,10 +26,9 @@ public class DichVuService {
     @Autowired
     private FileStorageService fileStorageService;
 
-    public List<DichVuResponse> getAllDichVu() {
-        return dichVuRepository.findAll().stream()
-                .map(this::convertToResponse)
-                .collect(Collectors.toList());
+    public Page<DichVuResponse> getAllDichVu(Pageable pageable) {
+        return dichVuRepository.findAll(pageable)
+                .map(this::convertToResponse);
     }
 
     public Optional<DichVuResponse> getDichVuById(Integer id) {

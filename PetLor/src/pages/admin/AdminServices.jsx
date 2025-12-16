@@ -20,13 +20,6 @@ const AdminServices = () => {
   // 1. State
   const [services, setServices] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [editingService, setEditingService] = useState(null);
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [selectedService, setSelectedService] = useState(null);
-  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
-  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const [serviceImageFile, setServiceImageFile] = useState(null);
   const [newService, setNewService] = useState({
     tenDichVu: "",
     moTa: "",
@@ -36,42 +29,51 @@ const AdminServices = () => {
     hinhAnh: "",
   });
   const [serviceCategories, setServiceCategories] = useState([]);
+  const [editingService, setEditingService] = useState(null);
+  const [selectedService, setSelectedService] = useState(null);
+
+  // State cho bộ lọc
+  const [searchTerm, setSearchTerm] = useState("");
+
+  // State phân trang
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(0);
+  const [totalElements, setTotalElements] = useState(0);
+  const ITEMS_PER_PAGE = 5;
+
+  // State cho Modal
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+  const [serviceImageFile, setServiceImageFile] = useState(null);
 
   // 2. Fetch Data
   const fetchServices = async () => {
     setLoading(true);
     try {
-      const response = await petService.getAllServices();
+      const page = currentPage - 1; // API is 0-indexed
+      const response = await petService.getAllServices({
+        page,
+        size: ITEMS_PER_PAGE,
+        search: searchTerm,
+      });
 
-      // Map dữ liệu
-      const formattedData = Array.isArray(response)
-        ? response.map((svc) => ({
-            ...svc,
-            dichVuId: svc.id || svc.dichVuId,
-            tenDichVu: svc.tenDichVu || "Chưa đặt tên",
-            moTa: svc.moTa || "Không có mô tả",
-            giaDichVu: svc.giaDichVu || svc.gia || 0,
-            thoiLuongUocTinhPhut: svc.thoiLuongUocTinhPhut || 0, // Phút
-            trangThai: svc.trangThai || "Hoạt động",
-            hinhAnh: svc.hinhAnh,
-          }))
-        : [];
+      const servicesData = response?.content || [];
+      const formattedData = servicesData.map((svc) => ({
+        ...svc,
+        dichVuId: svc.id || svc.dichVuId,
+        tenDichVu: svc.tenDichVu || "Chưa đặt tên",
+        moTa: svc.moTa || "Không có mô tả",
+        giaDichVu: svc.giaDichVu || svc.gia || 0,
+        thoiLuongUocTinhPhut: svc.thoiLuongUocTinhPhut || 0, // Phút
+        trangThai: svc.trangThai || "Hoạt động",
+        hinhAnh: svc.hinhAnh,
+        // tenDanhMucDv is expected from the API response
+      }));
 
       setServices(formattedData);
-
-      // Tự động trích xuất danh mục từ danh sách dịch vụ
-      if (Array.isArray(response)) {
-        const categoriesMap = new Map();
-        response.forEach((service) => {
-          if (service.danhMucDvId && service.tenDanhMucDv) {
-            categoriesMap.set(service.danhMucDvId, {
-              id: service.danhMucDvId,
-              tenDanhMucDv: service.tenDanhMucDv,
-            });
-          }
-        });
-        setServiceCategories(Array.from(categoriesMap.values()));
-      }
+      setTotalPages(response?.totalPages || 0);
+      setTotalElements(response?.totalElements || 0);
     } catch (error) {
       console.error("Lỗi tải dịch vụ:", error);
       alert("Không thể tải danh sách dịch vụ.");
@@ -80,16 +82,51 @@ const AdminServices = () => {
     }
   };
 
+  // Fetch service categories once on component mount for modal dropdowns
+  useEffect(() => {
+    const fetchServiceCategories = async () => {
+      try {
+        // Workaround: Fetch a large page of services to extract all unique categories.
+        // This is necessary because a dedicated API endpoint like `getAllServiceCategories` does not exist.
+        // Ideally, the backend should provide an endpoint like /api/danh-muc-dich-vu.
+        const response = await petService.getAllServices({
+          page: 0,
+          size: 200,
+        }); // Fetch up to 200 services to get all categories
+        const allServices = response?.content || [];
+
+        const categoriesMap = new Map();
+        allServices.forEach((service) => {
+          if (service.danhMucDvId && service.tenDanhMucDv) {
+            categoriesMap.set(service.danhMucDvId, {
+              id: service.danhMucDvId,
+              danhMucDvId: service.danhMucDvId, // for consistency
+              tenDanhMucDv: service.tenDanhMucDv,
+            });
+          }
+        });
+        setServiceCategories(Array.from(categoriesMap.values()));
+      } catch (error) {
+        console.error("Lỗi tải danh mục dịch vụ:", error);
+        alert(
+          "Không thể tải danh sách danh mục dịch vụ. Chức năng Thêm/Sửa có thể không hoạt động đúng."
+        );
+      }
+    };
+    fetchServiceCategories();
+  }, []);
+
+  // Fetch services when page or search term changes
   useEffect(() => {
     fetchServices();
-  }, []);
+  }, [currentPage, searchTerm]);
 
   // 3. Actions
   const handleDelete = async (id) => {
     if (!window.confirm("Bạn có chắc chắn muốn xóa dịch vụ này?")) return;
     try {
       await petService.deleteService(id);
-      setServices((prev) => prev.filter((s) => s.dichVuId !== id));
+      fetchServices(); // Refresh list
       alert("Xóa thành công!");
     } catch (error) {
       console.error(error);
@@ -199,23 +236,27 @@ const AdminServices = () => {
     }
   };
 
-  // 4. Filter Logic
-  const filteredServices = services.filter(
-    (svc) =>
-      svc.tenDichVu.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      svc.moTa.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // 4. Logic Phân trang
+  const handlePageChange = (pageNumber) => {
+    if (pageNumber > 0 && pageNumber <= totalPages) {
+      setCurrentPage(pageNumber);
+    }
+  };
+  const indexOfFirstItem = (currentPage - 1) * ITEMS_PER_PAGE;
 
   // 5. Stats Calculation
-  const totalServices = services.length;
+  // Lưu ý: Các chỉ số thống kê bên dưới chỉ được tính cho các dịch vụ trên trang hiện tại.
+  // Để có số liệu toàn bộ, backend cần cung cấp API riêng cho thống kê.
+  const totalServices = totalElements;
   // Tính giá trung bình các dịch vụ
   const avgPrice =
-    totalServices > 0
-      ? services.reduce((sum, s) => sum + s.giaDichVu, 0) / totalServices
+    services.length > 0
+      ? services.reduce((sum, s) => sum + s.giaDichVu, 0) / services.length
       : 0;
 
   // Tìm dịch vụ có giá cao nhất
   const expensiveService =
+    // This calculation is only for the current page
     services.length > 0
       ? services.reduce((prev, current) =>
           prev.giaDichVu > current.giaDichVu ? prev : current
@@ -316,7 +357,10 @@ const AdminServices = () => {
                 placeholder="Tìm tên dịch vụ, mô tả..."
                 type="text"
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                onChange={(e) => {
+                  setSearchTerm(e.target.value);
+                  setCurrentPage(1);
+                }}
               />
             </div>
           </div>
@@ -349,6 +393,9 @@ const AdminServices = () => {
                   Tên Dịch Vụ
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Danh mục
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Hình ảnh
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -366,8 +413,8 @@ const AdminServices = () => {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {filteredServices.length > 0 ? (
-                filteredServices.map((service, index) => (
+              {services.length > 0 ? (
+                services.map((service, index) => (
                   <tr
                     key={service.dichVuId || index}
                     className="hover:bg-gray-50 transition-colors"
@@ -380,6 +427,11 @@ const AdminServices = () => {
                     {/* Tên */}
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                       {service.tenDichVu}
+                    </td>
+
+                    {/* Danh mục */}
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {service.tenDanhMucDv || "Chưa phân loại"}
                     </td>
 
                     {/* Hình ảnh */}
@@ -456,15 +508,87 @@ const AdminServices = () => {
               ) : (
                 <tr>
                   <td
-                    colSpan="7"
+                    colSpan="8"
                     className="px-6 py-4 text-center text-gray-500"
                   >
-                    Chưa có dịch vụ nào.
+                    Không tìm thấy dịch vụ nào phù hợp.
                   </td>
                 </tr>
               )}
             </tbody>
           </table>
+        </div>
+
+        {/* Pagination */}
+        <div className="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6">
+          <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+            <div>
+              <p className="text-sm text-gray-700">
+                Hiển thị{" "}
+                <span className="font-medium">
+                  {totalElements > 0 ? indexOfFirstItem + 1 : 0}
+                </span>{" "}
+                đến{" "}
+                <span className="font-medium">
+                  {indexOfFirstItem + services.length}
+                </span>{" "}
+                trong số <span className="font-medium">{totalElements}</span>{" "}
+                kết quả
+              </p>
+            </div>
+            <div>
+              <nav
+                className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px"
+                aria-label="Pagination"
+              >
+                <button
+                  onClick={() => handlePageChange(currentPage - 1)}
+                  disabled={currentPage === 1}
+                  className={`relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium ${
+                    currentPage === 1
+                      ? "text-gray-300 cursor-not-allowed"
+                      : "text-gray-500 hover:bg-gray-50"
+                  }`}
+                >
+                  <span className="sr-only">Previous</span>
+                  <span className="material-symbols-outlined text-base">
+                    chevron_left
+                  </span>
+                </button>
+
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map(
+                  (number) => (
+                    <button
+                      key={number}
+                      onClick={() => handlePageChange(number)}
+                      className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${
+                        currentPage === number
+                          ? "z-10 bg-primary border-primary text-white"
+                          : "bg-white border-gray-300 text-gray-500 hover:bg-gray-50"
+                      }`}
+                    >
+                      {number}
+                    </button>
+                  )
+                )}
+
+                <button
+                  onClick={() => handlePageChange(currentPage + 1)}
+                  disabled={currentPage === totalPages || totalPages === 0}
+                  className={`relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium ${
+                    currentPage === totalPages || totalPages === 0
+                      ? "text-gray-300 cursor-not-allowed"
+                      : "text-gray-500 hover:bg-gray-50"
+                  }`}
+                >
+                  <span className="sr-only">Next</span>
+                  <span className="material-symbols-outlined text-base">
+                    chevron_right
+                  </span>
+                </button>
+              </nav>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -590,7 +714,10 @@ const AdminServices = () => {
                     -- Chọn danh mục --
                   </option>
                   {serviceCategories.map((cat) => (
-                    <option key={cat.id} value={cat.id}>
+                    <option
+                      key={cat.id || cat.danhMucDvId}
+                      value={cat.id || cat.danhMucDvId}
+                    >
                       {cat.tenDanhMucDv}
                     </option>
                   ))}
@@ -797,7 +924,10 @@ const AdminServices = () => {
                 >
                   <option value="">-- Chọn danh mục --</option>
                   {serviceCategories.map((cat) => (
-                    <option key={cat.id} value={cat.id}>
+                    <option
+                      key={cat.id || cat.danhMucDvId}
+                      value={cat.id || cat.danhMucDvId}
+                    >
                       {cat.tenDanhMucDv}
                     </option>
                   ))}

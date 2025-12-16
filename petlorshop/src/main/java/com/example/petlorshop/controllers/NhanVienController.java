@@ -6,6 +6,8 @@ import com.example.petlorshop.services.NhanVienService;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -13,7 +15,6 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDateTime;
-import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -39,15 +40,15 @@ public class NhanVienController {
     }
 
     @GetMapping
-    public List<NhanVienResponse> getAllNhanVien() {
-        return nhanVienService.getAllNhanVien();
+    public Page<NhanVienResponse> getAllNhanVien(Pageable pageable) {
+        return nhanVienService.getAllNhanVien(pageable);
     }
 
     @GetMapping("/{id}")
     public ResponseEntity<NhanVienResponse> getNhanVienById(@PathVariable Integer id) {
         return nhanVienService.getNhanVienById(id)
                 .map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy nhân viên với ID: " + id));
     }
 
     @PutMapping(value = "/{id}", consumes = { MediaType.MULTIPART_FORM_DATA_VALUE })
@@ -67,12 +68,8 @@ public class NhanVienController {
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Map<String, String>> deleteNhanVien(@PathVariable Integer id) {
-        try {
-            nhanVienService.deleteNhanVien(id);
-            return ResponseEntity.ok(Map.of("message", "Xóa nhân viên thành công"));
-        } catch (RuntimeException e) {
-            return ResponseEntity.status(404).body(Map.of("error", e.getMessage()));
-        }
+        nhanVienService.deleteNhanVien(id);
+        return ResponseEntity.ok(Map.of("message", "Xóa nhân viên thành công"));
     }
 
     @GetMapping("/{id}/check-availability")
@@ -80,11 +77,7 @@ public class NhanVienController {
             @PathVariable Integer id,
             @RequestParam("start") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime start,
             @RequestParam("end") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime end) {
-        try {
-            boolean isAvailable = nhanVienService.isTimeSlotAvailable(id, start, end);
-            return ResponseEntity.ok(Map.of("available", isAvailable));
-        } catch (RuntimeException e) {
-            return ResponseEntity.badRequest().body(null);
-        }
+        boolean isAvailable = nhanVienService.isTimeSlotAvailable(id, start, end);
+        return ResponseEntity.ok(Map.of("available", isAvailable));
     }
 }
