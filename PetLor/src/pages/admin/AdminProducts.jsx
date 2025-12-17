@@ -1,7 +1,18 @@
+/**
+ * @file AdminProducts.jsx
+ * @description Trang quản lý các sản phẩm của cửa hàng.
+ * Cho phép xem, tìm kiếm, lọc, tạo, cập nhật và xóa sản phẩm.
+ */
 import React, { useEffect, useState } from "react";
 import productService from "../../services/productService";
 
-// Helper: Format tiền tệ (VND)
+// --- Helpers (Hàm hỗ trợ) ---
+
+/**
+ * Định dạng một số thành chuỗi tiền tệ VND.
+ * @param {number} amount - Số tiền cần định dạng.
+ * @returns {string} - Chuỗi tiền tệ đã định dạng.
+ */
 const formatCurrency = (amount) => {
   return new Intl.NumberFormat("vi-VN", {
     style: "currency",
@@ -9,9 +20,13 @@ const formatCurrency = (amount) => {
   }).format(amount);
 };
 
-// Helper: Xác định trạng thái kho hàng
+/**
+ * Trả về nhãn và màu sắc cho trạng thái kho hàng.
+ * @param {number} quantity - Số lượng tồn kho.
+ * @returns {{label: string, color: string}} - Đối tượng chứa nhãn và lớp CSS.
+ */
 const getStockStatus = (quantity) => {
-  if (quantity === 0)
+  if (quantity <= 0)
     return {
       label: "Hết hàng",
       color: "bg-red-100 text-red-800 border-red-200",
@@ -27,8 +42,13 @@ const getStockStatus = (quantity) => {
   };
 };
 
-// Helper: Xử lý URL hình ảnh để tránh lỗi khi URL đã là tuyệt đối
-const getImageUrl = (imagePath, fallbackText = "No+Image") => {
+/**
+ * Xử lý URL hình ảnh để hiển thị, bao gồm cả fallback.
+ * @param {string} imagePath - Đường dẫn tương đối của ảnh.
+ * @param {string} [fallbackText="Product"] - Chữ hiển thị trên ảnh placeholder.
+ * @returns {string} - URL đầy đủ của ảnh hoặc URL placeholder.
+ */
+const getImageUrl = (imagePath, fallbackText = "Product") => {
   if (!imagePath) return `https://placehold.co/100x100?text=${fallbackText}`;
   if (imagePath.startsWith("http")) return imagePath;
   return `http://localhost:8080/uploads/${imagePath}`;
@@ -36,24 +56,27 @@ const getImageUrl = (imagePath, fallbackText = "No+Image") => {
 
 const AdminProducts = () => {
   // 1. State
-  const [products, setProducts] = useState([]);
-  const [categories, setCategories] = useState([]); // Để hiển thị trong Dropdown lọc
-  const [loading, setLoading] = useState(true);
+  // --- 1. State Management (Quản lý Trạng thái) ---
 
-  // State cho bộ lọc
-  const [searchTerm, setSearchTerm] = useState("");
-  const [filterCategory, setFilterCategory] = useState("");
-  const [filterStock, setFilterStock] = useState("");
+  // State lưu trữ dữ liệu chính và trạng thái tải
+  const [products, setProducts] = useState([]); // Danh sách sản phẩm
+  const [categories, setCategories] = useState([]); // Danh sách danh mục cho dropdown
+  const [loading, setLoading] = useState(true); // Trạng thái tải dữ liệu
 
-  // State phân trang
-  const [currentPage, setCurrentPage] = useState(1); // Component uses 1-based indexing
-  const [totalPages, setTotalPages] = useState(0);
-  const [totalElements, setTotalElements] = useState(0);
-  const ITEMS_PER_PAGE = 5;
+  // State cho các bộ lọc
+  const [searchTerm, setSearchTerm] = useState(""); // Từ khóa tìm kiếm
+  const [filterCategory, setFilterCategory] = useState(""); // Lọc theo danh mục
+  const [filterStock, setFilterStock] = useState(""); // Lọc theo trạng thái kho
 
-  // State cho Modal Thêm/Sửa
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingId, setEditingId] = useState(null);
+  // State cho phân trang
+  const [currentPage, setCurrentPage] = useState(1); // Trang hiện tại
+  const [totalPages, setTotalPages] = useState(0); // Tổng số trang
+  const [totalElements, setTotalElements] = useState(0); // Tổng số sản phẩm
+  const ITEMS_PER_PAGE = 5; // Số mục trên mỗi trang
+
+  // State cho các form (Thêm/Sửa)
+  const [isModalOpen, setIsModalOpen] = useState(false); // Mở/đóng modal thêm/sửa
+  const [editingId, setEditingId] = useState(null); // ID của sản phẩm đang sửa, null nếu là thêm mới
   const [formData, setFormData] = useState({
     tenSanPham: "",
     moTaChiTiet: "",
@@ -62,18 +85,21 @@ const AdminProducts = () => {
     hinhAnh: "",
     danhMucId: "",
   });
-  const [productImageFile, setProductImageFile] = useState(null);
+  const [productImageFile, setProductImageFile] = useState(null); // File ảnh cho form
 
-  // State cho Modal Chi tiết
-  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
-  const [selectedProduct, setSelectedProduct] = useState(null);
+  // State cho việc xem chi tiết
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false); // Mở/đóng modal chi tiết
+  const [selectedProduct, setSelectedProduct] = useState(null); // Sản phẩm được chọn để xem chi tiết
 
-  // 2. Hàm tải dữ liệu
+  // --- 2. Data Fetching (Lấy Dữ liệu từ API) ---
+
+  /**
+   * Lấy danh sách sản phẩm từ API dựa trên các tham số phân trang và lọc.
+   */
   const fetchProducts = async () => {
     setLoading(true);
     try {
-      // API page is 0-indexed, component state is 1-indexed
-      const page = currentPage - 1;
+      const page = currentPage - 1; // API sử dụng trang bắt đầu từ 0
 
       // Assuming productService.getAllProducts can now take parameters
       // for pagination and filtering based on the new backend.
@@ -88,8 +114,7 @@ const AdminProducts = () => {
       const productsData = response?.content || [];
       const formattedProducts = productsData.map((p) => ({
         ...p,
-        // The new API response already includes 'tenDanhMuc'.
-        // We'll just ensure the component uses a consistent property name.
+        // API đã trả về `tenDanhMuc`, chỉ cần đảm bảo component sử dụng tên thuộc tính nhất quán.
         sanPhamId: p.sanPhamId,
         tenSanPham: p.tenSanPham,
         gia: p.gia || 0,
@@ -109,7 +134,7 @@ const AdminProducts = () => {
     }
   };
 
-  // Fetch categories only once on component mount for filter/modal dropdowns
+  // Effect: Lấy danh sách danh mục một lần khi component được mount.
   useEffect(() => {
     const fetchCategories = async () => {
       try {
@@ -121,21 +146,69 @@ const AdminProducts = () => {
       }
     };
     fetchCategories();
-  }, []);
+  }, []); // Mảng rỗng đảm bảo effect chỉ chạy một lần.
 
-  // Fetch products when page or filters change
+  // Effect: Tải lại danh sách sản phẩm mỗi khi trang hoặc bộ lọc thay đổi.
   useEffect(() => {
     fetchProducts();
   }, [currentPage, searchTerm, filterCategory, filterStock]);
 
-  // 3. Xử lý Xóa
+  // --- 3. Event Handlers (Hàm Xử lý Sự kiện) ---
+
+  /**
+   * Mở modal để thêm sản phẩm mới và reset form.
+   */
+  const handleOpenAddModal = () => {
+    setEditingId(null);
+    setFormData({
+      tenSanPham: "",
+      moTaChiTiet: "",
+      gia: 0,
+      soLuongTonKho: 0,
+      hinhAnh: "",
+      // Mặc định chọn danh mục đầu tiên nếu có
+      danhMucId:
+        categories.length > 0
+          ? categories[0].id || categories[0].danhMucId
+          : "",
+    });
+    setProductImageFile(null);
+    setIsModalOpen(true);
+  };
+
+  /**
+   * Mở modal để chỉnh sửa một sản phẩm đã có.
+   * @param {object} product - Đối tượng sản phẩm được chọn.
+   */
+  const handleOpenEditModal = (product) => {
+    setEditingId(product.sanPhamId);
+    setFormData({
+      tenSanPham: product.tenSanPham,
+      moTaChiTiet: product.moTaChiTiet || "",
+      gia: product.gia,
+      soLuongTonKho: product.soLuongTonKho,
+      hinhAnh: product.hinhAnh || "",
+      danhMucId:
+        product.danhMucId ||
+        (product.danhMuc
+          ? product.danhMuc.id || product.danhMuc.danhMucId
+          : ""),
+    });
+    setProductImageFile(null);
+    setIsModalOpen(true);
+  };
+
+  /**
+   * Xử lý sự kiện xóa một sản phẩm.
+   * @param {number} id - ID của sản phẩm cần xóa.
+   */
   const handleDelete = async (id) => {
     if (!window.confirm(`Bạn có chắc chắn muốn xóa sản phẩm ID: ${id}?`))
       return;
 
     try {
       await productService.deleteProduct(id);
-      // Refetch data for the current page to reflect the deletion
+      // Tải lại dữ liệu trên trang hiện tại để phản ánh thay đổi
       fetchProducts();
       alert("Xóa sản phẩm thành công!");
     } catch (error) {
@@ -144,7 +217,9 @@ const AdminProducts = () => {
     }
   };
 
-  // Hàm xử lý Lưu (Thêm mới hoặc Cập nhật)
+  /**
+   * Gửi yêu cầu tạo hoặc cập nhật sản phẩm lên server.
+   */
   const handleSave = async () => {
     if (!formData.tenSanPham || !formData.danhMucId || !formData.gia) {
       alert("Vui lòng nhập tên, danh mục và giá sản phẩm!");
@@ -159,7 +234,7 @@ const AdminProducts = () => {
       danhMucId: parseInt(formData.danhMucId),
     };
 
-    // Xóa trường hinhAnh thừa trong JSON (vì đã gửi qua multipart)
+    // Xóa trường text `hinhAnh` không cần thiết (vì đã gửi file qua multipart)
     delete productData.hinhAnh;
 
     // Gửi dữ liệu sản phẩm dưới dạng Blob với Content-Type application/json
@@ -183,7 +258,7 @@ const AdminProducts = () => {
       }
       setIsModalOpen(false);
       setProductImageFile(null);
-      // Refetch data to show the new/updated product.
+      // Tải lại dữ liệu để hiển thị sản phẩm mới/đã cập nhật.
       fetchProducts();
     } catch (error) {
       console.error("Lỗi lưu sản phẩm:", error);
@@ -191,7 +266,10 @@ const AdminProducts = () => {
     }
   };
 
-  // Hàm xem chi tiết (Gọi API /api/san-pham/{id})
+  /**
+   * Mở modal và tải chi tiết sản phẩm để xem.
+   * @param {number} id - ID của sản phẩm cần xem.
+   */
   const handleViewDetail = async (id) => {
     try {
       const data = await productService.getProductById(id);
@@ -205,23 +283,25 @@ const AdminProducts = () => {
       setIsDetailModalOpen(true);
     } catch (error) {
       console.error("Lỗi tải chi tiết:", error);
-      // Fallback nếu API lỗi
       alert("Không thể tải chi tiết sản phẩm từ server.");
     }
   };
 
-  // 4. Logic Phân trang (dữ liệu đã được phân trang từ backend)
-  const currentItems = products;
-  const totalItems = totalElements;
-  const indexOfFirstItem = (currentPage - 1) * ITEMS_PER_PAGE;
-
+  /**
+   * Xử lý thay đổi trang.
+   * @param {number} pageNumber - Số trang muốn chuyển đến.
+   */
   const handlePageChange = (pageNumber) => {
     if (pageNumber > 0 && pageNumber <= totalPages) {
       setCurrentPage(pageNumber);
     }
   };
 
-  // 5. Tính toán Thống kê (Stats)
+  // --- 4. Derived Data & Calculations (Dữ liệu & Tính toán) ---
+
+  // Tính toán index của item đầu tiên trên trang
+  const indexOfFirstItem = (currentPage - 1) * ITEMS_PER_PAGE;
+
   // Lưu ý: Các chỉ số thống kê bên dưới (Sắp hết, Giá trị kho) chỉ được tính cho các sản phẩm trên trang hiện tại.
   // Để có số liệu toàn bộ, backend cần cung cấp API riêng cho thống kê.
   const lowStockCount = products.filter((p) => p.soLuongTonKho < 10).length;
@@ -234,7 +314,7 @@ const AdminProducts = () => {
   const stats = [
     {
       title: "Tổng sản phẩm",
-      value: totalElements, // SỬA LỖI: Lấy tổng số sản phẩm từ state
+      value: totalElements,
       icon: "inventory_2",
       color: "text-blue-600",
       bg: "bg-blue-100",
@@ -258,14 +338,17 @@ const AdminProducts = () => {
     },
   ];
 
-  if (loading)
+  // --- 5. UI Rendering (Kết xuất Giao diện) ---
+
+  // Hiển thị trạng thái tải lần đầu tiên
+  if (loading && products.length === 0)
     return (
       <div className="p-10 text-center">Đang tải danh sách sản phẩm...</div>
     );
 
   return (
     <>
-      {/* Page Heading */}
+      {/* Tiêu đề trang */}
       <div className="flex flex-wrap justify-between gap-3">
         <p className="text-gray-900 text-4xl font-black leading-tight tracking-[-0.033em] min-w-72">
           Quản lý Sản phẩm
@@ -274,6 +357,8 @@ const AdminProducts = () => {
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-6">
+        {" "}
+        {/* Lưới thống kê */}
         {stats.map((stat, index) => (
           <div
             key={index}
@@ -306,7 +391,7 @@ const AdminProducts = () => {
         ))}
       </div>
 
-      {/* Filters & Actions */}
+      {/* Bộ lọc & Hành động */}
       <div className="bg-white shadow-sm rounded-xl border border-gray-200 p-6 mt-6">
         <div className="flex flex-col md:flex-row justify-between md:items-center space-y-4 md:space-y-0">
           <div className="flex-1 flex flex-col md:flex-row md:space-x-4 space-y-4 md:space-y-0">
@@ -329,7 +414,7 @@ const AdminProducts = () => {
               />
             </div>
 
-            {/* Select Category (Dynamic) */}
+            {/* Lọc theo danh mục */}
             <div className="relative inline-block text-left">
               <select
                 className="block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-primary focus:border-primary sm:text-sm rounded-md h-10"
@@ -351,7 +436,7 @@ const AdminProducts = () => {
               </select>
             </div>
 
-            {/* Select Stock Status */}
+            {/* Lọc theo trạng thái kho */}
             <div className="relative inline-block text-left">
               <select
                 className="block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-primary focus:border-primary sm:text-sm rounded-md h-10"
@@ -369,7 +454,7 @@ const AdminProducts = () => {
             </div>
           </div>
 
-          {/* Buttons */}
+          {/* Các nút hành động */}
           <div className="flex space-x-3">
             <button
               className="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none"
@@ -383,22 +468,7 @@ const AdminProducts = () => {
             <button
               className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-primary hover:bg-green-600 focus:outline-none"
               type="button"
-              onClick={() => {
-                setEditingId(null);
-                setFormData({
-                  tenSanPham: "",
-                  moTaChiTiet: "",
-                  gia: 0,
-                  soLuongTonKho: 0,
-                  hinhAnh: "",
-                  danhMucId:
-                    categories.length > 0
-                      ? categories[0].id || categories[0].danhMucId
-                      : "",
-                });
-                setProductImageFile(null);
-                setIsModalOpen(true);
-              }}
+              onClick={handleOpenAddModal}
             >
               <span className="material-symbols-outlined text-sm mr-2">
                 add
@@ -409,7 +479,7 @@ const AdminProducts = () => {
         </div>
       </div>
 
-      {/* Data Table */}
+      {/* Bảng dữ liệu */}
       <div className="bg-white shadow-sm rounded-xl border border-gray-200 overflow-hidden mt-6">
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
@@ -451,140 +521,132 @@ const AdminProducts = () => {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {currentItems.length > 0 ? (
-                currentItems.map((product, index) => {
-                  const stockStatus = getStockStatus(product.soLuongTonKho);
-                  return (
-                    <tr
-                      key={product.sanPhamId || index}
-                      className="hover:bg-gray-50 transition-colors"
-                    >
-                      {/* ID */}
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        #{product.sanPhamId}
-                      </td>
-
-                      {/* Sản phẩm (Ảnh + Tên + Danh mục) */}
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center">
-                          <div className="h-10 w-10 flex-shrink-0">
-                            <img
-                              className="h-10 w-10 rounded-md object-cover border border-gray-200"
-                              src={getImageUrl(product.hinhAnh)}
-                              alt={product.tenSanPham}
-                              onError={(e) => {
-                                e.target.onerror = null;
-                                e.target.src =
-                                  "https://placehold.co/40?text=Pet";
-                              }}
-                            />
-                          </div>
-                          <div className="ml-4">
-                            <div
-                              className="text-sm font-medium text-gray-900 max-w-[200px] truncate"
-                              title={product.tenSanPham}
-                            >
-                              {product.tenSanPham}
-                            </div>
-                            <div className="text-xs text-gray-500">
-                              Danh mục:{" "}
-                              <span className="font-semibold">
-                                {product.categoryName}
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-                      </td>
-
-                      {/* Giá */}
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-gray-900">
-                        {formatCurrency(product.gia)}
-                      </td>
-
-                      {/* Tồn kho */}
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm text-gray-900 font-medium">
-                            {product.soLuongTonKho}
-                          </span>
-                          <span
-                            className={`px-2 py-0.5 text-[10px] font-bold uppercase rounded-full border ${stockStatus.color}`}
-                          >
-                            {stockStatus.label}
-                          </span>
-                        </div>
-                      </td>
-
-                      {/* Mô tả */}
-                      <td
-                        className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 max-w-[200px] truncate"
-                        title={product.moTaChiTiet}
-                      >
-                        {product.moTaChiTiet || "Chưa có mô tả"}
-                      </td>
-
-                      {/* Actions */}
-                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                        <div className="flex items-center justify-end space-x-2">
-                          <button
-                            title="Xem chi tiết"
-                            className="text-gray-400 hover:text-green-600 transition-colors"
-                            onClick={() => handleViewDetail(product.sanPhamId)}
-                          >
-                            <span className="material-symbols-outlined text-base">
-                              visibility
-                            </span>
-                          </button>
-                          <button
-                            title="Chỉnh sửa"
-                            className="text-gray-400 hover:text-blue-500 transition-colors"
-                            onClick={() => {
-                              setEditingId(product.sanPhamId);
-                              setFormData({
-                                tenSanPham: product.tenSanPham,
-                                moTaChiTiet: product.moTaChiTiet || "",
-                                gia: product.gia,
-                                soLuongTonKho: product.soLuongTonKho,
-                                hinhAnh: product.hinhAnh || "",
-                                danhMucId:
-                                  product.danhMucId ||
-                                  (product.danhMuc
-                                    ? product.danhMuc.id ||
-                                      product.danhMuc.danhMucId
-                                    : ""),
-                              });
-                              setProductImageFile(null);
-                              setIsModalOpen(true);
-                            }}
-                          >
-                            <span className="material-symbols-outlined text-base">
-                              edit_note
-                            </span>
-                          </button>
-                          <button
-                            title="Xóa"
-                            className="text-gray-400 hover:text-red-500 transition-colors"
-                            onClick={() => handleDelete(product.sanPhamId)}
-                          >
-                            <span className="material-symbols-outlined text-base">
-                              cancel
-                            </span>
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })
-              ) : (
+              {loading && (
                 <tr>
-                  <td
-                    colSpan="6"
-                    className="px-6 py-4 text-center text-gray-500"
-                  >
-                    Không tìm thấy sản phẩm nào phù hợp.
+                  <td colSpan="6" className="p-4 text-center">
+                    Đang tải...
                   </td>
                 </tr>
               )}
+              {!loading && products.length > 0
+                ? products.map((product, index) => {
+                    const stockStatus = getStockStatus(product.soLuongTonKho);
+                    return (
+                      <tr
+                        key={product.sanPhamId || index}
+                        className="hover:bg-gray-50 transition-colors"
+                      >
+                        {/* ID */}
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          #{product.sanPhamId}
+                        </td>
+
+                        {/* Sản phẩm (Ảnh + Tên + Danh mục) */}
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="flex items-center">
+                            <div className="h-10 w-10 flex-shrink-0">
+                              <img
+                                className="h-10 w-10 rounded-md object-cover border border-gray-200"
+                                src={getImageUrl(product.hinhAnh)}
+                                alt={product.tenSanPham}
+                                onError={(e) => {
+                                  e.target.onerror = null;
+                                  e.target.src =
+                                    "https://placehold.co/40?text=Pet";
+                                }}
+                              />
+                            </div>
+                            <div className="ml-4">
+                              <div
+                                className="text-sm font-medium text-gray-900 max-w-[200px] truncate"
+                                title={product.tenSanPham}
+                              >
+                                {product.tenSanPham}
+                              </div>
+                              <div className="text-xs text-gray-500">
+                                Danh mục:{" "}
+                                <span className="font-semibold">
+                                  {product.categoryName}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        </td>
+
+                        {/* Giá */}
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-gray-900">
+                          {formatCurrency(product.gia)}
+                        </td>
+
+                        {/* Tồn kho */}
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm text-gray-900 font-medium">
+                              {product.soLuongTonKho}
+                            </span>
+                            <span
+                              className={`px-2 py-0.5 text-[10px] font-bold uppercase rounded-full border ${stockStatus.color}`}
+                            >
+                              {stockStatus.label}
+                            </span>
+                          </div>
+                        </td>
+
+                        {/* Mô tả */}
+                        <td
+                          className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 max-w-[200px] truncate"
+                          title={product.moTaChiTiet}
+                        >
+                          {product.moTaChiTiet || "Chưa có mô tả"}
+                        </td>
+
+                        {/* Actions */}
+                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                          <div className="flex items-center justify-end space-x-2">
+                            <button
+                              title="Xem chi tiết"
+                              className="text-gray-400 hover:text-green-600 transition-colors"
+                              onClick={() =>
+                                handleViewDetail(product.sanPhamId)
+                              }
+                            >
+                              <span className="material-symbols-outlined text-base">
+                                visibility
+                              </span>
+                            </button>
+                            <button
+                              title="Chỉnh sửa"
+                              className="text-gray-400 hover:text-blue-500 transition-colors"
+                              onClick={() => handleOpenEditModal(product)}
+                            >
+                              <span className="material-symbols-outlined text-base">
+                                edit_note
+                              </span>
+                            </button>
+                            <button
+                              title="Xóa"
+                              className="text-gray-400 hover:text-red-500 transition-colors"
+                              onClick={() => handleDelete(product.sanPhamId)}
+                            >
+                              <span className="material-symbols-outlined text-base">
+                                cancel
+                              </span>
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })
+                : !loading && (
+                    <tr>
+                      <td
+                        colSpan="6"
+                        className="px-6 py-4 text-center text-gray-500"
+                      >
+                        Không tìm thấy sản phẩm nào phù hợp.
+                      </td>
+                    </tr>
+                  )}
             </tbody>
           </table>
         </div>
@@ -596,14 +658,14 @@ const AdminProducts = () => {
               <p className="text-sm text-gray-700">
                 Hiển thị{" "}
                 <span className="font-medium">
-                  {totalItems > 0 ? indexOfFirstItem + 1 : 0}
+                  {totalElements > 0 ? indexOfFirstItem + 1 : 0}
                 </span>{" "}
                 đến{" "}
                 <span className="font-medium">
-                  {indexOfFirstItem + currentItems.length}
+                  {indexOfFirstItem + products.length}
                 </span>{" "}
-                trong số <span className="font-medium">{totalItems}</span> kết
-                quả
+                trong số <span className="font-medium">{totalElements}</span>{" "}
+                kết quả
               </p>
             </div>
             <div>
@@ -662,7 +724,7 @@ const AdminProducts = () => {
         </div>
       </div>
 
-      {/* Modal Thêm/Sửa Sản Phẩm */}
+      {/* Modal Thêm/Sửa Sản phẩm */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
           <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl p-6 max-h-[90vh] overflow-y-auto">

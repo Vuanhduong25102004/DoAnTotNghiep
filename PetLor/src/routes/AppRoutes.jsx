@@ -39,21 +39,23 @@ const AppRoutes = () => {
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
 
-      <Route path="/admin" element={<AdminLayout />}>
-        {/* Khi vào /admin, mặc định hiện Dashboard */}
-        <Route index element={<AdminDashboard />} />
-        <Route path="dashboard" element={<AdminDashboard />} />
+      {/* Admin Routes */}
+      <Route element={<AdminRoute />}>
+        <Route path="/admin" element={<AdminLayout />}>
+          {/* Khi vào /admin, mặc định hiện Dashboard */}
+          <Route index element={<AdminDashboard />} />
+          <Route path="dashboard" element={<AdminDashboard />} />
 
-        {/* Các trang quản lý khác */}
-        <Route path="users" element={<AdminUsers />} />
-        <Route path="orders" element={<AdminOrders />} />
-        <Route path="pets" element={<AdminPets />} />
-        <Route path="products" element={<AdminProducts />} />
-        <Route path="employees" element={<AdminEmployees />} />
-        <Route path="products" element={<AdminProducts />} />
-        <Route path="appointments" element={<AdminAppointments />} />
-        <Route path="services" element={<AdminServices />} />
-        <Route path="categories" element={<AdminCategories />} />
+          {/* Các trang quản lý khác */}
+          <Route path="users" element={<AdminUsers />} />
+          <Route path="orders" element={<AdminOrders />} />
+          <Route path="pets" element={<AdminPets />} />
+          <Route path="products" element={<AdminProducts />} />
+          <Route path="employees" element={<AdminEmployees />} />
+          <Route path="appointments" element={<AdminAppointments />} />
+          <Route path="services" element={<AdminServices />} />
+          <Route path="categories" element={<AdminCategories />} />
+        </Route>
       </Route>
     </Routes>
   );

@@ -1,18 +1,32 @@
+/**
+ * @file AdminUsers.jsx
+ * @description Trang quản lý tất cả người dùng trong hệ thống (khách hàng, nhân viên, admin).
+ * Cho phép xem, tìm kiếm, lọc, tạo, cập nhật và xóa người dùng.
+ */
 import React, { useEffect, useState } from "react";
 import userService from "../../services/userService";
 
-// Helper: Format ngày tháng từ chuỗi ISO
+// --- Helpers (Hàm hỗ trợ) ---
+
+/**
+ * Định dạng chuỗi ngày giờ sang định dạng dd/MM/yyyy, HH:mm.
+ * @param {string} dateString - Chuỗi ngày giờ đầu vào (ISO 8601).
+ * @returns {string} - Chuỗi ngày giờ đã định dạng hoặc "N/A" nếu không có.
+ */
 const formatDate = (dateString) => {
+  if (!dateString) return "N/A";
   return new Date(dateString).toLocaleDateString("vi-VN", {
     day: "2-digit",
     month: "2-digit",
     year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
   });
 };
 
-// Helper: Chọn màu badge cho Role
+/**
+ * Trả về các lớp CSS của Tailwind để tạo badge cho vai trò người dùng.
+ * @param {string} role - Vai trò của người dùng (ADMIN, STAFF, USER, etc.).
+ * @returns {string} - Chuỗi các lớp CSS.
+ */
 const getRoleStyle = (role) => {
   switch (role) {
     case "ADMIN":
@@ -28,37 +42,45 @@ const getRoleStyle = (role) => {
   }
 };
 
+/**
+ * Component chính cho trang quản lý người dùng.
+ */
 const AdminUsers = () => {
+  // --- 1. State Management (Quản lý Trạng thái) ---
+
+  // State lưu trữ dữ liệu chính và trạng thái tải
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  // State cho các modal (cửa sổ pop-up)
   const [selectedUser, setSelectedUser] = useState(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [avatarFile, setAvatarFile] = useState(null); // State for avatar file
-
-  // State cho Modal Tạo mới (Unified)
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [creationType, setCreationType] = useState("USER"); // 'USER' | 'EMPLOYEE'
+
+  // State lưu trữ dữ liệu cho các form
+  const [avatarFile, setAvatarFile] = useState(null); // File ảnh đại diện được chọn
+  const [creationType, setCreationType] = useState("USER"); // Loại tài khoản tạo mới: 'USER' | 'EMPLOYEE'
   const [newUserData, setNewUserData] = useState({
     hoTen: "",
     email: "",
     password: "",
     soDienThoai: "",
     diaChi: "",
-    role: "USER",
+    role: "USER", // Mặc định là tạo khách hàng
     chucVu: "",
     chuyenKhoa: "",
     kinhNghiem: "",
   });
 
-  // Filter & Pagination States
+  // State cho bộ lọc và phân trang
   const [searchTerm, setSearchTerm] = useState("");
   const [filterRole, setFilterRole] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(0);
   const [totalElements, setTotalElements] = useState(0);
-  const ITEMS_PER_PAGE = 5;
+  const ITEMS_PER_PAGE = 5; // Số mục trên mỗi trang
 
   const fetchUsers = async () => {
     setLoading(true);
@@ -70,7 +92,7 @@ const AdminUsers = () => {
         search: searchTerm,
         role: filterRole,
       };
-      // Remove empty params to keep URL clean
+      // Xóa các tham số rỗng để không gửi lên server
       if (!params.search) delete params.search;
       if (!params.role) delete params.role;
 
@@ -86,26 +108,42 @@ const AdminUsers = () => {
     }
   };
 
+  // --- 3. Side Effects (Xử lý Tác vụ Phụ) ---
+
+  // Tải lại danh sách người dùng mỗi khi trang, từ khóa tìm kiếm hoặc bộ lọc thay đổi.
   useEffect(() => {
     fetchUsers();
   }, [currentPage, searchTerm, filterRole]);
 
+  // --- 4. Event Handlers (Hàm Xử lý Sự kiện) ---
+
+  /**
+   * Mở modal và hiển thị chi tiết người dùng được chọn.
+   * @param {object} user - Đối tượng người dùng.
+   */
   const handleViewDetail = (user) => {
     setSelectedUser(user);
     setIsDetailModalOpen(true);
   };
 
+  /**
+   * Mở modal chỉnh sửa và điền dữ liệu của người dùng được chọn.
+   * @param {object} user - Đối tượng người dùng.
+   */
   const handleEditClick = (user) => {
     setEditingUser({ ...user });
-    setAvatarFile(null); // Reset file input on new edit
+    setAvatarFile(null); // Reset file ảnh khi mở modal
     setIsEditModalOpen(true);
   };
 
+  /**
+   * Gửi yêu cầu cập nhật thông tin người dùng lên server.
+   */
   const handleSaveUser = async () => {
     if (!editingUser) return;
 
     const formData = new FormData();
-    // Chuẩn bị đối tượng JSON chứa dữ liệu người dùng
+    // Chuẩn bị đối tượng JSON chứa dữ liệu cần cập nhật
     const userData = {
       hoTen: editingUser.hoTen,
       email: editingUser.email,
@@ -126,20 +164,23 @@ const AdminUsers = () => {
     }
 
     try {
-      // Assuming updateUser can handle FormData
+      // API updateUser có thể xử lý FormData
       await userService.updateUser(editingUser.userId, formData);
       fetchUsers();
       setIsEditModalOpen(false);
-      setAvatarFile(null); // Reset file state
+      setAvatarFile(null); // Reset trạng thái file
       alert("Cập nhật thành công!");
     } catch (error) {
       console.error("Lỗi cập nhật:", error);
       alert("Cập nhật thất bại.");
     }
   };
-
+  /**
+   * Mở modal để tạo người dùng mới.
+   */
   const handleCreateClick = () => {
     setNewUserData({
+      // Reset form
       hoTen: "",
       email: "",
       password: "",
@@ -150,11 +191,14 @@ const AdminUsers = () => {
       chuyenKhoa: "",
       kinhNghiem: "",
     });
-    setCreationType("USER");
-    setAvatarFile(null); // Reset avatar file
+    setCreationType("USER"); // Mặc định là tạo khách hàng
+    setAvatarFile(null); // Reset file ảnh
     setIsCreateModalOpen(true);
   };
 
+  /**
+   * Gửi dữ liệu để tạo người dùng mới (khách hàng hoặc nhân viên).
+   */
   const handleCreateSubmit = async () => {
     if (!newUserData.hoTen || !newUserData.email || !newUserData.password) {
       alert("Vui lòng điền đầy đủ thông tin bắt buộc!");
@@ -164,6 +208,7 @@ const AdminUsers = () => {
     const formData = new FormData();
     const userData = { ...newUserData };
 
+    // Nếu chỉ tạo khách hàng, xóa các trường của nhân viên
     if (creationType === "USER") {
       userData.role = "USER";
       delete userData.chucVu;
@@ -171,7 +216,7 @@ const AdminUsers = () => {
       delete userData.kinhNghiem;
     }
 
-    // Gửi dữ liệu người dùng dưới dạng Blob với Content-Type application/json
+    // Gửi dữ liệu JSON dưới dạng Blob với key 'nguoiDung'
     const jsonBlob = new Blob([JSON.stringify(userData)], {
       type: "application/json",
     });
@@ -183,18 +228,25 @@ const AdminUsers = () => {
     }
 
     try {
+      // Sử dụng API hợp nhất để tạo tài khoản
       await userService.createUnifiedUser(formData);
 
-      fetchUsers(); // Refresh the user list
+      fetchUsers(); // Tải lại danh sách
       setIsCreateModalOpen(false);
-      setAvatarFile(null); // Reset file state
+      setAvatarFile(null); // Reset trạng thái file
       alert("Tạo mới thành công!");
     } catch (error) {
       console.error("Lỗi tạo mới:", error);
-      alert("Tạo mới thất bại. Vui lòng kiểm tra lại thông tin.");
+      alert(
+        "Tạo mới thất bại. Email có thể đã tồn tại hoặc dữ liệu không hợp lệ."
+      );
     }
   };
 
+  /**
+   * Xử lý xóa một người dùng.
+   * @param {number} userId - ID của người dùng cần xóa.
+   */
   const handleDeleteUser = async (userId) => {
     if (
       !window.confirm(
@@ -206,11 +258,11 @@ const AdminUsers = () => {
     try {
       await userService.deleteUser(userId);
       alert("Xóa người dùng thành công!");
-      // After deletion, if the current page becomes empty, go to the previous page.
+      // Sau khi xóa, nếu trang hiện tại trống, lùi về trang trước.
       if (users.length === 1 && currentPage > 1) {
         setCurrentPage(currentPage - 1);
       } else {
-        fetchUsers(); // Otherwise, just refresh the current page.
+        fetchUsers(); // Nếu không, chỉ cần làm mới trang hiện tại.
       }
     } catch (error) {
       console.error("Lỗi xóa người dùng:", error);
@@ -220,18 +272,24 @@ const AdminUsers = () => {
     }
   };
 
-  // Pagination Logic
+  /**
+   * Xử lý thay đổi trang.
+   * @param {number} pageNumber - Số trang muốn chuyển đến.
+   */
   const handlePageChange = (pageNumber) => {
     if (pageNumber > 0 && pageNumber <= totalPages) {
       setCurrentPage(pageNumber);
     }
   };
+
+  // --- 5. Derived Data & Calculations (Dữ liệu & Tính toán) ---
+
+  // Tính toán index của item đầu tiên trên trang để hiển thị thông tin phân trang
   const indexOfFirstItem = (currentPage - 1) * ITEMS_PER_PAGE;
 
-  // Stats Calculation
+  // Lưu ý: Các chỉ số thống kê bên dưới chỉ được tính cho các người dùng trên trang hiện tại.
+  // Để có số liệu toàn bộ, backend cần cung cấp API riêng cho thống kê.
   const totalUsers = totalElements;
-  // Note: The following stats are calculated based on the data of the current page only.
-  // For accurate global stats, dedicated backend APIs are needed.
   const newUsersCount = users.filter((u) => {
     if (!u.ngayTao) return false;
     const d = new Date(u.ngayTao);
@@ -240,6 +298,7 @@ const AdminUsers = () => {
       d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear()
     );
   }).length;
+  // Đếm số lượng nhân viên (bao gồm các vai trò liên quan)
   const staffCount = users.filter((u) =>
     ["ADMIN", "STAFF", "DOCTOR", "SPA"].includes(u.role)
   ).length;
@@ -271,6 +330,13 @@ const AdminUsers = () => {
     },
   ];
 
+  // --- 6. UI Rendering (Kết xuất Giao diện) ---
+
+  // Hiển thị trạng thái tải lần đầu tiên
+  if (loading && users.length === 0)
+    return (
+      <div className="p-10 text-center">Đang tải dữ liệu người dùng...</div>
+    );
   return (
     <>
       {/* Page Heading */}
@@ -280,8 +346,8 @@ const AdminUsers = () => {
         </p>
       </div>
 
-      {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      {/* Lưới thống kê */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-6">
         {stats.map((stat, index) => (
           <div
             key={index}
@@ -314,8 +380,8 @@ const AdminUsers = () => {
         ))}
       </div>
 
-      {/* Filters & Actions */}
-      <div className="bg-white shadow-sm rounded-xl border border-gray-200 p-6">
+      {/* Bộ lọc & Hành động */}
+      <div className="bg-white shadow-sm rounded-xl border border-gray-200 p-6 mt-6">
         <div className="flex flex-col md:flex-row justify-between md:items-center space-y-4 md:space-y-0">
           <div className="flex-1 flex flex-col md:flex-row md:space-x-4 space-y-4 md:space-y-0">
             {/* Search */}
@@ -358,7 +424,7 @@ const AdminUsers = () => {
           {/* Buttons */}
           <div className="flex space-x-3">
             <button
-              className="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
+              className="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none"
               type="button"
             >
               <span className="material-symbols-outlined text-sm mr-2">
@@ -367,7 +433,7 @@ const AdminUsers = () => {
               Xuất Excel
             </button>
             <button
-              className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-primary hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
+              className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-primary hover:bg-green-600 focus:outline-none"
               type="button"
               onClick={handleCreateClick}
             >
@@ -380,8 +446,8 @@ const AdminUsers = () => {
         </div>
       </div>
 
-      {/* Data Table */}
-      <div className="bg-white shadow-sm rounded-xl border border-gray-200 overflow-hidden">
+      {/* Bảng dữ liệu */}
+      <div className="bg-white shadow-sm rounded-xl border border-gray-200 overflow-hidden mt-6">
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
@@ -428,13 +494,7 @@ const AdminUsers = () => {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {loading ? (
-                <tr>
-                  <td colSpan="7" className="px-6 py-4 text-center">
-                    Đang tải dữ liệu...
-                  </td>
-                </tr>
-              ) : users.length > 0 ? (
+              {users.length > 0 ? (
                 users.map((user, index) => (
                   <tr
                     key={user.userId || index}
@@ -445,7 +505,7 @@ const AdminUsers = () => {
                       #{user.userId}
                     </td>
 
-                    {/* Họ Tên + Avatar giả lập */}
+                    {/* Họ Tên + Avatar */}
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
                         <div className="h-10 w-10 flex-shrink-0">
@@ -453,6 +513,12 @@ const AdminUsers = () => {
                             <img
                               className="h-10 w-10 rounded-full object-cover"
                               src={`http://localhost:8080/uploads/${user.anhDaiDien}`}
+                              onError={(e) => {
+                                e.target.onerror = null;
+                                e.target.src = `https://placehold.co/40x40?text=${user.hoTen.charAt(
+                                  0
+                                )}`;
+                              }}
                               alt={user.hoTen}
                             />
                           ) : (
@@ -631,7 +697,7 @@ const AdminUsers = () => {
               </button>
             </div>
 
-            <div className="flex justify-center mb-4">
+            <div className="space-y-4">
               {selectedUser.anhDaiDien ? (
                 <img
                   className="h-24 w-24 rounded-full object-cover"
@@ -645,51 +711,51 @@ const AdminUsers = () => {
                     : "U"}
                 </div>
               )}
-            </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <p className="text-sm text-gray-500">Họ và tên</p>
-                <p className="font-medium text-gray-900">
-                  {selectedUser.hoTen}
-                </p>
-              </div>
-              <div>
-                <p className="text-sm text-gray-500">Vai trò</p>
-                <span
-                  className={`px-2 py-1 text-xs font-medium rounded-full border ${getRoleStyle(
-                    selectedUser.role
-                  )}`}
-                >
-                  {selectedUser.role}
-                </span>
-              </div>
-              <div className="min-w-0">
-                <p className="text-sm text-gray-500">Email</p>
-                <p
-                  className="font-medium text-gray-900 truncate"
-                  title={selectedUser.email}
-                >
-                  {selectedUser.email}
-                </p>
-              </div>
-              <div>
-                <p className="text-sm text-gray-500">Số điện thoại</p>
-                <p className="font-medium text-gray-900">
-                  {selectedUser.soDienThoai}
-                </p>
-              </div>
-              <div className="col-span-2">
-                <p className="text-sm text-gray-500">Địa chỉ</p>
-                <p className="font-medium text-gray-900">
-                  {selectedUser.diaChi}
-                </p>
-              </div>
-              <div>
-                <p className="text-sm text-gray-500">Ngày tạo</p>
-                <p className="font-medium text-gray-900">
-                  {formatDate(selectedUser.ngayTao)}
-                </p>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm text-gray-500">Họ và tên</p>
+                  <p className="font-medium text-gray-900">
+                    {selectedUser.hoTen}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">Vai trò</p>
+                  <span
+                    className={`px-2 py-1 text-xs font-medium rounded-full border ${getRoleStyle(
+                      selectedUser.role
+                    )}`}
+                  >
+                    {selectedUser.role}
+                  </span>
+                </div>
+                <div className="min-w-0">
+                  <p className="text-sm text-gray-500">Email</p>
+                  <p
+                    className="font-medium text-gray-900 truncate"
+                    title={selectedUser.email}
+                  >
+                    {selectedUser.email}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">Số điện thoại</p>
+                  <p className="font-medium text-gray-900">
+                    {selectedUser.soDienThoai}
+                  </p>
+                </div>
+                <div className="col-span-2">
+                  <p className="text-sm text-gray-500">Địa chỉ</p>
+                  <p className="font-medium text-gray-900">
+                    {selectedUser.diaChi}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">Ngày tạo</p>
+                  <p className="font-medium text-gray-900">
+                    {formatDate(selectedUser.ngayTao)}
+                  </p>
+                </div>
               </div>
             </div>
           </div>
@@ -839,7 +905,7 @@ const AdminUsers = () => {
         </div>
       )}
 
-      {/* Modal Thêm mới User (Unified) */}
+      {/* Modal Thêm mới User (Hợp nhất) */}
       {isCreateModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
           <div className="bg-white rounded-lg shadow-xl w-full max-w-lg p-6 max-h-[90vh] overflow-y-auto">
@@ -855,7 +921,7 @@ const AdminUsers = () => {
               </button>
             </div>
 
-            {/* Type Selection */}
+            {/* Chọn loại tài khoản */}
             <div className="flex space-x-4 mb-6">
               <button
                 className={`flex-1 py-2 text-sm font-medium rounded-md border ${
@@ -886,7 +952,7 @@ const AdminUsers = () => {
             </div>
 
             <div className="space-y-4">
-              {/* Common Fields */}
+              {/* Các trường chung */}
               <div>
                 <label className="block text-sm font-medium text-gray-700">
                   Họ và tên <span className="text-red-500">*</span>
@@ -1003,7 +1069,7 @@ const AdminUsers = () => {
                 />
               </div>
 
-              {/* Employee Specific Fields */}
+              {/* Các trường dành riêng cho nhân viên */}
               {creationType === "EMPLOYEE" && (
                 <div className="border-t pt-4 mt-4 space-y-4 bg-gray-50 p-4 rounded-md">
                   <h4 className="font-medium text-gray-900">

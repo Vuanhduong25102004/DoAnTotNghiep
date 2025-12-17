@@ -1,103 +1,15 @@
 import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 
-// Dữ liệu Thống kê (Stats)
-const statsData = [
-  { title: "Tổng người dùng", value: "1,204", change: "+5%", isPositive: true },
-  { title: "Tổng thú cưng", value: "1,530", change: "+8%", isPositive: true },
-  {
-    title: "Đơn hàng tháng này",
-    value: "256",
-    change: "+12%",
-    isPositive: true,
-  },
-  { title: "Lịch hẹn tuần này", value: "88", change: "+3%", isPositive: true },
-  { title: "Nhân viên", value: "15", change: "-", isPositive: false },
-  {
-    title: "Doanh thu tháng",
-    value: "150tr",
-    change: "+15%",
-    isPositive: true,
-  },
-];
-
-// Dữ liệu Đơn hàng gần đây
-const recentOrders = [
-  {
-    id: "#12056",
-    customer: "Nguyễn Văn A",
-    date: "15/07/2024",
-    total: "550.000 đ",
-    status: "Hoàn thành",
-    statusColor: "bg-green-100 text-green-800",
-  },
-  {
-    id: "#12055",
-    customer: "Trần Thị B",
-    date: "15/07/2024",
-    total: "300.000 đ",
-    status: "Đang xử lý",
-    statusColor: "bg-yellow-100 text-yellow-800",
-  },
-  {
-    id: "#12054",
-    customer: "Lê Văn C",
-    date: "14/07/2024",
-    total: "1.200.000 đ",
-    status: "Hoàn thành",
-    statusColor: "bg-green-100 text-green-800",
-  },
-  {
-    id: "#12053",
-    customer: "Phạm Thị D",
-    date: "14/07/2024",
-    total: "250.000 đ",
-    status: "Đã hủy",
-    statusColor: "bg-red-100 text-red-800",
-  },
-  {
-    id: "#12052",
-    customer: "Võ Văn E",
-    date: "13/07/2024",
-    total: "780.000 đ",
-    status: "Hoàn thành",
-    statusColor: "bg-green-100 text-green-800",
-  },
-];
-
-// Dữ liệu Lịch hẹn sắp tới
-const upcomingAppointments = [
-  {
-    time: "09:00",
-    period: "AM",
-    title: "Grooming cho 'Milo'",
-    customer: "Trần Thị B",
-    staff: "An",
-    type: "primary",
-  },
-  {
-    time: "11:30",
-    period: "AM",
-    title: "Khám sức khỏe cho 'Ki'",
-    customer: "Lê Văn C",
-    staff: "BS. Dũng",
-    type: "yellow",
-  },
-  {
-    time: "02:00",
-    period: "PM",
-    title: "Spa thư giãn cho 'Luna'",
-    customer: "Nguyễn Văn A",
-    staff: "Chi",
-    type: "primary",
-  },
-];
+// Import dữ liệu mẫu. Trong ứng dụng thực tế, dữ liệu này sẽ được fetch từ API.
+import { statsData, recentOrders, upcomingAppointments } from "./mockData.js";
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Lấy user từ localStorage thay vì gọi service để tránh lỗi
+    // Kiểm tra vai trò của người dùng khi component được render.
+    // Nếu người dùng có vai trò là 'DOCTOR', chuyển hướng họ đến trang quản lý lịch hẹn.
     const user = JSON.parse(localStorage.getItem("user"));
     if (user && user.role === "DOCTOR") {
       navigate("/admin/appointments");
@@ -106,18 +18,18 @@ const AdminDashboard = () => {
 
   return (
     <>
-      {/* Page Heading */}
+      {/* Tiêu đề trang */}
       <div className="flex flex-wrap justify-between gap-3">
         <p className="text-gray-900 text-4xl font-black leading-tight tracking-[-0.033em] min-w-72">
           Tổng quan Dashboard
         </p>
       </div>
 
-      {/* Stats Grid */}
+      {/* Lưới hiển thị các thẻ thống kê */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6">
-        {statsData.map((stat, index) => (
+        {statsData.map((stat) => (
           <div
-            key={index}
+            key={stat.title} // Sử dụng `title` làm key vì nó là duy nhất trong dữ liệu mẫu
             className="flex min-w-[158px] flex-1 flex-col gap-2 rounded-xl p-6 bg-white border border-gray-200 shadow-sm"
           >
             <p className="text-gray-700 text-base font-medium leading-normal">
@@ -137,23 +49,23 @@ const AdminDashboard = () => {
         ))}
       </div>
 
-      {/* Main Grid */}
+      {/* Lưới chính chứa các phần Đơn hàng gần đây và Lịch hẹn sắp tới */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Recent Orders */}
+        {/* Phần: Đơn hàng gần đây */}
         <div className="lg:col-span-2 bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-gray-900 text-lg font-bold leading-tight tracking-[-0.015em]">
               Đơn hàng gần đây
             </h2>
-            <a
+            <Link
+              to="/admin/orders"
               className="text-sm font-medium text-primary hover:underline"
-              href="#"
             >
               Xem tất cả
-            </a>
+            </Link>
           </div>
-          {/* ... Table code ... */}
           <div className="overflow-x-auto">
+            {/* Bảng hiển thị các đơn hàng */}
             <table className="w-full text-sm text-left text-gray-500">
               <thead className="text-xs text-gray-700 uppercase bg-gray-50">
                 <tr>
@@ -170,9 +82,9 @@ const AdminDashboard = () => {
               </thead>
 
               <tbody>
-                {recentOrders.map((order, index) => (
+                {recentOrders.map((order) => (
                   <tr
-                    key={index}
+                    key={order.id} // Sử dụng `id` của đơn hàng làm key để tối ưu việc render
                     className="border-b last:border-b-0 hover:bg-gray-50 transition-colors"
                   >
                     <td className="px-4 py-3 font-medium text-gray-900">
@@ -199,23 +111,24 @@ const AdminDashboard = () => {
           </div>
         </div>
 
-        {/* Upcoming Appointments */}
+        {/* Phần: Lịch hẹn sắp tới */}
         <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-gray-900 text-lg font-bold leading-tight tracking-[-0.015em]">
               Lịch hẹn sắp tới
             </h2>
-            <a
+            <Link
+              to="/admin/appointments"
               className="text-sm font-medium text-primary hover:underline"
-              href="#"
             >
               Xem lịch
-            </a>
+            </Link>
           </div>
+          {/* Danh sách các lịch hẹn */}
           <div className="space-y-4">
-            {upcomingAppointments.map((app, index) => (
+            {upcomingAppointments.map((app) => (
               <div
-                key={index}
+                key={app.id} // Sử dụng `id` của lịch hẹn làm key
                 className="flex items-start gap-4 p-3 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors"
               >
                 <div className="w-12 text-center flex-shrink-0">

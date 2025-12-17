@@ -1,32 +1,92 @@
 @import "tailwindcss";
 
 @theme {
-  /* Màu chủ đạo */
+  /* --- CẤU HÌNH CỦA BẠN (GIỮ NGUYÊN) --- */
   --color-primary: #13ec5b;
-  --color-primary-hover: #0ec94d; /* Thêm màu hover */
+  --color-primary-hover: #0ec94d;
   
-  /* Màu nền */
   --color-background-light: #f6f8f6;
   --color-surface: #f0f4f2; 
   
-  /* Màu chữ & Viền */
   --color-text-main: #111813;   
-  --color-text-secondary: #61896f; /* Thêm màu chữ phụ */
+  --color-text-secondary: #61896f;
   --color-text-muted: #61896f; 
-  --color-border-color: #dbe6df;   /* Thêm màu viền */
+  --color-border-color: #dbe6df;
   --color-text-gray-500: #6b7280;
   --color-border-gray-200: #e5e7eb;
 
-  /* Font chữ */
   --font-display: "Plus Jakarta Sans", "Noto Sans", sans-serif;
   --font-body: "Noto Sans", sans-serif;
 
-  /* Border Radius */
   --radius-lg: 0.5rem;
   --radius-xl: 0.75rem;
+
+  /* --- CẤU HÌNH BỔ SUNG TỪ FORM GỐC (ĐÃ ĐIỀU CHỈNH THEO THEME CỦA BẠN) --- */
+  
+  /* Map các class cũ sang màu mới của bạn để đồng bộ */
+  --color-text-heading: var(--color-text-main);
+  --color-text-body: var(--color-text-secondary);
+  --color-bg-page: var(--color-background-light);
+  --color-border-light: var(--color-border-color);
+
+  /* Các màu thiếu */
+  --color-bg-card: #FFFFFF;
+  --color-text-placeholder: #94A3B8;
+  --color-secondary: #64748B; /* Màu xám cho nút đóng/phụ */
+  
+  /* Shadow riêng cho Modal */
+  --shadow-modal: 0 10px 40px -10px rgba(0, 0, 0, 0.08);
 }
 
-/* Class hỗ trợ icon */
+/* --- CUSTOM STYLES CHO FORM (BẮT BUỘC ĐỂ GIỮ GIAO DIỆN CŨ) --- */
+
+/* Scrollbar */
+.custom-scrollbar::-webkit-scrollbar { width: 6px; }
+.custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+.custom-scrollbar::-webkit-scrollbar-thumb { background: var(--color-border-color); border-radius: 3px; }
+.custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #CBD5E1; }
+
+/* Input Styles - Kiểu gạch chân (Material style) */
+.input-group {
+  @apply flex flex-col space-y-2;
+}
+
+.form-label {
+  @apply text-xs font-medium text-text-body uppercase tracking-wider mb-1 opacity-80;
+}
+
+.form-control {
+  @apply block w-full rounded-none bg-transparent text-text-heading shadow-none focus:ring-0 sm:text-sm transition-colors duration-200 py-3 px-0 placeholder-text-placeholder/60 font-light;
+  /* Border bottom only */
+  border-width: 0 0 1px 0;
+  border-color: var(--color-border-light);
+}
+
+.form-control:focus {
+  border-color: var(--color-primary);
+  outline: none;
+}
+
+.form-control:hover {
+  @apply border-slate-400;
+}
+
+/* Select Styling adjustments */
+select.form-control {
+  @apply py-3 pl-0 pr-8;
+  background-position: right 0 center !important;
+}
+
+/* Section Headers */
+.section-header {
+  @apply flex items-center gap-3 mb-8;
+}
+
+.section-title {
+  @apply text-base font-semibold text-text-heading tracking-tight;
+}
+
+/* Icon Setup */
 .material-symbols-outlined {
   font-family: 'Material Symbols Outlined';
   font-weight: normal;
@@ -39,5 +99,4 @@
   letter-spacing: normal;
   word-wrap: normal;
   direction: ltr;
-  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
 }

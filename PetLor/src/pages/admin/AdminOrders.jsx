@@ -1,7 +1,20 @@
+/**
+ * @file AdminOrders.jsx
+ * @description Trang quản lý đơn hàng cho quản trị viên.
+ * Cho phép xem, tìm kiếm, lọc, cập nhật và xóa đơn hàng.
+ * Tối ưu hóa bằng cách sử dụng phân trang và lọc phía máy chủ.
+ */
 import React, { useEffect, useState } from "react";
 import orderService from "../../services/orderService";
+import { motion, AnimatePresence } from "framer-motion";
 
-// Helper: Format tiền tệ
+// --- Helpers (Hàm hỗ trợ) ---
+
+/**
+ * Định dạng một số thành chuỗi tiền tệ VND.
+ * @param {number} amount - Số tiền cần định dạng.
+ * @returns {string} - Chuỗi tiền tệ đã định dạng (ví dụ: "50.000 ₫").
+ */
 const formatCurrency = (amount) => {
   return new Intl.NumberFormat("vi-VN", {
     style: "currency",
@@ -9,19 +22,25 @@ const formatCurrency = (amount) => {
   }).format(amount);
 };
 
-// Helper: Format ngày giờ
+/**
+ * Định dạng chuỗi ngày giờ sang định dạng dd/MM/yyyy, HH:mm.
+ * @param {string} dateString - Chuỗi ngày giờ đầu vào (ISO 8601).
+ * @returns {string} - Chuỗi ngày giờ đã định dạng hoặc "---" nếu không có.
+ */
 const formatDateTime = (dateString) => {
   if (!dateString) return "---";
   return new Date(dateString).toLocaleString("vi-VN", {
     day: "2-digit",
     month: "2-digit",
     year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
   });
 };
 
-// Helper: Style cho trạng thái đơn hàng
+/**
+ * Trả về các lớp CSS của Tailwind để tạo badge cho trạng thái đơn hàng.
+ * @param {string} status - Trạng thái của đơn hàng.
+ * @returns {string} - Chuỗi các lớp CSS.
+ */
 const getStatusBadge = (status) => {
   // Chuẩn hóa status về chữ thường để so sánh
   const normalizedStatus = status ? status.toLowerCase() : "";
@@ -48,61 +67,93 @@ const getStatusBadge = (status) => {
   return "bg-yellow-100 text-yellow-800 border-yellow-200";
 };
 
+// Danh sách các trạng thái có thể có của một đơn hàng
+const ORDER_STATUSES = ["Chờ xử lý", "Đang giao", "Hoàn thành", "Đã hủy"];
+
+/**
+ * Component chính cho trang quản lý đơn hàng.
+ */
 const AdminOrders = () => {
-  // 1. State
+  // --- 1. State Management (Quản lý Trạng thái) ---
+
+  // State lưu trữ dữ liệu chính và trạng thái tải
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // State cho Modal Cập nhật
+  // State cho Modal Cập nhật trạng thái
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingOrder, setEditingOrder] = useState(null);
   const [formData, setFormData] = useState({ trangThai: "", diaChi: "" });
 
-  // State cho Modal Chi tiết
+  // State cho Modal xem Chi tiết đơn hàng
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [orderItems, setOrderItems] = useState([]);
 
-  // Filter States
+  // State cho Modal xác nhận xóa
+  const [isConfirmDeleteModalOpen, setIsConfirmDeleteModalOpen] =
+    useState(false);
+  const [orderToDeleteId, setOrderToDeleteId] = useState(null);
+
+  // State cho các bộ lọc
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [dateFilter, setDateFilter] = useState("");
 
-  // State phân trang
+  // State cho phân trang
   const [currentPage, setCurrentPage] = useState(1);
-  const ITEMS_PER_PAGE = 5;
+  const [totalPages, setTotalPages] = useState(0);
+  const [totalElements, setTotalElements] = useState(0);
+  const ITEMS_PER_PAGE = 6; // Số đơn hàng trên mỗi trang
 
-  // 2. Fetch Data
+  // --- 2. Data Fetching (Lấy Dữ liệu từ API) ---
+
+  /**
+   * Lấy danh sách đơn hàng từ API dựa trên các tham số phân trang và lọc.
+   */
   const fetchOrders = async () => {
     setLoading(true);
     try {
-      const response = await orderService.getAllOrders();
-      // Map dữ liệu cho khớp với UI
-      const formattedData = Array.isArray(response)
-        ? response.map((order) => ({
-            ...order,
-            donHangId: order.id || order.donHangId,
-            // Map thông tin khách hàng
-            userName:
-              order.tenNguoiDung ||
-              (order.user
-                ? order.user.hoTen || order.user.tenNguoiDung
-                : order.hoTenNguoiNhan || "Khách vãng lai"),
-            userId: order.user
-              ? order.user.id || order.user.userId
-              : order.userId,
-            tongTien: order.tongTien || 0,
-            trangThai: order.trangThaiDonHang || order.trangThai || "Chờ xử lý",
-            diaChi: order.diaChiGiaoHang || order.diaChi || "Tại cửa hàng",
-          }))
-        : [];
+      const page = currentPage - 1; // API sử dụng trang bắt đầu từ 0
+      const params = {
+        page,
+        size: ITEMS_PER_PAGE,
+        search: searchTerm,
+        status: statusFilter,
+        date: dateFilter,
+      };
+      // Xóa các tham số rỗng để không gửi lên server
+      if (!params.search) delete params.search;
+      if (!params.status) delete params.status;
+      if (!params.date) delete params.date;
 
-      // Sắp xếp đơn mới nhất lên đầu
-      formattedData.sort(
-        (a, b) => new Date(b.ngayDatHang) - new Date(a.ngayDatHang)
-      );
+      const response = await orderService.getAllOrders(params);
+
+      // Xác định dữ liệu là mảng trực tiếp hay nằm trong thuộc tính content (phân trang)
+      const ordersList = Array.isArray(response)
+        ? response
+        : response?.content || [];
+
+      // Map dữ liệu trả về từ API để đảm bảo tính nhất quán
+      const formattedData = ordersList.map((order) => ({
+        ...order,
+        donHangId: order.id || order.donHangId,
+        userName:
+          order.tenNguoiDung ||
+          (order.user ? order.user.hoTen : order.hoTenNguoiNhan) ||
+          "Khách vãng lai",
+        userId: order.user ? order.user.id || order.user.userId : order.userId,
+        tongTien: order.tongTien || 0,
+        trangThai: order.trangThaiDonHang || order.trangThai || "Chờ xử lý",
+        diaChi: order.diaChiGiaoHang || order.diaChi || "Tại cửa hàng",
+      }));
 
       setOrders(formattedData);
+      setTotalPages(response?.totalPages || (Array.isArray(response) ? 1 : 0));
+      setTotalElements(
+        response?.totalElements ||
+          (Array.isArray(response) ? response.length : 0)
+      );
     } catch (error) {
       console.error("Lỗi tải đơn hàng:", error);
       alert("Không thể tải danh sách đơn hàng");
@@ -111,54 +162,97 @@ const AdminOrders = () => {
     }
   };
 
+  // --- 3. Side Effects (Xử lý Tác vụ Phụ) ---
+
+  // Tải lại danh sách đơn hàng mỗi khi trang, từ khóa tìm kiếm hoặc bộ lọc thay đổi.
   useEffect(() => {
     fetchOrders();
+  }, [currentPage, searchTerm, statusFilter, dateFilter]);
+
+  // Khóa cuộn trang khi có bất kỳ modal nào đang mở
+  useEffect(() => {
+    const isAnyModalOpen =
+      isModalOpen || isDetailModalOpen || isConfirmDeleteModalOpen;
+
+    if (isAnyModalOpen) {
+      document.body.style.overflow = "hidden";
+      document.documentElement.style.overflow = "hidden";
+      document.body.style.overscrollBehavior = "none";
+    } else {
+      document.body.style.overflow = "";
+      document.documentElement.style.overflow = "";
+      document.body.style.overscrollBehavior = "";
+    }
+
+    // Hàm cleanup để khôi phục cuộn khi component unmount
+    return () => {
+      document.body.style.overflow = "";
+      document.documentElement.style.overflow = "";
+      document.body.style.overscrollBehavior = "";
+    };
+  }, [isModalOpen, isDetailModalOpen, isConfirmDeleteModalOpen]);
+
+  // Xử lý phím ESC để đóng modal
+  useEffect(() => {
+    const handleEscKey = (event) => {
+      if (event.key === "Escape") {
+        setIsModalOpen(false);
+        setIsDetailModalOpen(false);
+        setIsConfirmDeleteModalOpen(false);
+      }
+    };
+    document.addEventListener("keydown", handleEscKey);
+    return () => document.removeEventListener("keydown", handleEscKey);
   }, []);
 
-  // Reset trang về 1 khi thay đổi bộ lọc
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [searchTerm, statusFilter, dateFilter]);
+  // --- 4. Event Handlers (Hàm Xử lý Sự kiện) ---
 
-  // 3. Handle Actions
-  const handleDelete = async (id) => {
-    if (
-      !window.confirm(
-        "Bạn có chắc chắn muốn xóa lịch sử đơn hàng này? Thao tác này không thể hoàn tác."
-      )
-    )
-      return;
+  /**
+   * Xử lý xóa một đơn hàng.
+   * @param {number} id - ID của đơn hàng cần xóa.
+   */
+  const handleDeleteClick = (id) => {
+    setOrderToDeleteId(id);
+    setIsConfirmDeleteModalOpen(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!orderToDeleteId) return;
     try {
-      await orderService.deleteOrder(id);
-      setOrders((prev) => prev.filter((o) => o.donHangId !== id));
+      await orderService.deleteOrder(orderToDeleteId);
       alert("Đã xóa đơn hàng.");
+      // Tải lại dữ liệu sau khi xóa
+      if (orders.length === 1 && currentPage > 1) {
+        setCurrentPage(currentPage - 1); // Lùi về trang trước nếu trang hiện tại trống
+      } else {
+        fetchOrders();
+      }
     } catch (error) {
+      console.error("Lỗi xóa đơn hàng:", error);
       alert("Xóa thất bại.");
+    } finally {
+      setIsConfirmDeleteModalOpen(false);
+      setOrderToDeleteId(null);
     }
   };
 
-  // Hàm xem chi tiết đơn hàng
+  /**
+   * Mở modal và tải chi tiết đơn hàng (bao gồm danh sách sản phẩm).
+   * @param {object} order - Đối tượng đơn hàng được chọn.
+   */
   const handleViewDetail = async (order) => {
     try {
       // Gọi API lấy chi tiết (danh sách sản phẩm)
       const response = await orderService.getOrderById(order.donHangId);
 
-      // Cập nhật state dựa trên dữ liệu trả về
-      if (response && response.chiTietDonHangs) {
-        setOrderItems(response.chiTietDonHangs);
-        // Cập nhật thông tin chi tiết đơn hàng
-        setSelectedOrder({
-          ...order,
-          ...response,
-          userName: response.tenNguoiDung || order.userName,
-          trangThai: response.trangThaiDonHang || order.trangThai,
-          diaChi: response.diaChiGiaoHang || order.diaChi,
-        });
-      } else {
-        // Fallback cho cấu trúc dữ liệu cũ
-        setOrderItems(Array.isArray(response) ? response : []);
-        setSelectedOrder(order);
-      }
+      setOrderItems(response?.chiTietDonHangs || []);
+      setSelectedOrder({
+        ...order,
+        ...response, // Ghi đè với dữ liệu chi tiết mới nhất từ API
+        userName: response.tenNguoiDung || order.userName,
+        trangThai: response.trangThaiDonHang || order.trangThai,
+        diaChi: response.diaChiGiaoHang || order.diaChi,
+      });
       setIsDetailModalOpen(true);
     } catch (error) {
       console.error("Lỗi tải chi tiết:", error);
@@ -166,7 +260,10 @@ const AdminOrders = () => {
     }
   };
 
-  // Hàm mở Modal sửa
+  /**
+   * Mở modal để cập nhật trạng thái/địa chỉ đơn hàng.
+   * @param {object} order - Đối tượng đơn hàng cần chỉnh sửa.
+   */
   const handleEdit = (order) => {
     setEditingOrder(order);
     setFormData({
@@ -176,7 +273,9 @@ const AdminOrders = () => {
     setIsModalOpen(true);
   };
 
-  // Hàm lưu thay đổi
+  /**
+   * Gửi yêu cầu cập nhật đơn hàng lên server.
+   */
   const handleSave = async () => {
     if (!editingOrder) return;
 
@@ -184,63 +283,40 @@ const AdminOrders = () => {
       // Chuẩn bị payload: Loại bỏ các trường frontend tự tạo
       const { userName, donHangId, ...rest } = editingOrder;
       const payload = {
-        ...rest,
-        diaChi: formData.diaChi,
-        diaChiGiaoHang: formData.diaChi, // Đồng bộ field cho backend
-        trangThai: formData.trangThai,
-        trangThaiDonHang: formData.trangThai, // Đồng bộ field cho backend
+        // Chỉ gửi những trường cần cập nhật
+        diaChiGiaoHang: formData.diaChi,
+        trangThaiDonHang: formData.trangThai,
       };
 
       await orderService.updateOrder(editingOrder.donHangId, payload);
 
-      // Update UI
-      setOrders((prev) =>
-        prev.map((o) =>
-          o.donHangId === editingOrder.donHangId ? { ...o, ...formData } : o
-        )
-      );
       alert("Cập nhật đơn hàng thành công!");
       setIsModalOpen(false);
+      fetchOrders(); // Tải lại dữ liệu để hiển thị thay đổi
     } catch (error) {
       console.error(error);
       alert("Cập nhật thất bại.");
     }
   };
 
-  // 4. Filter Logic
-  const filteredOrders = orders.filter((order) => {
-    // Tìm kiếm theo ID hoặc Tên khách
-    const matchSearch =
-      order.donHangId.toString().includes(searchTerm) ||
-      (order.userName &&
-        order.userName.toLowerCase().includes(searchTerm.toLowerCase()));
-
-    // Lọc trạng thái (Backend trả về tiếng Việt hay Anh thì phải khớp ở đây)
-    // Tạm thời so sánh tương đối
-    const matchStatus = statusFilter
-      ? order.trangThai.toLowerCase().includes(statusFilter.toLowerCase())
-      : true;
-
-    // Lọc ngày
-    const matchDate = dateFilter
-      ? order.ngayDatHang.startsWith(dateFilter)
-      : true;
-
-    return matchSearch && matchStatus && matchDate;
-  });
-
-  // Logic Phân trang
-  const indexOfLastItem = currentPage * ITEMS_PER_PAGE;
-  const indexOfFirstItem = indexOfLastItem - ITEMS_PER_PAGE;
-  const currentItems = filteredOrders.slice(indexOfFirstItem, indexOfLastItem);
-  const totalPages = Math.ceil(filteredOrders.length / ITEMS_PER_PAGE);
-
+  /**
+   * Xử lý thay đổi trang.
+   * @param {number} pageNumber - Số trang muốn chuyển đến.
+   */
   const handlePageChange = (pageNumber) => {
-    setCurrentPage(pageNumber);
+    if (pageNumber > 0 && pageNumber <= totalPages) {
+      setCurrentPage(pageNumber);
+    }
   };
 
-  // 5. Tính toán Stats
-  const totalOrders = orders.length;
+  // --- 5. Derived Data & Calculations (Dữ liệu & Tính toán) ---
+
+  // Tính toán index của item đầu tiên trên trang để hiển thị thông tin phân trang
+  const indexOfFirstItem = (currentPage - 1) * ITEMS_PER_PAGE;
+
+  // Lưu ý: Các chỉ số thống kê bên dưới (Doanh thu, Đơn chờ) chỉ được tính cho các đơn hàng trên trang hiện tại.
+  // Để có số liệu toàn bộ, backend cần cung cấp API riêng cho thống kê.
+  const totalOrders = totalElements;
   // Tính tổng tiền các đơn KHÔNG bị hủy
   const revenue = orders
     .filter(
@@ -250,10 +326,9 @@ const AdminOrders = () => {
     )
     .reduce((sum, o) => sum + o.tongTien, 0);
 
-  const pendingOrders = orders.filter(
-    (o) =>
-      o.trangThai.toLowerCase().includes("chờ") ||
-      o.trangThai.toLowerCase().includes("pending")
+  // Đếm số đơn hàng đang chờ xử lý
+  const pendingOrders = orders.filter((o) =>
+    o.trangThai.toLowerCase().includes("chờ")
   ).length;
 
   const stats = [
@@ -282,6 +357,8 @@ const AdminOrders = () => {
       border: "border-yellow-500",
     },
   ];
+
+  // --- 6. UI Rendering (Kết xuất Giao diện) ---
 
   if (loading)
     return <div className="p-10 text-center">Đang tải dữ liệu đơn hàng...</div>;
@@ -345,7 +422,10 @@ const AdminOrders = () => {
                 placeholder="Tìm mã đơn, tên khách..."
                 type="text"
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                onChange={(e) => {
+                  setSearchTerm(e.target.value);
+                  setCurrentPage(1); // Quay về trang đầu khi tìm kiếm
+                }}
               />
             </div>
 
@@ -354,13 +434,17 @@ const AdminOrders = () => {
               <select
                 className="block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-primary focus:border-primary sm:text-sm rounded-md h-10"
                 value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
+                onChange={(e) => {
+                  setStatusFilter(e.target.value);
+                  setCurrentPage(1); // Quay về trang đầu khi lọc
+                }}
               >
                 <option value="">Tất cả trạng thái</option>
-                <option value="chờ">Chờ xử lý</option>
-                <option value="giao">Đang giao</option>
-                <option value="hoàn thành">Hoàn thành</option>
-                <option value="hủy">Đã hủy</option>
+                {ORDER_STATUSES.map((status) => (
+                  <option key={status} value={status}>
+                    {status}
+                  </option>
+                ))}
               </select>
             </div>
 
@@ -370,7 +454,10 @@ const AdminOrders = () => {
                 className="block w-full pl-3 pr-3 py-2 text-base border-gray-300 focus:outline-none focus:ring-primary focus:border-primary sm:text-sm rounded-md h-10"
                 type="date"
                 value={dateFilter}
-                onChange={(e) => setDateFilter(e.target.value)}
+                onChange={(e) => {
+                  setDateFilter(e.target.value);
+                  setCurrentPage(1); // Quay về trang đầu khi lọc
+                }}
               />
             </div>
           </div>
@@ -438,8 +525,8 @@ const AdminOrders = () => {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {currentItems.length > 0 ? (
-                currentItems.map((order, index) => (
+              {orders.length > 0 ? (
+                orders.map((order, index) => (
                   <tr
                     key={order.donHangId || index}
                     className="hover:bg-gray-50 transition-colors"
@@ -512,7 +599,7 @@ const AdminOrders = () => {
                         <button
                           title="Xóa/Hủy"
                           className="text-gray-400 hover:text-red-500 transition-colors"
-                          onClick={() => handleDelete(order.donHangId)}
+                          onClick={() => handleDeleteClick(order.donHangId)}
                         >
                           <span className="material-symbols-outlined text-base">
                             cancel
@@ -541,17 +628,17 @@ const AdminOrders = () => {
           <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
             <div>
               <p className="text-sm text-gray-700">
-                Hiển thị{" "}
+                Hiển thị
                 <span className="font-medium">
-                  {filteredOrders.length > 0 ? indexOfFirstItem + 1 : 0}
-                </span>{" "}
-                đến{" "}
+                  {totalElements > 0 ? indexOfFirstItem + 1 : 0}
+                </span>
+                đến
                 <span className="font-medium">
-                  {Math.min(indexOfLastItem, filteredOrders.length)}
-                </span>{" "}
-                trong số{" "}
-                <span className="font-medium">{filteredOrders.length}</span> kết
-                quả
+                  {indexOfFirstItem + orders.length}
+                </span>
+                trong số
+                <span className="font-medium">{totalElements}</span>
+                kết quả
               </p>
             </div>
             <div>
@@ -611,214 +698,349 @@ const AdminOrders = () => {
       </div>
 
       {/* Modal Cập nhật Đơn hàng */}
-      {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-md p-6">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-bold text-gray-900">
-                Cập nhật Đơn hàng #{editingOrder?.donHangId}
-              </h3>
-              <button
-                onClick={() => setIsModalOpen(false)}
-                className="text-gray-400 hover:text-gray-600"
-              >
-                <span className="material-symbols-outlined">close</span>
-              </button>
-            </div>
-
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Trạng thái đơn hàng
-                </label>
-                <select
-                  className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-primary focus:border-primary"
-                  value={formData.trangThai}
-                  onChange={(e) =>
-                    setFormData({ ...formData, trangThai: e.target.value })
-                  }
-                >
-                  <option value="Chờ xử lý">Chờ xử lý</option>
-                  <option value="Đang giao">Đang giao</option>
-                  <option value="Hoàn thành">Hoàn thành</option>
-                  <option value="Đã hủy">Đã hủy</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Địa chỉ giao hàng
-                </label>
-                <textarea
-                  rows="3"
-                  className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-primary focus:border-primary"
-                  value={formData.diaChi}
-                  onChange={(e) =>
-                    setFormData({ ...formData, diaChi: e.target.value })
-                  }
-                ></textarea>
-              </div>
-
-              <div className="flex justify-end space-x-3 mt-6">
+      <AnimatePresence>
+        {isModalOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm overflow-hidden"
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.95, opacity: 0, y: 20 }}
+              transition={{ duration: 0.3, ease: "easeOut" }}
+              className="w-full max-w-2xl bg-white rounded-2xl shadow-modal flex flex-col max-h-[95vh] relative overflow-hidden font-body mx-auto my-8"
+            >
+              {/* Header */}
+              <div className="px-10 py-6 border-b border-border-light/50 flex justify-between items-center bg-white sticky top-0 z-20 backdrop-blur-sm bg-white/95">
+                <div className="flex items-center gap-5">
+                  <div className="w-12 h-12 rounded-full bg-surface border border-border-light flex items-center justify-center text-primary">
+                    <span className="material-symbols-outlined text-[24px]">
+                      edit_note
+                    </span>
+                  </div>
+                  <div>
+                    <h1 className="text-xl font-semibold text-text-heading tracking-tight font-display">
+                      Cập nhật Đơn hàng #{editingOrder?.donHangId}
+                    </h1>
+                    <p className="text-sm text-text-body/70 mt-1 font-light">
+                      Chỉnh sửa trạng thái và địa chỉ giao hàng
+                    </p>
+                  </div>
+                </div>
                 <button
                   onClick={() => setIsModalOpen(false)}
-                  className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+                  className="w-10 h-10 rounded-full flex items-center justify-center text-secondary hover:text-text-heading hover:bg-surface transition-all duration-300"
+                >
+                  <span className="material-symbols-outlined font-light">
+                    close
+                  </span>
+                </button>
+              </div>
+
+              {/* Body */}
+              <div className="flex-1 p-8 md:p-10 bg-white overflow-y-auto">
+                <div className="space-y-8">
+                  <div className="input-group">
+                    <label className="form-label block text-sm font-medium text-text-heading mb-2">
+                      Trạng thái đơn hàng
+                    </label>
+                    <select
+                      className="form-control w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-primary focus:border-primary"
+                      value={formData.trangThai}
+                      onChange={(e) =>
+                        setFormData({ ...formData, trangThai: e.target.value })
+                      }
+                    >
+                      {ORDER_STATUSES.map((status) => (
+                        <option key={status} value={status}>
+                          {status}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="input-group">
+                    <label className="form-label block text-sm font-medium text-text-heading mb-2">
+                      Địa chỉ giao hàng
+                    </label>
+                    <textarea
+                      rows="3"
+                      className="form-control w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-primary focus:border-primary"
+                      value={formData.diaChi}
+                      onChange={(e) =>
+                        setFormData({ ...formData, diaChi: e.target.value })
+                      }
+                    ></textarea>
+                  </div>
+                </div>
+              </div>
+
+              {/* Footer */}
+              <div className="px-10 py-6 bg-white border-t border-border-light/50 flex justify-end gap-4 sticky bottom-0 z-20">
+                <button
+                  onClick={() => setIsModalOpen(false)}
+                  className="px-6 py-2.5 rounded-lg text-sm font-medium text-text-body hover:bg-surface hover:text-text-heading transition-colors border border-transparent hover:border-border-light"
+                >
+                  Hủy bỏ
+                </button>
+                <button
+                  onClick={handleSave}
+                  className="px-8 py-2.5 rounded-lg text-sm font-medium text-white bg-primary hover:bg-primary-hover shadow-lg shadow-primary/20 hover:shadow-primary/30 transition-all duration-200 transform hover:-translate-y-0.5 active:translate-y-0 flex items-center gap-2 tracking-wide"
+                >
+                  <span className="material-symbols-outlined text-[18px]">
+                    save
+                  </span>
+                  Lưu thay đổi
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Modal: Chi tiết Đơn hàng */}
+      <AnimatePresence>
+        {isDetailModalOpen && selectedOrder && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm overflow-hidden"
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.95, opacity: 0, y: 20 }}
+              transition={{ duration: 0.3, ease: "easeOut" }}
+              className="w-full max-w-4xl bg-white rounded-2xl shadow-modal flex flex-col max-h-[95vh] relative overflow-hidden font-body mx-auto my-8"
+            >
+              {/* Header */}
+              <div className="px-10 py-6 border-b border-border-light/50 flex justify-between items-center bg-white sticky top-0 z-20 backdrop-blur-sm bg-white/95">
+                <div className="flex items-center gap-5">
+                  <div className="w-12 h-12 rounded-full bg-surface border border-border-light flex items-center justify-center text-primary">
+                    <span className="material-symbols-outlined text-[24px]">
+                      receipt_long
+                    </span>
+                  </div>
+                  <div>
+                    <h1 className="text-xl font-semibold text-text-heading tracking-tight font-display">
+                      Chi tiết Đơn hàng #{selectedOrder.donHangId}
+                    </h1>
+                    <p className="text-sm text-text-body/70 mt-1 font-light">
+                      Xem thông tin chi tiết của đơn hàng
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setIsDetailModalOpen(false)}
+                  className="w-10 h-10 rounded-full flex items-center justify-center text-secondary hover:text-text-heading hover:bg-surface transition-all duration-300"
+                >
+                  <span className="material-symbols-outlined font-light">
+                    close
+                  </span>
+                </button>
+              </div>
+
+              {/* Body */}
+              <div className="flex-1 p-8 md:p-10 bg-white overflow-y-auto">
+                <div className="space-y-8">
+                  {/* Thông tin chung */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    <div className="space-y-1">
+                      <label className="text-sm font-medium text-text-muted">
+                        Khách hàng
+                      </label>
+                      <p className="font-medium text-text-heading">
+                        {selectedOrder.userName}
+                      </p>
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-sm font-medium text-text-muted">
+                        Ngày đặt
+                      </label>
+                      <p className="font-medium text-text-heading">
+                        {formatDateTime(selectedOrder.ngayDatHang)}
+                      </p>
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-sm font-medium text-text-muted">
+                        Trạng thái
+                      </label>
+                      <p>
+                        <span
+                          className={`inline-block px-2 py-1 text-xs font-medium rounded-full border ${getStatusBadge(
+                            selectedOrder.trangThai
+                          )}`}
+                        >
+                          {selectedOrder.trangThai}
+                        </span>
+                      </p>
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-sm font-medium text-text-muted">
+                        Địa chỉ
+                      </label>
+                      <p className="font-medium text-text-heading">
+                        {selectedOrder.diaChi}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Danh sách sản phẩm */}
+                  <div>
+                    <h4 className="font-semibold text-text-heading mb-4">
+                      Danh sách sản phẩm
+                    </h4>
+                    <div className="overflow-x-auto border rounded-lg">
+                      <table className="w-full text-sm text-left text-gray-500">
+                        <thead className="text-xs text-gray-700 uppercase bg-gray-50">
+                          <tr>
+                            <th className="px-4 py-3">Sản phẩm</th>
+                            <th className="px-4 py-3 text-right">Đơn giá</th>
+                            <th className="px-4 py-3 text-center">Số lượng</th>
+                            <th className="px-4 py-3 text-right">Thành tiền</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {orderItems.length > 0 ? (
+                            orderItems.map((item, index) => (
+                              <tr
+                                key={index}
+                                className="border-b last:border-b-0 hover:bg-gray-50"
+                              >
+                                <td className="px-4 py-3 font-medium text-gray-900">
+                                  <div className="flex items-center">
+                                    <img
+                                      src={
+                                        item.hinhAnhUrl ||
+                                        (item.sanPham &&
+                                          item.sanPham.hinhAnhUrl) ||
+                                        "https://via.placeholder.com/40?text=SP"
+                                      }
+                                      alt={
+                                        item.tenSanPham ||
+                                        (item.sanPham &&
+                                          item.sanPham.tenSanPham)
+                                      }
+                                      className="w-10 h-10 object-cover rounded mr-3 border border-gray-200"
+                                      onError={(e) => {
+                                        e.target.src =
+                                          "https://via.placeholder.com/40?text=SP";
+                                      }}
+                                    />
+                                    <span>
+                                      {item.tenSanPham ||
+                                        (item.sanPham &&
+                                          item.sanPham.tenSanPham) ||
+                                        "Sản phẩm không xác định"}
+                                    </span>
+                                  </div>
+                                </td>
+                                <td className="px-4 py-3 text-right">
+                                  {formatCurrency(item.donGiaLucMua || 0)}
+                                </td>
+                                <td className="px-4 py-3 text-center">
+                                  {item.soLuong}
+                                </td>
+                                <td className="px-4 py-3 text-right font-medium">
+                                  {formatCurrency(
+                                    (item.donGiaLucMua || 0) * item.soLuong
+                                  )}
+                                </td>
+                              </tr>
+                            ))
+                          ) : (
+                            <tr>
+                              <td
+                                colSpan="4"
+                                className="px-4 py-3 text-center text-gray-500"
+                              >
+                                Không có dữ liệu sản phẩm
+                              </td>
+                            </tr>
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Footer */}
+              <div className="px-10 py-6 bg-white border-t border-border-light/50 flex justify-between items-center sticky bottom-0 z-20">
+                <div className="text-lg font-bold text-gray-900">
+                  Tổng cộng:{" "}
+                  <span className="text-primary text-xl">
+                    {formatCurrency(selectedOrder.tongTien)}
+                  </span>
+                </div>
+                <button
+                  onClick={() => setIsDetailModalOpen(false)}
+                  className="px-6 py-2.5 rounded-lg text-sm font-medium text-text-body hover:bg-surface hover:text-text-heading transition-colors border border-transparent hover:border-border-light"
+                >
+                  Đóng
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Modal Xác nhận Xóa */}
+      <AnimatePresence>
+        {isConfirmDeleteModalOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.95, opacity: 0, y: 20 }}
+              transition={{ duration: 0.3, ease: "easeOut" }}
+              className="bg-white rounded-lg shadow-xl w-full max-w-md p-6"
+            >
+              <div className="text-center">
+                <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-red-100">
+                  <span className="material-symbols-outlined text-red-600 text-3xl">
+                    warning
+                  </span>
+                </div>
+                <h3 className="mt-5 text-lg font-semibold text-gray-900">
+                  Xác nhận xóa
+                </h3>
+                <div className="mt-2">
+                  <p className="text-sm text-gray-500">
+                    Bạn có chắc chắn muốn xóa đơn hàng này không? Hành động này
+                    không thể hoàn tác.
+                  </p>
+                </div>
+              </div>
+              <div className="mt-6 grid grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  onClick={() => setIsConfirmDeleteModalOpen(false)}
+                  className="inline-flex w-full justify-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
                 >
                   Hủy
                 </button>
                 <button
-                  onClick={handleSave}
-                  className="px-4 py-2 bg-primary text-white rounded-md hover:bg-green-600"
+                  type="button"
+                  onClick={confirmDelete}
+                  className="inline-flex w-full justify-center rounded-md bg-red-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-red-500"
                 >
-                  Lưu lại
+                  Xóa
                 </button>
               </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Modal Chi tiết Đơn hàng */}
-      {isDetailModalOpen && selectedOrder && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-3xl p-6 max-h-[90vh] overflow-y-auto">
-            {/* Header */}
-            <div className="flex justify-between items-center mb-4 border-b pb-2">
-              <h3 className="text-xl font-bold text-gray-900">
-                Chi tiết Đơn hàng #{selectedOrder.donHangId}
-              </h3>
-              <button
-                onClick={() => setIsDetailModalOpen(false)}
-                className="text-gray-400 hover:text-gray-600"
-              >
-                <span className="material-symbols-outlined">close</span>
-              </button>
-            </div>
-
-            {/* Thông tin chung */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-              <div>
-                <p className="text-sm text-gray-500">Khách hàng</p>
-                <p className="font-medium text-gray-900">
-                  {selectedOrder.userName}
-                </p>
-                <p className="text-xs text-gray-400">
-                  ID: #{selectedOrder.userId || "N/A"}
-                </p>
-              </div>
-              <div>
-                <p className="text-sm text-gray-500">Ngày đặt hàng</p>
-                <p className="font-medium text-gray-900">
-                  {formatDateTime(selectedOrder.ngayDatHang)}
-                </p>
-              </div>
-              <div>
-                <p className="text-sm text-gray-500">Trạng thái</p>
-                <span
-                  className={`inline-block mt-1 px-2 py-1 text-xs font-medium rounded-full border ${getStatusBadge(
-                    selectedOrder.trangThai
-                  )}`}
-                >
-                  {selectedOrder.trangThai}
-                </span>
-              </div>
-              <div>
-                <p className="text-sm text-gray-500">Địa chỉ giao hàng</p>
-                <p className="font-medium text-gray-900">
-                  {selectedOrder.diaChi}
-                </p>
-              </div>
-            </div>
-
-            {/* Danh sách sản phẩm */}
-            <h4 className="font-bold text-gray-800 mb-3">Danh sách sản phẩm</h4>
-            <div className="overflow-x-auto border rounded-lg mb-4">
-              <table className="w-full text-sm text-left text-gray-500">
-                <thead className="text-xs text-gray-700 uppercase bg-gray-50">
-                  <tr>
-                    <th className="px-4 py-3">Sản phẩm</th>
-                    <th className="px-4 py-3 text-right">Đơn giá</th>
-                    <th className="px-4 py-3 text-center">Số lượng</th>
-                    <th className="px-4 py-3 text-right">Thành tiền</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {orderItems.length > 0 ? (
-                    orderItems.map((item, index) => (
-                      <tr
-                        key={index}
-                        className="border-b last:border-b-0 hover:bg-gray-50"
-                      >
-                        <td className="px-4 py-3 font-medium text-gray-900">
-                          <div className="flex items-center">
-                            <img
-                              src={
-                                item.hinhAnhUrl ||
-                                (item.sanPham && item.sanPham.hinhAnhUrl) ||
-                                "https://via.placeholder.com/40?text=SP"
-                              }
-                              alt={
-                                item.tenSanPham ||
-                                (item.sanPham && item.sanPham.tenSanPham)
-                              }
-                              className="w-10 h-10 object-cover rounded mr-3 border border-gray-200"
-                              onError={(e) => {
-                                e.target.src =
-                                  "https://via.placeholder.com/40?text=SP";
-                              }}
-                            />
-                            <span>
-                              {item.tenSanPham ||
-                                (item.sanPham && item.sanPham.tenSanPham) ||
-                                "Sản phẩm không xác định"}
-                            </span>
-                          </div>
-                        </td>
-                        <td className="px-4 py-3 text-right">
-                          {formatCurrency(item.donGiaLucMua || 0)}
-                        </td>
-                        <td className="px-4 py-3 text-center">
-                          {item.soLuong}
-                        </td>
-                        <td className="px-4 py-3 text-right font-medium">
-                          {formatCurrency(
-                            (item.donGiaLucMua || 0) * item.soLuong
-                          )}
-                        </td>
-                      </tr>
-                    ))
-                  ) : (
-                    <tr>
-                      <td
-                        colSpan="4"
-                        className="px-4 py-3 text-center text-gray-500"
-                      >
-                        Không có dữ liệu sản phẩm
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-
-            {/* Footer: Tổng tiền & Nút đóng */}
-            <div className="flex justify-between items-center border-t pt-4">
-              <div className="text-lg font-bold text-gray-900">
-                Tổng cộng:{" "}
-                <span className="text-primary text-xl">
-                  {formatCurrency(selectedOrder.tongTien)}
-                </span>
-              </div>
-              <button
-                onClick={() => setIsDetailModalOpen(false)}
-                className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 font-medium"
-              >
-                Đóng
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </>
   );
 };

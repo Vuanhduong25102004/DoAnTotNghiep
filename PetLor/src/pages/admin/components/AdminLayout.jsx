@@ -4,72 +4,70 @@ import authService from "../../../services/authService";
 import userService from "../../../services/userService";
 import AdminHeader from "./AdminHeader";
 import AdminSidebar from "./AdminSidebar";
+import { jwtDecode } from "jwt-decode";
 
+/**
+ * AdminLayout là component khung chính cho toàn bộ trang quản trị.
+ * Nó bao gồm Sidebar, Header và khu vực nội dung chính sẽ thay đổi tùy theo route.
+ * Component này cũng chịu trách nhiệm lấy thông tin người dùng đang đăng nhập để hiển thị.
+ */
 const AdminLayout = () => {
+  // State để lưu thông tin chi tiết của người dùng đang đăng nhập.
   const [user, setUser] = useState(null);
   const navigate = useNavigate();
 
+  // Sử dụng useEffect để lấy dữ liệu người dùng khi component được mount.
   useEffect(() => {
     const fetchUserData = async () => {
+      // Lấy token xác thực từ localStorage.
       const token = localStorage.getItem("accessToken");
       if (token) {
         try {
-          // 1. Decode token to get basic info (like ID)
-          const base64Url = token.split(".")[1];
-          const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
-          const jsonPayload = decodeURIComponent(
-            atob(base64)
-              .split("")
-              .map((c) => "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2))
-              .join("")
-          );
-          const decodedToken = JSON.parse(jsonPayload);
-
-          if (decodedToken.exp && decodedToken.exp < Date.now() / 1000) {
-            handleLogout();
-            return; // Stop execution
-          }
-
-          // 2. Use the ID from token to fetch the full user profile from the database
-          // (Assuming the token payload has a 'userId' field)
+          // Giải mã token để lấy ID người dùng.
+          const decodedToken = jwtDecode(token);
+          
+          // Nếu token chứa userId, dùng nó để gọi API lấy thông tin đầy đủ của người dùng.
           if (decodedToken.userId) {
             const fullUserData = await userService.getUserById(
               decodedToken.userId
             );
-            setUser(fullUserData); // 3. Set the full user object to state
-          } else {
-            setUser(decodedToken); // Fallback, though not ideal
+            // Cập nhật state với dữ liệu người dùng đầy đủ.
+            setUser(fullUserData);
           }
         } catch (error) {
-          console.error("Lỗi xác thực hoặc tải dữ liệu người dùng:", error);
-          handleLogout();
+          console.error("Lỗi khi lấy dữ liệu người dùng:", error);
+          // Nếu có lỗi (ví dụ: token không hợp lệ), đặt state người dùng về null.
+          // Việc chuyển hướng đã được xử lý bởi AdminRoute, ở đây chỉ cần xử lý lỗi dữ liệu.
+          setUser(null);
         }
-      } else {
-        // Nếu không có token, đá về trang chủ hoặc login
-        navigate("/login");
       }
     };
 
     fetchUserData();
-  }, [navigate]);
+  }, []); // Mảng rỗng đảm bảo useEffect chỉ chạy một lần sau khi component mount.
 
+  // Hàm xử lý việc đăng xuất.
   const handleLogout = () => {
-    authService.logout();
-    setUser(null);
-    navigate("/");
+    authService.logout(); // Gọi service để xóa token.
+    setUser(null); // Xóa thông tin người dùng khỏi state.
+    navigate("/"); // Chuyển hướng về trang chủ.
   };
 
   return (
+    // Cấu trúc layout chính sử dụng Flexbox.
     <div className="flex h-screen overflow-hidden bg-background-light font-display text-text-main">
-      {/* Sidebar dùng chung */}
+      {/* Sidebar chung cho toàn trang admin, truyền hàm logout vào. */}
       <AdminSidebar onLogout={handleLogout} />
 
-      {/* Main Content Area */}
+      {/* Khu vực nội dung chính */}
       <main className="flex-1 flex flex-col overflow-hidden">
-        {/* Header dùng chung */}
+        {/* Header chung, truyền thông tin người dùng vào để hiển thị. */}
         <AdminHeader user={user} />
 
-        {/* Nơi nội dung thay đổi sẽ hiển thị (Dashboard, Users, Orders...) */}
+        {/* 
+          Khu vực hiển thị nội dung của các trang con (nested routes).
+          <Outlet /> là một component của React Router, nó sẽ render component con tương ứng với URL hiện tại.
+        */}
         <div className="p-6 space-y-6 overflow-y-auto flex-1">
           <Outlet />
         </div>
