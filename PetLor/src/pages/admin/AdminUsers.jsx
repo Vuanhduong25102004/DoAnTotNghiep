@@ -1,18 +1,14 @@
 /**
  * @file AdminUsers.jsx
- * @description Trang quản lý tất cả người dùng trong hệ thống (khách hàng, nhân viên, admin).
- * Cho phép xem, tìm kiếm, lọc, tạo, cập nhật và xóa người dùng.
+ * @description Trang quản lý tất cả người dùng (khách hàng, nhân viên, admin) với giao diện đồng bộ AdminAppointments.
  */
 import React, { useEffect, useState } from "react";
 import userService from "../../services/userService";
+import { motion, AnimatePresence } from "framer-motion";
+import { toast } from "react-toastify";
 
 // --- Helpers (Hàm hỗ trợ) ---
 
-/**
- * Định dạng chuỗi ngày giờ sang định dạng dd/MM/yyyy, HH:mm.
- * @param {string} dateString - Chuỗi ngày giờ đầu vào (ISO 8601).
- * @returns {string} - Chuỗi ngày giờ đã định dạng hoặc "N/A" nếu không có.
- */
 const formatDate = (dateString) => {
   if (!dateString) return "N/A";
   return new Date(dateString).toLocaleDateString("vi-VN", {
@@ -22,77 +18,106 @@ const formatDate = (dateString) => {
   });
 };
 
-/**
- * Trả về các lớp CSS của Tailwind để tạo badge cho vai trò người dùng.
- * @param {string} role - Vai trò của người dùng (ADMIN, STAFF, USER, etc.).
- * @returns {string} - Chuỗi các lớp CSS.
- */
-const getRoleStyle = (role) => {
-  switch (role) {
-    case "ADMIN":
-      return "bg-purple-100 text-purple-800 border-purple-200";
-    case "STAFF":
-      return "bg-blue-100 text-blue-800 border-blue-200";
-    case "DOCTOR":
-      return "bg-cyan-100 text-cyan-800 border-cyan-200";
-    case "SPA":
-      return "bg-pink-100 text-pink-800 border-pink-200";
-    default: // USER
-      return "bg-green-100 text-green-800 border-green-200";
-  }
+const getRoleBadge = (role) => {
+  const styles = {
+    ADMIN: "bg-purple-100 text-purple-800",
+    STAFF: "bg-blue-100 text-blue-800",
+    DOCTOR: "bg-cyan-100 text-cyan-800",
+    SPA: "bg-pink-100 text-pink-800",
+    USER: "bg-green-100 text-green-800",
+  };
+  return (
+    <span
+      className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+        styles[role] || "bg-gray-100 text-gray-800"
+      }`}
+    >
+      {role}
+    </span>
+  );
 };
 
-/**
- * Component chính cho trang quản lý người dùng.
- */
-const AdminUsers = () => {
-  // --- 1. State Management (Quản lý Trạng thái) ---
+// Component Skeleton Loading cho Table
+const SkeletonRow = () => (
+  <tr className="animate-pulse border-b border-gray-100 last:border-0">
+    <td className="px-6 py-4">
+      <div className="h-4 bg-gray-200 rounded w-8"></div>
+    </td>
+    <td className="px-6 py-4 flex items-center gap-3">
+      <div className="h-10 w-10 bg-gray-200 rounded-full"></div>
+      <div className="space-y-2">
+        <div className="h-4 bg-gray-200 rounded w-32"></div>
+      </div>
+    </td>
+    <td className="px-6 py-4">
+      <div className="h-4 bg-gray-200 rounded w-40 mb-2"></div>
+      <div className="h-3 bg-gray-100 rounded w-24"></div>
+    </td>
+    <td className="px-6 py-4">
+      <div className="h-4 bg-gray-200 rounded w-24"></div>
+    </td>
+    <td className="px-6 py-4">
+      <div className="h-6 bg-gray-200 rounded w-20"></div>
+    </td>
+    <td className="px-6 py-4">
+      <div className="h-4 bg-gray-200 rounded w-24"></div>
+    </td>
+    <td className="px-6 py-4">
+      <div className="h-8 bg-gray-200 rounded w-20 ml-auto"></div>
+    </td>
+  </tr>
+);
 
-  // State lưu trữ dữ liệu chính và trạng thái tải
+const AdminUsers = () => {
+  // --- State Management ---
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // State cho các modal (cửa sổ pop-up)
+  // State Modals
   const [selectedUser, setSelectedUser] = useState(null);
-  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isConfirmDeleteModalOpen, setIsConfirmDeleteModalOpen] =
+    useState(false);
+  const [userToDeleteId, setUserToDeleteId] = useState(null);
 
-  // State lưu trữ dữ liệu cho các form
-  const [avatarFile, setAvatarFile] = useState(null); // File ảnh đại diện được chọn
-  const [creationType, setCreationType] = useState("USER"); // Loại tài khoản tạo mới: 'USER' | 'EMPLOYEE'
+  // State Form
+  const [avatarFile, setAvatarFile] = useState(null);
+  const [creationType, setCreationType] = useState("USER"); // 'USER' | 'EMPLOYEE'
   const [newUserData, setNewUserData] = useState({
     hoTen: "",
     email: "",
     password: "",
     soDienThoai: "",
     diaChi: "",
-    role: "USER", // Mặc định là tạo khách hàng
+    role: "USER",
     chucVu: "",
     chuyenKhoa: "",
     kinhNghiem: "",
   });
 
-  // State cho bộ lọc và phân trang
+  // State Phân trang & Lọc
   const [searchTerm, setSearchTerm] = useState("");
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
   const [filterRole, setFilterRole] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(0);
   const [totalElements, setTotalElements] = useState(0);
-  const ITEMS_PER_PAGE = 5; // Số mục trên mỗi trang
+  const ITEMS_PER_PAGE = 5;
 
+  // --- Data Fetching ---
   const fetchUsers = async () => {
     setLoading(true);
     try {
-      const page = currentPage - 1; // API is 0-indexed
+      const page = currentPage - 1;
       const params = {
         page,
         size: ITEMS_PER_PAGE,
-        search: searchTerm,
+        search: debouncedSearchTerm, // Dùng giá trị đã debounce
         role: filterRole,
       };
-      // Xóa các tham số rỗng để không gửi lên server
       if (!params.search) delete params.search;
       if (!params.role) delete params.role;
 
@@ -101,49 +126,67 @@ const AdminUsers = () => {
       setTotalPages(response?.totalPages || 0);
       setTotalElements(response?.totalElements || 0);
     } catch (error) {
-      console.error("Lỗi khi tải danh sách người dùng:", error);
-      alert("Không thể tải danh sách người dùng.");
+      console.error("Lỗi tải danh sách người dùng:", error);
+      toast.error("Không thể tải danh sách người dùng.");
     } finally {
       setLoading(false);
     }
   };
 
-  // --- 3. Side Effects (Xử lý Tác vụ Phụ) ---
+  // Debounce Search
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm);
+    }, 500);
+    return () => clearTimeout(handler);
+  }, [searchTerm]);
 
-  // Tải lại danh sách người dùng mỗi khi trang, từ khóa tìm kiếm hoặc bộ lọc thay đổi.
+  // Fetch khi điều kiện thay đổi
   useEffect(() => {
     fetchUsers();
-  }, [currentPage, searchTerm, filterRole]);
+  }, [currentPage, debouncedSearchTerm, filterRole]);
 
-  // --- 4. Event Handlers (Hàm Xử lý Sự kiện) ---
-
-  /**
-   * Mở modal và hiển thị chi tiết người dùng được chọn.
-   * @param {object} user - Đối tượng người dùng.
-   */
   const handleViewDetail = (user) => {
     setSelectedUser(user);
     setIsDetailModalOpen(true);
   };
 
-  /**
-   * Mở modal chỉnh sửa và điền dữ liệu của người dùng được chọn.
-   * @param {object} user - Đối tượng người dùng.
-   */
   const handleEditClick = (user) => {
     setEditingUser({ ...user });
-    setAvatarFile(null); // Reset file ảnh khi mở modal
+    setAvatarFile(null);
     setIsEditModalOpen(true);
   };
 
-  /**
-   * Gửi yêu cầu cập nhật thông tin người dùng lên server.
-   */
+  const handleDeleteClick = (id) => {
+    setUserToDeleteId(id);
+    setIsConfirmDeleteModalOpen(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!userToDeleteId) return;
+    try {
+      await userService.deleteUser(userToDeleteId);
+      toast.success("Xóa người dùng thành công!");
+      // Logic lùi trang nếu xóa hết item ở trang cuối
+      if (users.length === 1 && currentPage > 1) {
+        setCurrentPage(currentPage - 1);
+      } else {
+        fetchUsers();
+      }
+    } catch (error) {
+      console.error("Lỗi xóa:", error);
+      toast.error(
+        "Xóa thất bại (người dùng có thể đang có dữ liệu liên quan)."
+      );
+    } finally {
+      setIsConfirmDeleteModalOpen(false);
+      setUserToDeleteId(null);
+    }
+  };
+
   const handleSaveUser = async () => {
     if (!editingUser) return;
-
     const formData = new FormData();
-    // Chuẩn bị đối tượng JSON chứa dữ liệu cần cập nhật
     const userData = {
       hoTen: editingUser.hoTen,
       email: editingUser.email,
@@ -151,64 +194,35 @@ const AdminUsers = () => {
       diaChi: editingUser.diaChi,
       role: editingUser.role,
     };
-
-    // Gửi dữ liệu người dùng dưới dạng Blob với Content-Type application/json
-    const jsonBlob = new Blob([JSON.stringify(userData)], {
-      type: "application/json",
-    });
-    formData.append("nguoiDung", jsonBlob);
-
-    // Thêm file ảnh mới (nếu có) với key là 'anhDaiDien'
+    formData.append(
+      "nguoiDung",
+      new Blob([JSON.stringify(userData)], { type: "application/json" })
+    );
     if (avatarFile) {
       formData.append("anhDaiDien", avatarFile);
     }
 
     try {
-      // API updateUser có thể xử lý FormData
       await userService.updateUser(editingUser.userId, formData);
-      fetchUsers();
+      toast.success("Cập nhật thành công!");
       setIsEditModalOpen(false);
-      setAvatarFile(null); // Reset trạng thái file
-      alert("Cập nhật thành công!");
+      setAvatarFile(null);
+      fetchUsers();
     } catch (error) {
       console.error("Lỗi cập nhật:", error);
-      alert("Cập nhật thất bại.");
+      toast.error("Cập nhật thất bại.");
     }
   };
-  /**
-   * Mở modal để tạo người dùng mới.
-   */
-  const handleCreateClick = () => {
-    setNewUserData({
-      // Reset form
-      hoTen: "",
-      email: "",
-      password: "",
-      soDienThoai: "",
-      diaChi: "",
-      role: "USER",
-      chucVu: "",
-      chuyenKhoa: "",
-      kinhNghiem: "",
-    });
-    setCreationType("USER"); // Mặc định là tạo khách hàng
-    setAvatarFile(null); // Reset file ảnh
-    setIsCreateModalOpen(true);
-  };
 
-  /**
-   * Gửi dữ liệu để tạo người dùng mới (khách hàng hoặc nhân viên).
-   */
   const handleCreateSubmit = async () => {
     if (!newUserData.hoTen || !newUserData.email || !newUserData.password) {
-      alert("Vui lòng điền đầy đủ thông tin bắt buộc!");
+      toast.warning("Vui lòng điền đầy đủ thông tin bắt buộc!");
       return;
     }
 
     const formData = new FormData();
     const userData = { ...newUserData };
 
-    // Nếu chỉ tạo khách hàng, xóa các trường của nhân viên
     if (creationType === "USER") {
       userData.role = "USER";
       delete userData.chucVu;
@@ -216,112 +230,63 @@ const AdminUsers = () => {
       delete userData.kinhNghiem;
     }
 
-    // Gửi dữ liệu JSON dưới dạng Blob với key 'nguoiDung'
-    const jsonBlob = new Blob([JSON.stringify(userData)], {
-      type: "application/json",
-    });
-    formData.append("nguoiDung", jsonBlob);
-
-    // Gửi file ảnh (nếu có) với key 'anhDaiDien'
+    formData.append(
+      "nguoiDung",
+      new Blob([JSON.stringify(userData)], { type: "application/json" })
+    );
     if (avatarFile) {
       formData.append("anhDaiDien", avatarFile);
     }
 
     try {
-      // Sử dụng API hợp nhất để tạo tài khoản
       await userService.createUnifiedUser(formData);
-
-      fetchUsers(); // Tải lại danh sách
+      toast.success("Tạo mới thành công!");
+      fetchUsers();
       setIsCreateModalOpen(false);
-      setAvatarFile(null); // Reset trạng thái file
-      alert("Tạo mới thành công!");
+      setAvatarFile(null);
+      // Reset form
+      setNewUserData({
+        hoTen: "",
+        email: "",
+        password: "",
+        soDienThoai: "",
+        diaChi: "",
+        role: "USER",
+        chucVu: "",
+        chuyenKhoa: "",
+        kinhNghiem: "",
+      });
     } catch (error) {
       console.error("Lỗi tạo mới:", error);
-      alert(
-        "Tạo mới thất bại. Email có thể đã tồn tại hoặc dữ liệu không hợp lệ."
-      );
+      toast.error("Tạo mới thất bại. Email có thể đã tồn tại.");
     }
   };
 
-  /**
-   * Xử lý xóa một người dùng.
-   * @param {number} userId - ID của người dùng cần xóa.
-   */
-  const handleDeleteUser = async (userId) => {
-    if (
-      !window.confirm(
-        `Bạn có chắc chắn muốn xóa người dùng ID: ${userId}? Thao tác này không thể hoàn tác.`
-      )
-    )
-      return;
-
-    try {
-      await userService.deleteUser(userId);
-      alert("Xóa người dùng thành công!");
-      // Sau khi xóa, nếu trang hiện tại trống, lùi về trang trước.
-      if (users.length === 1 && currentPage > 1) {
-        setCurrentPage(currentPage - 1);
-      } else {
-        fetchUsers(); // Nếu không, chỉ cần làm mới trang hiện tại.
-      }
-    } catch (error) {
-      console.error("Lỗi xóa người dùng:", error);
-      alert(
-        "Xóa thất bại. Người dùng có thể có dữ liệu liên quan (lịch hẹn, đơn hàng, thú cưng)."
-      );
-    }
-  };
-
-  /**
-   * Xử lý thay đổi trang.
-   * @param {number} pageNumber - Số trang muốn chuyển đến.
-   */
-  const handlePageChange = (pageNumber) => {
-    if (pageNumber > 0 && pageNumber <= totalPages) {
-      setCurrentPage(pageNumber);
-    }
-  };
-
-  // --- 5. Derived Data & Calculations (Dữ liệu & Tính toán) ---
-
-  // Tính toán index của item đầu tiên trên trang để hiển thị thông tin phân trang
-  const indexOfFirstItem = (currentPage - 1) * ITEMS_PER_PAGE;
-
-  // Lưu ý: Các chỉ số thống kê bên dưới chỉ được tính cho các người dùng trên trang hiện tại.
-  // Để có số liệu toàn bộ, backend cần cung cấp API riêng cho thống kê.
-  const totalUsers = totalElements;
-  const newUsersCount = users.filter((u) => {
-    if (!u.ngayTao) return false;
-    const d = new Date(u.ngayTao);
-    const now = new Date();
-    return (
-      d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear()
-    );
-  }).length;
-  // Đếm số lượng nhân viên (bao gồm các vai trò liên quan)
+  // --- Stats Logic (Tạm tính trên trang hiện tại hoặc cần API riêng) ---
+  // Để chính xác cần API getStats, ở đây demo UI
   const staffCount = users.filter((u) =>
     ["ADMIN", "STAFF", "DOCTOR", "SPA"].includes(u.role)
   ).length;
 
   const stats = [
     {
-      title: "Tổng người dùng",
-      value: totalUsers,
+      title: "Tổng người dùng (Hệ thống)",
+      value: totalElements,
       icon: "group",
       color: "text-blue-600",
       bg: "bg-blue-100",
       border: "border-blue-600",
     },
     {
-      title: "Người dùng mới (Tháng)",
-      value: `+${newUsersCount}`,
+      title: "Khách hàng mới (Tháng)",
+      value: "+12", // Placeholder
       icon: "person_add",
       color: "text-green-600",
       bg: "bg-green-100",
       border: "border-green-500",
     },
     {
-      title: "Nhân viên & Admin",
+      title: "Nhân viên & Admin (Trang này)",
       value: staffCount,
       icon: "manage_accounts",
       color: "text-purple-600",
@@ -329,24 +294,28 @@ const AdminUsers = () => {
       border: "border-purple-500",
     },
   ];
-
-  // --- 6. UI Rendering (Kết xuất Giao diện) ---
-
-  // Hiển thị trạng thái tải lần đầu tiên
-  if (loading && users.length === 0)
-    return (
-      <div className="p-10 text-center">Đang tải dữ liệu người dùng...</div>
-    );
+  // Xử lý phím ESC để đóng modal
+  useEffect(() => {
+    const handleEscKey = (event) => {
+      if (event.key === "Escape") {
+        setIsDetailModalOpen(false);
+        setIsEditModalOpen(false);
+        setIsCreateModalOpen(false);
+        setIsConfirmDeleteModalOpen(false);
+      }
+    };
+    document.addEventListener("keydown", handleEscKey);
+    return () => document.removeEventListener("keydown", handleEscKey);
+  }, []);
   return (
     <>
-      {/* Page Heading */}
+      {/* --- Header & Stats --- */}
       <div className="flex flex-wrap justify-between gap-3">
         <p className="text-gray-900 text-4xl font-black leading-tight tracking-[-0.033em] min-w-72">
           Quản lý Người dùng
         </p>
       </div>
 
-      {/* Lưới thống kê */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-6">
         {stats.map((stat, index) => (
           <div
@@ -380,10 +349,10 @@ const AdminUsers = () => {
         ))}
       </div>
 
-      {/* Bộ lọc & Hành động */}
+      {/* --- Filters & Actions --- */}
       <div className="bg-white shadow-sm rounded-xl border border-gray-200 p-6 mt-6">
-        <div className="flex flex-col md:flex-row justify-between md:items-center space-y-4 md:space-y-0">
-          <div className="flex-1 flex flex-col md:flex-row md:space-x-4 space-y-4 md:space-y-0">
+        <div className="flex flex-col md:flex-row justify-between md:items-center gap-4">
+          <div className="flex-1 flex flex-col md:flex-row md:items-center gap-4">
             {/* Search */}
             <div className="relative rounded-md shadow-sm max-w-xs">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -393,7 +362,7 @@ const AdminUsers = () => {
               </div>
               <input
                 className="focus:ring-primary focus:border-primary block w-full pl-10 sm:text-sm border-gray-300 rounded-md h-10"
-                placeholder="Tìm tên, email, sđt..."
+                placeholder="Tìm tên, email..."
                 type="text"
                 value={searchTerm}
                 onChange={(e) => {
@@ -402,31 +371,29 @@ const AdminUsers = () => {
                 }}
               />
             </div>
-            {/* Select Role */}
-            <div className="relative inline-block text-left">
+            {/* Role Filter */}
+            <div className="relative rounded-md shadow-sm max-w-xs">
               <select
-                className="block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-primary focus:border-primary sm:text-sm rounded-md h-10"
                 value={filterRole}
                 onChange={(e) => {
                   setFilterRole(e.target.value);
                   setCurrentPage(1);
                 }}
+                className="focus:ring-primary focus:border-primary block w-full sm:text-sm border-gray-300 rounded-md h-10"
               >
                 <option value="">Tất cả vai trò</option>
                 <option value="USER">Khách hàng</option>
                 <option value="STAFF">Nhân viên</option>
-                <option value="ADMIN">Quản trị</option>
                 <option value="DOCTOR">Bác sĩ</option>
                 <option value="SPA">Spa</option>
+                <option value="ADMIN">Quản trị</option>
               </select>
             </div>
           </div>
+
           {/* Buttons */}
           <div className="flex space-x-3">
-            <button
-              className="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none"
-              type="button"
-            >
+            <button className="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none">
               <span className="material-symbols-outlined text-sm mr-2">
                 file_download
               </span>
@@ -434,8 +401,22 @@ const AdminUsers = () => {
             </button>
             <button
               className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-primary hover:bg-green-600 focus:outline-none"
-              type="button"
-              onClick={handleCreateClick}
+              onClick={() => {
+                setCreationType("USER");
+                setNewUserData({
+                  hoTen: "",
+                  email: "",
+                  password: "",
+                  soDienThoai: "",
+                  diaChi: "",
+                  role: "USER",
+                  chucVu: "",
+                  chuyenKhoa: "",
+                  kinhNghiem: "",
+                });
+                setAvatarFile(null);
+                setIsCreateModalOpen(true);
+              }}
             >
               <span className="material-symbols-outlined text-sm mr-2">
                 person_add
@@ -446,66 +427,49 @@ const AdminUsers = () => {
         </div>
       </div>
 
-      {/* Bảng dữ liệu */}
+      {/* --- Table --- */}
       <div className="bg-white shadow-sm rounded-xl border border-gray-200 overflow-hidden mt-6">
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
-                <th
-                  scope="col"
-                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                >
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   ID
                 </th>
-                <th
-                  scope="col"
-                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                >
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Họ và Tên
                 </th>
-                <th
-                  scope="col"
-                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                >
-                  Thông tin liên hệ
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Liên hệ
                 </th>
-                <th
-                  scope="col"
-                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                >
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Địa chỉ
                 </th>
-                <th
-                  scope="col"
-                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                >
-                  Vai trò (Role)
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Vai trò
                 </th>
-                <th
-                  scope="col"
-                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                >
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Ngày tạo
                 </th>
-                <th scope="col" className="relative px-6 py-3">
+                <th className="relative px-6 py-3">
                   <span className="sr-only">Hành động</span>
                 </th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {users.length > 0 ? (
-                users.map((user, index) => (
+              {loading ? (
+                Array.from({ length: ITEMS_PER_PAGE }).map((_, idx) => (
+                  <SkeletonRow key={idx} />
+                ))
+              ) : users.length > 0 ? (
+                users.map((user) => (
                   <tr
-                    key={user.userId || index}
+                    key={user.userId}
                     className="hover:bg-gray-50 transition-colors"
                   >
-                    {/* ID */}
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       #{user.userId}
                     </td>
-
-                    {/* Họ Tên + Avatar */}
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
                         <div className="h-10 w-10 flex-shrink-0">
@@ -519,16 +483,14 @@ const AdminUsers = () => {
                                   0
                                 )}`;
                               }}
-                              alt={user.hoTen}
+                              alt=""
                             />
                           ) : (
-                            <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-lg">
-                              {user.hoTen
-                                ? user.hoTen.charAt(0).toUpperCase()
-                                : "U"}
+                            <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold">
+                              {user.hoTen ? user.hoTen.charAt(0) : "U"}
                             </div>
                           )}
-                        </div>{" "}
+                        </div>
                         <div className="ml-4">
                           <div className="text-sm font-medium text-gray-900">
                             {user.hoTen}
@@ -536,64 +498,45 @@ const AdminUsers = () => {
                         </div>
                       </div>
                     </td>
-
-                    {/* Liên hệ (Email & SĐT) */}
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm text-gray-900">{user.email}</div>
                       <div className="text-xs text-gray-500">
                         {user.soDienThoai}
                       </div>
                     </td>
-
-                    {/* Địa chỉ (Truncate nếu dài) */}
                     <td
-                      className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 max-w-[200px] truncate"
+                      className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 max-w-[150px] truncate"
                       title={user.diaChi}
                     >
                       {user.diaChi}
                     </td>
-
-                    {/* Role */}
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span
-                        className={`px-2 py-1 text-xs font-medium rounded-full border ${getRoleStyle(
-                          user.role
-                        )}`}
-                      >
-                        {user.role}
-                      </span>
+                      {getRoleBadge(user.role)}
                     </td>
-
-                    {/* Ngày tạo */}
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       {formatDate(user.ngayTao)}
                     </td>
-
-                    {/* Actions */}
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       <div className="flex items-center justify-end space-x-2">
                         <button
-                          title="Xem chi tiết"
-                          className="text-gray-400 hover:text-primary transition-colors"
                           onClick={() => handleViewDetail(user)}
+                          className="text-gray-400 hover:text-green-600"
                         >
                           <span className="material-symbols-outlined text-base">
                             visibility
                           </span>
                         </button>
                         <button
-                          title="Chỉnh sửa"
-                          className="text-gray-400 hover:text-blue-500 transition-colors"
                           onClick={() => handleEditClick(user)}
+                          className="text-gray-400 hover:text-blue-500"
                         >
                           <span className="material-symbols-outlined text-base">
                             edit_note
                           </span>
                         </button>
                         <button
-                          title="Xóa/Khóa"
-                          className="text-gray-400 hover:text-red-500 transition-colors"
-                          onClick={() => handleDeleteUser(user.userId)}
+                          onClick={() => handleDeleteClick(user.userId)}
+                          className="text-gray-400 hover:text-red-500"
                         >
                           <span className="material-symbols-outlined text-base">
                             cancel
@@ -605,15 +548,17 @@ const AdminUsers = () => {
                 ))
               ) : (
                 <tr>
-                  <td colSpan="7" className="px-6 py-4 text-center">
-                    Không có dữ liệu
+                  <td
+                    colSpan="7"
+                    className="px-6 py-4 text-center text-gray-500"
+                  >
+                    Không tìm thấy người dùng nào.
                   </td>
                 </tr>
               )}
             </tbody>
           </table>
         </div>
-
         {/* Pagination */}
         <div className="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6">
           <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
@@ -621,11 +566,13 @@ const AdminUsers = () => {
               <p className="text-sm text-gray-700">
                 Hiển thị{" "}
                 <span className="font-medium">
-                  {totalElements > 0 ? indexOfFirstItem + 1 : 0}
+                  {totalElements > 0
+                    ? (currentPage - 1) * ITEMS_PER_PAGE + 1
+                    : 0}
                 </span>{" "}
                 đến{" "}
                 <span className="font-medium">
-                  {indexOfFirstItem + users.length}
+                  {(currentPage - 1) * ITEMS_PER_PAGE + users.length}
                 </span>{" "}
                 trong số <span className="font-medium">{totalElements}</span>{" "}
                 kết quả
@@ -638,21 +585,19 @@ const AdminUsers = () => {
                   aria-label="Pagination"
                 >
                   <button
-                    onClick={() => handlePageChange(currentPage - 1)}
+                    onClick={() => setCurrentPage(currentPage - 1)}
                     disabled={currentPage === 1}
                     className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50"
                   >
-                    <span className="sr-only">Previous</span>
                     <span className="material-symbols-outlined text-base">
                       chevron_left
                     </span>
                   </button>
-
                   {Array.from({ length: totalPages }, (_, i) => i + 1).map(
                     (number) => (
                       <button
                         key={number}
-                        onClick={() => handlePageChange(number)}
+                        onClick={() => setCurrentPage(number)}
                         className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${
                           currentPage === number
                             ? "z-10 bg-primary border-primary text-white"
@@ -663,13 +608,11 @@ const AdminUsers = () => {
                       </button>
                     )
                   )}
-
                   <button
-                    onClick={() => handlePageChange(currentPage + 1)}
+                    onClick={() => setCurrentPage(currentPage + 1)}
                     disabled={currentPage === totalPages || totalPages === 0}
                     className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50"
                   >
-                    <span className="sr-only">Next</span>
                     <span className="material-symbols-outlined text-base">
                       chevron_right
                     </span>
@@ -681,470 +624,618 @@ const AdminUsers = () => {
         </div>
       </div>
 
-      {/* Modal Chi tiết User */}
-      {isDetailModalOpen && selectedUser && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-lg p-6 max-h-[90vh] overflow-y-auto">
-            <div className="flex justify-between items-center mb-4 border-b pb-2">
-              <h3 className="text-xl font-bold text-gray-900">
-                Chi tiết Người dùng #{selectedUser.userId}
-              </h3>
-              <button
-                onClick={() => setIsDetailModalOpen(false)}
-                className="text-gray-400 hover:text-gray-600"
-              >
-                <span className="material-symbols-outlined">close</span>
-              </button>
-            </div>
-
-            <div className="space-y-4">
-              {selectedUser.anhDaiDien ? (
-                <img
-                  className="h-24 w-24 rounded-full object-cover"
-                  src={`http://localhost:8080/uploads/${selectedUser.anhDaiDien}`}
-                  alt={selectedUser.hoTen}
-                />
-              ) : (
-                <div className="h-24 w-24 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-4xl">
-                  {selectedUser.hoTen
-                    ? selectedUser.hoTen.charAt(0).toUpperCase()
-                    : "U"}
+      {/* --- MODAL XEM CHI TIẾT --- */}
+      <AnimatePresence>
+        {isDetailModalOpen && selectedUser && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm overflow-hidden"
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.95, opacity: 0, y: 20 }}
+              className="w-full max-w-2xl bg-white rounded-2xl shadow-modal flex flex-col max-h-[90vh] relative overflow-hidden mx-4"
+            >
+              {/* Header */}
+              <div className="px-8 py-6 border-b border-gray-100 flex justify-between items-center bg-white sticky top-0 z-20">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-full bg-blue-50 flex items-center justify-center text-blue-600">
+                    <span className="material-symbols-outlined">
+                      assignment_ind
+                    </span>
+                  </div>
+                  <div>
+                    <h1 className="text-xl font-bold text-gray-900">
+                      Thông tin Người dùng
+                    </h1>
+                    <p className="text-sm text-gray-500">
+                      ID: #{selectedUser.userId}
+                    </p>
+                  </div>
                 </div>
-              )}
+                <button
+                  onClick={() => setIsDetailModalOpen(false)}
+                  className="w-8 h-8 rounded-full flex items-center justify-center text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors"
+                >
+                  <span className="material-symbols-outlined">close</span>
+                </button>
+              </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-sm text-gray-500">Họ và tên</p>
-                  <p className="font-medium text-gray-900">
+              {/* Body */}
+              <div className="p-8 overflow-y-auto">
+                <div className="flex flex-col items-center mb-8">
+                  <div className="h-24 w-24 rounded-full border-4 border-white shadow-lg overflow-hidden mb-4">
+                    {selectedUser.anhDaiDien ? (
+                      <img
+                        src={`http://localhost:8080/uploads/${selectedUser.anhDaiDien}`}
+                        className="w-full h-full object-cover"
+                        alt=""
+                      />
+                    ) : (
+                      <div className="w-full h-full bg-primary/10 flex items-center justify-center text-primary text-3xl font-bold">
+                        {selectedUser.hoTen?.charAt(0)}
+                      </div>
+                    )}
+                  </div>
+                  <h2 className="text-2xl font-bold text-gray-900">
                     {selectedUser.hoTen}
-                  </p>
+                  </h2>
+                  <div className="mt-2">{getRoleBadge(selectedUser.role)}</div>
                 </div>
-                <div>
-                  <p className="text-sm text-gray-500">Vai trò</p>
-                  <span
-                    className={`px-2 py-1 text-xs font-medium rounded-full border ${getRoleStyle(
-                      selectedUser.role
-                    )}`}
-                  >
-                    {selectedUser.role}
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-1">
+                    <label className="text-xs text-gray-500 uppercase font-semibold">
+                      Email
+                    </label>
+                    <p className="text-gray-900 font-medium border-b pb-2">
+                      {selectedUser.email}
+                    </p>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs text-gray-500 uppercase font-semibold">
+                      Số điện thoại
+                    </label>
+                    <p className="text-gray-900 font-medium border-b pb-2">
+                      {selectedUser.soDienThoai}
+                    </p>
+                  </div>
+                  <div className="space-y-1 md:col-span-2">
+                    <label className="text-xs text-gray-500 uppercase font-semibold">
+                      Địa chỉ
+                    </label>
+                    <p className="text-gray-900 font-medium border-b pb-2">
+                      {selectedUser.diaChi}
+                    </p>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs text-gray-500 uppercase font-semibold">
+                      Ngày tạo
+                    </label>
+                    <p className="text-gray-900 font-medium border-b pb-2">
+                      {formatDate(selectedUser.ngayTao)}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Footer */}
+              <div className="px-8 py-5 border-t border-gray-100 flex justify-end">
+                <button
+                  onClick={() => setIsDetailModalOpen(false)}
+                  className="px-6 py-2.5 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-100 transition-colors"
+                >
+                  Đóng
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* --- MODAL XÁC NHẬN XÓA --- */}
+      <AnimatePresence>
+        {isConfirmDeleteModalOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.95, opacity: 0, y: 20 }}
+              className="bg-white rounded-lg shadow-xl w-full max-w-md p-6"
+            >
+              <div className="text-center">
+                <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-red-100">
+                  <span className="material-symbols-outlined text-red-600 text-3xl">
+                    warning
                   </span>
                 </div>
-                <div className="min-w-0">
-                  <p className="text-sm text-gray-500">Email</p>
-                  <p
-                    className="font-medium text-gray-900 truncate"
-                    title={selectedUser.email}
-                  >
-                    {selectedUser.email}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-500">Số điện thoại</p>
-                  <p className="font-medium text-gray-900">
-                    {selectedUser.soDienThoai}
-                  </p>
-                </div>
-                <div className="col-span-2">
-                  <p className="text-sm text-gray-500">Địa chỉ</p>
-                  <p className="font-medium text-gray-900">
-                    {selectedUser.diaChi}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-500">Ngày tạo</p>
-                  <p className="font-medium text-gray-900">
-                    {formatDate(selectedUser.ngayTao)}
-                  </p>
-                </div>
+                <h3 className="mt-5 text-lg font-semibold text-gray-900">
+                  Xác nhận xóa
+                </h3>
+                <p className="mt-2 text-sm text-gray-500">
+                  Bạn có chắc chắn muốn xóa người dùng này? Hành động này không
+                  thể hoàn tác và có thể ảnh hưởng đến dữ liệu liên quan.
+                </p>
               </div>
-            </div>
-          </div>
-
-          <div className="flex justify-end mt-6">
-            <button
-              onClick={() => setIsDetailModalOpen(false)}
-              className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 font-medium"
-            >
-              Đóng
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Modal Chỉnh sửa User */}
-      {isEditModalOpen && editingUser && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-lg p-6 max-h-[90vh] overflow-y-auto">
-            <div className="flex justify-between items-center mb-4 border-b pb-2">
-              <h3 className="text-xl font-bold text-gray-900">
-                Chỉnh sửa Người dùng #{editingUser.userId}
-              </h3>
-              <button
-                onClick={() => setIsEditModalOpen(false)}
-                className="text-gray-400 hover:text-gray-600"
-              >
-                <span className="material-symbols-outlined">close</span>
-              </button>
-            </div>
-
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700">
-                  Họ và tên
-                </label>
-                <input
-                  type="text"
-                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary focus:border-primary sm:text-sm"
-                  value={editingUser.hoTen || ""}
-                  onChange={(e) =>
-                    setEditingUser({ ...editingUser, hoTen: e.target.value })
-                  }
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">
-                  Email
-                </label>
-                <input
-                  type="email"
-                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary focus:border-primary sm:text-sm"
-                  value={editingUser.email || ""}
-                  onChange={(e) =>
-                    setEditingUser({ ...editingUser, email: e.target.value })
-                  }
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">
-                  Số điện thoại
-                </label>
-                <input
-                  type="text"
-                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary focus:border-primary sm:text-sm"
-                  value={editingUser.soDienThoai || ""}
-                  onChange={(e) =>
-                    setEditingUser({
-                      ...editingUser,
-                      soDienThoai: e.target.value,
-                    })
-                  }
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">
-                  Địa chỉ
-                </label>
-                <input
-                  type="text"
-                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary focus:border-primary sm:text-sm"
-                  value={editingUser.diaChi || ""}
-                  onChange={(e) =>
-                    setEditingUser({ ...editingUser, diaChi: e.target.value })
-                  }
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">
-                  Ảnh đại diện
-                </label>
-                <div className="mt-2 flex items-center space-x-4">
-                  <img
-                    src={
-                      avatarFile
-                        ? URL.createObjectURL(avatarFile)
-                        : editingUser.anhDaiDien
-                        ? `http://localhost:8080/uploads/${editingUser.anhDaiDien}`
-                        : "https://placehold.co/100x100?text=User"
-                    }
-                    alt="Avatar"
-                    className="h-16 w-16 rounded-full object-cover"
-                  />
-                  <input
-                    type="file"
-                    className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20"
-                    onChange={(e) => setAvatarFile(e.target.files[0])}
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700">
-                  Vai trò
-                </label>
-                <select
-                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary focus:border-primary sm:text-sm"
-                  value={editingUser.role || "USER"}
-                  onChange={(e) =>
-                    setEditingUser({ ...editingUser, role: e.target.value })
-                  }
+              <div className="mt-6 grid grid-cols-2 gap-3">
+                <button
+                  onClick={() => setIsConfirmDeleteModalOpen(false)}
+                  className="inline-flex w-full justify-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
                 >
-                  <option value="USER">Khách hàng (USER)</option>
-                  <option value="STAFF">Nhân viên (STAFF)</option>
-                  <option value="ADMIN">Quản trị (ADMIN)</option>
-                  <option value="DOCTOR">Bác sĩ (DOCTOR)</option>
-                  <option value="SPA">Spa (SPA)</option>
-                </select>
+                  Hủy
+                </button>
+                <button
+                  onClick={confirmDelete}
+                  className="inline-flex w-full justify-center rounded-md bg-red-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-red-500"
+                >
+                  Xóa
+                </button>
               </div>
-            </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
-            <div className="flex justify-end mt-6 space-x-3">
-              <button
-                onClick={() => setIsEditModalOpen(false)}
-                className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 font-medium"
-              >
-                Hủy
-              </button>
-              <button
-                onClick={handleSaveUser}
-                className="px-4 py-2 bg-primary text-white rounded-md hover:bg-green-600 font-medium"
-              >
-                Lưu thay đổi
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Modal Thêm mới User (Hợp nhất) */}
-      {isCreateModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-lg p-6 max-h-[90vh] overflow-y-auto">
-            <div className="flex justify-between items-center mb-4 border-b pb-2">
-              <h3 className="text-xl font-bold text-gray-900">
-                Thêm mới Tài khoản
-              </h3>
-              <button
-                onClick={() => setIsCreateModalOpen(false)}
-                className="text-gray-400 hover:text-gray-600"
-              >
-                <span className="material-symbols-outlined">close</span>
-              </button>
-            </div>
-
-            {/* Chọn loại tài khoản */}
-            <div className="flex space-x-4 mb-6">
-              <button
-                className={`flex-1 py-2 text-sm font-medium rounded-md border ${
-                  creationType === "USER"
-                    ? "bg-primary text-white border-primary"
-                    : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
-                }`}
-                onClick={() => {
-                  setCreationType("USER");
-                  setNewUserData({ ...newUserData, role: "USER" });
-                }}
-              >
-                Khách hàng
-              </button>
-              <button
-                className={`flex-1 py-2 text-sm font-medium rounded-md border ${
-                  creationType === "EMPLOYEE"
-                    ? "bg-primary text-white border-primary"
-                    : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
-                }`}
-                onClick={() => {
-                  setCreationType("EMPLOYEE");
-                  setNewUserData({ ...newUserData, role: "STAFF" });
-                }}
-              >
-                Nhân viên
-              </button>
-            </div>
-
-            <div className="space-y-4">
-              {/* Các trường chung */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700">
-                  Họ và tên <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary focus:border-primary sm:text-sm"
-                  value={newUserData.hoTen}
-                  onChange={(e) =>
-                    setNewUserData({ ...newUserData, hoTen: e.target.value })
-                  }
-                />
+      {/* --- MODAL CHỈNH SỬA --- */}
+      <AnimatePresence>
+        {isEditModalOpen && editingUser && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm overflow-hidden"
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.95, opacity: 0, y: 20 }}
+              className="w-full max-w-3xl bg-white rounded-2xl shadow-modal flex flex-col max-h-[95vh] relative overflow-hidden mx-auto my-8"
+            >
+              {/* Header */}
+              <div className="px-10 py-6 border-b border-gray-100 flex justify-between items-center bg-white sticky top-0 z-20">
+                <div className="flex items-center gap-5">
+                  <div className="w-12 h-12 rounded-full bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-600">
+                    <span className="material-symbols-outlined text-[24px]">
+                      manage_accounts
+                    </span>
+                  </div>
+                  <div>
+                    <h1 className="text-xl font-semibold text-gray-900">
+                      Cập nhật Người dùng
+                    </h1>
+                    <p className="text-sm text-gray-500 mt-1">
+                      Chỉnh sửa thông tin chi tiết
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setIsEditModalOpen(false)}
+                  className="w-10 h-10 rounded-full flex items-center justify-center text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+                >
+                  <span className="material-symbols-outlined">close</span>
+                </button>
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">
-                  Ảnh đại diện
-                </label>
-                <div className="mt-2 flex items-center space-x-4">
-                  <img
-                    src={
-                      avatarFile
-                        ? URL.createObjectURL(avatarFile)
-                        : "https://placehold.co/100x100?text=User"
-                    }
-                    alt="Avatar Preview"
-                    className="h-16 w-16 rounded-full object-cover"
-                  />
-                  <input
-                    type="file"
-                    className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20"
-                    onChange={(e) => setAvatarFile(e.target.files[0])}
-                  />
+
+              {/* Body */}
+              <div className="flex-1 p-10 bg-white overflow-y-auto">
+                <div className="space-y-8">
+                  {/* Ảnh đại diện */}
+                  <div className="flex items-center gap-6">
+                    <div className="relative group">
+                      <img
+                        src={
+                          avatarFile
+                            ? URL.createObjectURL(avatarFile)
+                            : editingUser.anhDaiDien
+                            ? `http://localhost:8080/uploads/${editingUser.anhDaiDien}`
+                            : "https://placehold.co/100x100?text=User"
+                        }
+                        alt="Avatar"
+                        className="w-24 h-24 rounded-full object-cover border-4 border-gray-50 shadow-sm"
+                      />
+                      <label className="absolute bottom-0 right-0 w-8 h-8 bg-white rounded-full shadow-md border border-gray-200 flex items-center justify-center cursor-pointer hover:bg-gray-50 text-gray-600">
+                        <span className="material-symbols-outlined text-sm">
+                          camera_alt
+                        </span>
+                        <input
+                          type="file"
+                          className="hidden"
+                          onChange={(e) => setAvatarFile(e.target.files[0])}
+                        />
+                      </label>
+                    </div>
+                    <div>
+                      <h3 className="font-medium text-gray-900">
+                        Ảnh hồ sơ mới
+                      </h3>
+                      <p className="text-sm text-gray-500">
+                        JPG, GIF hoặc PNG.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
+                    <div className="input-group">
+                      <label className="form-label">Họ và tên</label>
+                      <input
+                        className="form-control"
+                        type="text"
+                        value={editingUser.hoTen}
+                        onChange={(e) =>
+                          setEditingUser({
+                            ...editingUser,
+                            hoTen: e.target.value,
+                          })
+                        }
+                      />
+                    </div>
+                    <div className="input-group">
+                      <label className="form-label">Email</label>
+                      <input
+                        className="form-control"
+                        type="email"
+                        value={editingUser.email}
+                        onChange={(e) =>
+                          setEditingUser({
+                            ...editingUser,
+                            email: e.target.value,
+                          })
+                        }
+                      />
+                    </div>
+                    <div className="input-group">
+                      <label className="form-label">Số điện thoại</label>
+                      <input
+                        className="form-control"
+                        type="text"
+                        value={editingUser.soDienThoai}
+                        onChange={(e) =>
+                          setEditingUser({
+                            ...editingUser,
+                            soDienThoai: e.target.value,
+                          })
+                        }
+                      />
+                    </div>
+                    <div className="input-group">
+                      <label className="form-label">Vai trò</label>
+                      <select
+                        className="form-control"
+                        value={editingUser.role}
+                        onChange={(e) =>
+                          setEditingUser({
+                            ...editingUser,
+                            role: e.target.value,
+                          })
+                        }
+                      >
+                        <option value="USER">Khách hàng</option>
+                        <option value="STAFF">Nhân viên</option>
+                        <option value="DOCTOR">Bác sĩ</option>
+                        <option value="SPA">Spa</option>
+                        <option value="ADMIN">Quản trị</option>
+                      </select>
+                    </div>
+                    <div className="input-group md:col-span-2">
+                      <label className="form-label">Địa chỉ</label>
+                      <input
+                        className="form-control"
+                        type="text"
+                        value={editingUser.diaChi}
+                        onChange={(e) =>
+                          setEditingUser({
+                            ...editingUser,
+                            diaChi: e.target.value,
+                          })
+                        }
+                      />
+                    </div>
+                  </div>
                 </div>
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">
-                  Email <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="email"
-                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary focus:border-primary sm:text-sm"
-                  value={newUserData.email}
-                  onChange={(e) =>
-                    setNewUserData({ ...newUserData, email: e.target.value })
-                  }
-                />
+
+              {/* Footer */}
+              <div className="px-10 py-6 border-t border-gray-100 flex justify-end gap-4">
+                <button
+                  onClick={() => setIsEditModalOpen(false)}
+                  className="px-6 py-2.5 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-100 transition-colors"
+                >
+                  Hủy bỏ
+                </button>
+                <button
+                  onClick={handleSaveUser}
+                  className="px-8 py-2.5 rounded-lg text-sm font-medium text-white bg-primary hover:bg-green-600 shadow-lg shadow-primary/20 transition-all flex items-center gap-2"
+                >
+                  <span className="material-symbols-outlined text-[18px]">
+                    save
+                  </span>
+                  Lưu thay đổi
+                </button>
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">
-                  Mật khẩu <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="password"
-                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary focus:border-primary sm:text-sm"
-                  value={newUserData.password}
-                  onChange={(e) =>
-                    setNewUserData({ ...newUserData, password: e.target.value })
-                  }
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">
-                    Số điện thoại
-                  </label>
-                  <input
-                    type="text"
-                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary focus:border-primary sm:text-sm"
-                    value={newUserData.soDienThoai}
-                    onChange={(e) =>
-                      setNewUserData({
-                        ...newUserData,
-                        soDienThoai: e.target.value,
-                      })
-                    }
-                  />
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* --- MODAL TẠO MỚI --- */}
+      <AnimatePresence>
+        {isCreateModalOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm overflow-hidden"
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.95, opacity: 0, y: 20 }}
+              className="w-full max-w-4xl bg-white rounded-2xl shadow-modal flex flex-col max-h-[95vh] relative overflow-hidden mx-auto my-8"
+            >
+              {/* Header */}
+              <div className="px-10 py-6 border-b border-gray-100 flex justify-between items-center bg-white sticky top-0 z-20">
+                <div className="flex items-center gap-5">
+                  <div className="w-12 h-12 rounded-full bg-green-50 border border-green-100 flex items-center justify-center text-primary">
+                    <span className="material-symbols-outlined text-[24px]">
+                      person_add
+                    </span>
+                  </div>
+                  <div>
+                    <h1 className="text-xl font-semibold text-gray-900">
+                      Thêm mới Tài khoản
+                    </h1>
+                    <p className="text-sm text-gray-500 mt-1">
+                      Tạo tài khoản khách hàng hoặc nhân viên
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">
-                    Vai trò
-                  </label>
-                  <select
-                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary focus:border-primary sm:text-sm"
-                    value={newUserData.role}
-                    disabled={creationType === "USER"}
-                    onChange={(e) =>
-                      setNewUserData({ ...newUserData, role: e.target.value })
-                    }
-                  >
-                    {creationType === "USER" ? (
-                      <option value="USER">Khách hàng (USER)</option>
-                    ) : (
-                      <>
-                        <option value="STAFF">Nhân viên (STAFF)</option>
-                        <option value="DOCTOR">Bác sĩ (DOCTOR)</option>
-                        <option value="SPA">Spa (SPA)</option>
-                        <option value="ADMIN">Quản trị (ADMIN)</option>
-                      </>
+                <button
+                  onClick={() => setIsCreateModalOpen(false)}
+                  className="w-10 h-10 rounded-full flex items-center justify-center text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+                >
+                  <span className="material-symbols-outlined">close</span>
+                </button>
+              </div>
+
+              {/* Body */}
+              <div className="flex-1 p-10 bg-white overflow-y-auto">
+                <div className="max-w-3xl mx-auto space-y-8">
+                  {/* Loại tài khoản Switcher */}
+                  <div className="flex bg-gray-100 p-1 rounded-lg w-full max-w-md mx-auto">
+                    <button
+                      className={`flex-1 py-2 text-sm font-medium rounded-md transition-all ${
+                        creationType === "USER"
+                          ? "bg-white text-primary shadow-sm"
+                          : "text-gray-500 hover:text-gray-700"
+                      }`}
+                      onClick={() => {
+                        setCreationType("USER");
+                        setNewUserData({ ...newUserData, role: "USER" });
+                      }}
+                    >
+                      Khách hàng
+                    </button>
+                    <button
+                      className={`flex-1 py-2 text-sm font-medium rounded-md transition-all ${
+                        creationType === "EMPLOYEE"
+                          ? "bg-white text-primary shadow-sm"
+                          : "text-gray-500 hover:text-gray-700"
+                      }`}
+                      onClick={() => {
+                        setCreationType("EMPLOYEE");
+                        setNewUserData({ ...newUserData, role: "STAFF" });
+                      }}
+                    >
+                      Nhân viên
+                    </button>
+                  </div>
+
+                  {/* Ảnh đại diện */}
+                  <div className="flex justify-center">
+                    <div className="relative group">
+                      <img
+                        src={
+                          avatarFile
+                            ? URL.createObjectURL(avatarFile)
+                            : "https://placehold.co/100x100?text=+"
+                        }
+                        alt="Avatar Preview"
+                        className="w-24 h-24 rounded-full object-cover border-4 border-gray-50 shadow-sm"
+                      />
+                      <label className="absolute bottom-0 right-0 w-8 h-8 bg-white rounded-full shadow-md border border-gray-200 flex items-center justify-center cursor-pointer hover:bg-gray-50 text-primary">
+                        <span className="material-symbols-outlined text-sm">
+                          upload
+                        </span>
+                        <input
+                          type="file"
+                          className="hidden"
+                          onChange={(e) => setAvatarFile(e.target.files[0])}
+                        />
+                      </label>
+                    </div>
+                  </div>
+
+                  {/* Form Fields */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
+                    <div className="input-group">
+                      <label className="form-label">
+                        Họ và tên <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        className="form-control"
+                        value={newUserData.hoTen}
+                        onChange={(e) =>
+                          setNewUserData({
+                            ...newUserData,
+                            hoTen: e.target.value,
+                          })
+                        }
+                        placeholder="Nguyễn Văn A"
+                      />
+                    </div>
+                    <div className="input-group">
+                      <label className="form-label">
+                        Email <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        className="form-control"
+                        type="email"
+                        value={newUserData.email}
+                        onChange={(e) =>
+                          setNewUserData({
+                            ...newUserData,
+                            email: e.target.value,
+                          })
+                        }
+                        placeholder="example@email.com"
+                      />
+                    </div>
+                    <div className="input-group">
+                      <label className="form-label">
+                        Mật khẩu <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        className="form-control"
+                        type="password"
+                        value={newUserData.password}
+                        onChange={(e) =>
+                          setNewUserData({
+                            ...newUserData,
+                            password: e.target.value,
+                          })
+                        }
+                        placeholder="••••••"
+                      />
+                    </div>
+                    <div className="input-group">
+                      <label className="form-label">Số điện thoại</label>
+                      <input
+                        className="form-control"
+                        value={newUserData.soDienThoai}
+                        onChange={(e) =>
+                          setNewUserData({
+                            ...newUserData,
+                            soDienThoai: e.target.value,
+                          })
+                        }
+                      />
+                    </div>
+                    <div className="input-group md:col-span-2">
+                      <label className="form-label">Địa chỉ</label>
+                      <input
+                        className="form-control"
+                        value={newUserData.diaChi}
+                        onChange={(e) =>
+                          setNewUserData({
+                            ...newUserData,
+                            diaChi: e.target.value,
+                          })
+                        }
+                      />
+                    </div>
+
+                    {/* Fields riêng cho Employee */}
+                    {creationType === "EMPLOYEE" && (
+                      <div className="md:col-span-2 bg-gray-50 p-6 rounded-xl border border-gray-200 mt-2 grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="md:col-span-2 text-sm font-semibold text-gray-700 uppercase tracking-wide mb-2">
+                          Thông tin chuyên môn
+                        </div>
+                        <div className="input-group">
+                          <label className="form-label">Vai trò hệ thống</label>
+                          <select
+                            className="form-control"
+                            value={newUserData.role}
+                            onChange={(e) =>
+                              setNewUserData({
+                                ...newUserData,
+                                role: e.target.value,
+                              })
+                            }
+                          >
+                            <option value="STAFF">Nhân viên</option>
+                            <option value="DOCTOR">Bác sĩ</option>
+                            <option value="SPA">Spa</option>
+                            <option value="ADMIN">Quản trị</option>
+                          </select>
+                        </div>
+                        <div className="input-group">
+                          <label className="form-label">Chức vụ</label>
+                          <input
+                            className="form-control"
+                            value={newUserData.chucVu}
+                            onChange={(e) =>
+                              setNewUserData({
+                                ...newUserData,
+                                chucVu: e.target.value,
+                              })
+                            }
+                            placeholder="VD: Trưởng phòng, NV Grooming"
+                          />
+                        </div>
+                        <div className="input-group">
+                          <label className="form-label">Chuyên khoa</label>
+                          <input
+                            className="form-control"
+                            value={newUserData.chuyenKhoa}
+                            onChange={(e) =>
+                              setNewUserData({
+                                ...newUserData,
+                                chuyenKhoa: e.target.value,
+                              })
+                            }
+                            placeholder="VD: Nội khoa, Ngoại khoa"
+                          />
+                        </div>
+                        <div className="input-group">
+                          <label className="form-label">Kinh nghiệm</label>
+                          <input
+                            className="form-control"
+                            value={newUserData.kinhNghiem}
+                            onChange={(e) =>
+                              setNewUserData({
+                                ...newUserData,
+                                kinhNghiem: e.target.value,
+                              })
+                            }
+                            placeholder="VD: 5 năm"
+                          />
+                        </div>
+                      </div>
                     )}
-                  </select>
-                </div>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">
-                  Địa chỉ
-                </label>
-                <input
-                  type="text"
-                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary focus:border-primary sm:text-sm"
-                  value={newUserData.diaChi}
-                  onChange={(e) =>
-                    setNewUserData({ ...newUserData, diaChi: e.target.value })
-                  }
-                />
-              </div>
-
-              {/* Các trường dành riêng cho nhân viên */}
-              {creationType === "EMPLOYEE" && (
-                <div className="border-t pt-4 mt-4 space-y-4 bg-gray-50 p-4 rounded-md">
-                  <h4 className="font-medium text-gray-900">
-                    Thông tin Nhân viên
-                  </h4>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">
-                      Chức vụ
-                    </label>
-                    <input
-                      type="text"
-                      className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary focus:border-primary sm:text-sm"
-                      value={newUserData.chucVu}
-                      onChange={(e) =>
-                        setNewUserData({
-                          ...newUserData,
-                          chucVu: e.target.value,
-                        })
-                      }
-                      placeholder="VD: Bác sĩ thú y, Groomer..."
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">
-                      Chuyên khoa
-                    </label>
-                    <input
-                      type="text"
-                      className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary focus:border-primary sm:text-sm"
-                      value={newUserData.chuyenKhoa}
-                      onChange={(e) =>
-                        setNewUserData({
-                          ...newUserData,
-                          chuyenKhoa: e.target.value,
-                        })
-                      }
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">
-                      Kinh nghiệm
-                    </label>
-                    <input
-                      type="text"
-                      className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary focus:border-primary sm:text-sm"
-                      value={newUserData.kinhNghiem}
-                      onChange={(e) =>
-                        setNewUserData({
-                          ...newUserData,
-                          kinhNghiem: e.target.value,
-                        })
-                      }
-                    />
                   </div>
                 </div>
-              )}
-            </div>
+              </div>
 
-            <div className="flex justify-end mt-6 space-x-3">
-              <button
-                onClick={() => setIsCreateModalOpen(false)}
-                className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 font-medium"
-              >
-                Hủy
-              </button>
-              <button
-                onClick={handleCreateSubmit}
-                className="px-4 py-2 bg-primary text-white rounded-md hover:bg-green-600 font-medium"
-              >
-                Tạo mới
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+              {/* Footer */}
+              <div className="px-10 py-6 border-t border-gray-100 flex justify-end gap-4">
+                <button
+                  onClick={() => setIsCreateModalOpen(false)}
+                  className="px-6 py-2.5 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-100 transition-colors"
+                >
+                  Hủy bỏ
+                </button>
+                <button
+                  onClick={handleCreateSubmit}
+                  className="px-8 py-2.5 rounded-lg text-sm font-medium text-white bg-primary hover:bg-green-600 shadow-lg shadow-primary/20 transition-all flex items-center gap-2"
+                >
+                  <span className="material-symbols-outlined text-[18px]">
+                    check
+                  </span>
+                  Tạo tài khoản
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </>
   );
 };

@@ -7,6 +7,7 @@
 import React, { useEffect, useState } from "react";
 import orderService from "../../services/orderService";
 import { motion, AnimatePresence } from "framer-motion";
+import { toast } from "react-toastify";
 
 // --- Helpers (Hàm hỗ trợ) ---
 
@@ -69,6 +70,36 @@ const getStatusBadge = (status) => {
 
 // Danh sách các trạng thái có thể có của một đơn hàng
 const ORDER_STATUSES = ["Chờ xử lý", "Đang giao", "Hoàn thành", "Đã hủy"];
+
+// Component Skeleton Loading cho Table
+const SkeletonRow = () => (
+  <tr className="animate-pulse border-b border-gray-100 last:border-0">
+    <td className="px-6 py-4">
+      <div className="h-4 bg-gray-200 rounded w-8"></div>
+    </td>
+    <td className="px-6 py-4 flex items-center gap-3">
+      <div className="space-y-2">
+        <div className="h-4 bg-gray-200 rounded w-32"></div>
+        <div className="h-3 bg-gray-100 rounded w-20"></div>
+      </div>
+    </td>
+    <td className="px-6 py-4">
+      <div className="h-4 bg-gray-200 rounded w-32"></div>
+    </td>
+    <td className="px-6 py-4">
+      <div className="h-4 bg-gray-200 rounded w-40"></div>
+    </td>
+    <td className="px-6 py-4">
+      <div className="h-4 bg-gray-200 rounded w-24"></div>
+    </td>
+    <td className="px-6 py-4">
+      <div className="h-6 bg-gray-200 rounded w-24"></div>
+    </td>
+    <td className="px-6 py-4">
+      <div className="h-8 bg-gray-200 rounded w-20 ml-auto"></div>
+    </td>
+  </tr>
+);
 
 /**
  * Component chính cho trang quản lý đơn hàng.
@@ -156,7 +187,7 @@ const AdminOrders = () => {
       );
     } catch (error) {
       console.error("Lỗi tải đơn hàng:", error);
-      alert("Không thể tải danh sách đơn hàng");
+      toast.error("Không thể tải danh sách đơn hàng");
     } finally {
       setLoading(false);
     }
@@ -174,22 +205,27 @@ const AdminOrders = () => {
     const isAnyModalOpen =
       isModalOpen || isDetailModalOpen || isConfirmDeleteModalOpen;
 
-    if (isAnyModalOpen) {
-      document.body.style.overflow = "hidden";
-      document.documentElement.style.overflow = "hidden";
-      document.body.style.overscrollBehavior = "none";
-    } else {
-      document.body.style.overflow = "";
-      document.documentElement.style.overflow = "";
-      document.body.style.overscrollBehavior = "";
-    }
+    const contentArea = document.getElementById("admin-content-area");
+    const header = document.querySelector("header"); // Target the main header
 
-    // Hàm cleanup để khôi phục cuộn khi component unmount
-    return () => {
-      document.body.style.overflow = "";
-      document.documentElement.style.overflow = "";
-      document.body.style.overscrollBehavior = "";
-    };
+    if (contentArea) {
+      if (isAnyModalOpen) {
+        const scrollbarWidth =
+          contentArea.offsetWidth - contentArea.clientWidth;
+        contentArea.style.overflow = "hidden";
+        contentArea.style.paddingRight = `${scrollbarWidth}px`;
+        if (header) header.style.paddingRight = `${scrollbarWidth}px`;
+      } else {
+        contentArea.style.overflow = "auto";
+        contentArea.style.paddingRight = "";
+        if (header) header.style.paddingRight = "";
+      }
+      return () => {
+        contentArea.style.overflow = "auto";
+        contentArea.style.paddingRight = "";
+        if (header) header.style.paddingRight = "";
+      };
+    }
   }, [isModalOpen, isDetailModalOpen, isConfirmDeleteModalOpen]);
 
   // Xử lý phím ESC để đóng modal
@@ -220,7 +256,7 @@ const AdminOrders = () => {
     if (!orderToDeleteId) return;
     try {
       await orderService.deleteOrder(orderToDeleteId);
-      alert("Đã xóa đơn hàng.");
+      toast.success("Đã xóa đơn hàng.");
       // Tải lại dữ liệu sau khi xóa
       if (orders.length === 1 && currentPage > 1) {
         setCurrentPage(currentPage - 1); // Lùi về trang trước nếu trang hiện tại trống
@@ -229,7 +265,7 @@ const AdminOrders = () => {
       }
     } catch (error) {
       console.error("Lỗi xóa đơn hàng:", error);
-      alert("Xóa thất bại.");
+      toast.error("Xóa thất bại.");
     } finally {
       setIsConfirmDeleteModalOpen(false);
       setOrderToDeleteId(null);
@@ -256,7 +292,7 @@ const AdminOrders = () => {
       setIsDetailModalOpen(true);
     } catch (error) {
       console.error("Lỗi tải chi tiết:", error);
-      alert("Không thể tải chi tiết đơn hàng.");
+      toast.error("Không thể tải chi tiết đơn hàng.");
     }
   };
 
@@ -290,12 +326,12 @@ const AdminOrders = () => {
 
       await orderService.updateOrder(editingOrder.donHangId, payload);
 
-      alert("Cập nhật đơn hàng thành công!");
+      toast.success("Cập nhật đơn hàng thành công!");
       setIsModalOpen(false);
       fetchOrders(); // Tải lại dữ liệu để hiển thị thay đổi
     } catch (error) {
       console.error(error);
-      alert("Cập nhật thất bại.");
+      toast.error("Cập nhật thất bại.");
     }
   };
 
@@ -359,9 +395,6 @@ const AdminOrders = () => {
   ];
 
   // --- 6. UI Rendering (Kết xuất Giao diện) ---
-
-  if (loading)
-    return <div className="p-10 text-center">Đang tải dữ liệu đơn hàng...</div>;
 
   return (
     <>
@@ -525,7 +558,11 @@ const AdminOrders = () => {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {orders.length > 0 ? (
+              {loading ? (
+                Array.from({ length: ITEMS_PER_PAGE }).map((_, idx) => (
+                  <SkeletonRow key={idx} />
+                ))
+              ) : orders.length > 0 ? (
                 orders.map((order, index) => (
                   <tr
                     key={order.donHangId || index}
@@ -711,7 +748,7 @@ const AdminOrders = () => {
               animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.95, opacity: 0, y: 20 }}
               transition={{ duration: 0.3, ease: "easeOut" }}
-              className="w-full max-w-2xl bg-white rounded-2xl shadow-modal flex flex-col max-h-[95vh] relative overflow-hidden font-body mx-auto my-8"
+              className="w-full max-w-3xl bg-white rounded-2xl shadow-modal flex flex-col max-h-[95vh] relative overflow-hidden font-body mx-auto my-8"
             >
               {/* Header */}
               <div className="px-10 py-6 border-b border-border-light/50 flex justify-between items-center bg-white sticky top-0 z-20 backdrop-blur-sm bg-white/95">
@@ -815,7 +852,7 @@ const AdminOrders = () => {
               animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.95, opacity: 0, y: 20 }}
               transition={{ duration: 0.3, ease: "easeOut" }}
-              className="w-full max-w-4xl bg-white rounded-2xl shadow-modal flex flex-col max-h-[95vh] relative overflow-hidden font-body mx-auto my-8"
+              className="w-full max-w-5xl bg-white rounded-2xl shadow-modal flex flex-col max-h-[95vh] relative overflow-hidden font-body mx-auto my-8"
             >
               {/* Header */}
               <div className="px-10 py-6 border-b border-border-light/50 flex justify-between items-center bg-white sticky top-0 z-20 backdrop-blur-sm bg-white/95">
@@ -848,52 +885,67 @@ const AdminOrders = () => {
               <div className="flex-1 p-8 md:p-10 bg-white overflow-y-auto">
                 <div className="space-y-8">
                   {/* Thông tin chung */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                    <div className="space-y-1">
-                      <label className="text-sm font-medium text-text-muted">
-                        Khách hàng
-                      </label>
-                      <p className="font-medium text-text-heading">
-                        {selectedOrder.userName}
-                      </p>
+                  <div className="pb-8 border-b border-border-light">
+                    <div className="flex items-center gap-3 mb-6">
+                      <span className="material-symbols-outlined text-primary font-light text-2xl">
+                        info
+                      </span>
+                      <h2 className="text-lg font-semibold text-text-heading">
+                        Thông tin chung
+                      </h2>
                     </div>
-                    <div className="space-y-1">
-                      <label className="text-sm font-medium text-text-muted">
-                        Ngày đặt
-                      </label>
-                      <p className="font-medium text-text-heading">
-                        {formatDateTime(selectedOrder.ngayDatHang)}
-                      </p>
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-sm font-medium text-text-muted">
-                        Trạng thái
-                      </label>
-                      <p>
-                        <span
-                          className={`inline-block px-2 py-1 text-xs font-medium rounded-full border ${getStatusBadge(
-                            selectedOrder.trangThai
-                          )}`}
-                        >
-                          {selectedOrder.trangThai}
-                        </span>
-                      </p>
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-sm font-medium text-text-muted">
-                        Địa chỉ
-                      </label>
-                      <p className="font-medium text-text-heading">
-                        {selectedOrder.diaChi}
-                      </p>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium text-text-muted">
+                          Khách hàng
+                        </label>
+                        <div className="font-medium text-text-heading">
+                          {selectedOrder.userName}
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium text-text-muted">
+                          Ngày đặt
+                        </label>
+                        <div className="font-medium text-text-heading">
+                          {formatDateTime(selectedOrder.ngayDatHang)}
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium text-text-muted">
+                          Trạng thái
+                        </label>
+                        <div>
+                          <span
+                            className={`inline-block px-2 py-1 text-xs font-medium rounded-full border ${getStatusBadge(
+                              selectedOrder.trangThai
+                            )}`}
+                          >
+                            {selectedOrder.trangThai}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium text-text-muted">
+                          Địa chỉ
+                        </label>
+                        <div className="font-medium text-text-heading">
+                          {selectedOrder.diaChi}
+                        </div>
+                      </div>
                     </div>
                   </div>
 
                   {/* Danh sách sản phẩm */}
                   <div>
-                    <h4 className="font-semibold text-text-heading mb-4">
-                      Danh sách sản phẩm
-                    </h4>
+                    <div className="flex items-center gap-3 mb-6">
+                      <span className="material-symbols-outlined text-blue-500 font-light text-2xl">
+                        shopping_cart
+                      </span>
+                      <h2 className="text-lg font-semibold text-text-heading">
+                        Danh sách sản phẩm
+                      </h2>
+                    </div>
                     <div className="overflow-x-auto border rounded-lg">
                       <table className="w-full text-sm text-left text-gray-500">
                         <thead className="text-xs text-gray-700 uppercase bg-gray-50">

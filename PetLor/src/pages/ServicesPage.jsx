@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import AOS from "aos";
 import "aos/dist/aos.css";
-import petService from "../services/petService";
+import productService from "../services/productService";
 
 // Helper: Format tiền tệ
 const formatCurrency = (amount) => {
@@ -31,8 +31,19 @@ const ServicesPage = () => {
 
     const fetchServices = async () => {
       try {
-        const data = await petService.getAllServices();
-        setServices(Array.isArray(data) ? data : []);
+        const response = await productService.getAllServices();
+        let data = [];
+        if (Array.isArray(response)) data = response;
+        else if (response?.data && Array.isArray(response.data))
+          data = response.data;
+        else if (response?.content && Array.isArray(response.content))
+          data = response.content;
+        else if (
+          response?.data?.content &&
+          Array.isArray(response.data.content)
+        )
+          data = response.data.content;
+        setServices(data);
       } catch (error) {
         console.error("Lỗi khi tải dịch vụ:", error);
       } finally {
@@ -152,6 +163,31 @@ const ServicesPage = () => {
                     </div>
                   ))
                 )}
+              </div>
+              {/* PAGINATION */}
+              <div
+                className="mt-12 flex items-center justify-center gap-2"
+                data-aos="fade-up"
+              >
+                <button className="flex size-10 items-center justify-center rounded-lg border border-border-gray-200 bg-white text-text-gray-500 hover:border-primary hover:text-primary transition-colors hover:scale-105">
+                  <span className="material-symbols-outlined text-sm">
+                    chevron_left
+                  </span>
+                </button>
+                <button className="flex size-10 items-center justify-center rounded-lg bg-primary text-text-main font-bold shadow-md hover:scale-105 transition-transform">
+                  1
+                </button>
+                <button className="flex size-10 items-center justify-center rounded-lg border border-border-gray-200 bg-white text-text-main hover:border-primary hover:text-primary transition-colors hover:scale-105">
+                  2
+                </button>
+                <button className="flex size-10 items-center justify-center rounded-lg border border-border-gray-200 bg-white text-text-main hover:border-primary hover:text-primary transition-colors hover:scale-105">
+                  3
+                </button>
+                <button className="flex size-10 items-center justify-center rounded-lg border border-border-gray-200 bg-white text-text-gray-500 hover:border-primary hover:text-primary transition-colors hover:scale-105">
+                  <span className="material-symbols-outlined text-sm">
+                    chevron_right
+                  </span>
+                </button>
               </div>
             </div>
           </div>

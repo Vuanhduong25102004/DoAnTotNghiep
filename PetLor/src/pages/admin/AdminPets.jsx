@@ -5,6 +5,8 @@
  */
 import React, { useEffect, useState } from "react";
 import petService from "../../services/petService"; // Đảm bảo đường dẫn đúng
+import { motion, AnimatePresence } from "framer-motion";
+import { toast } from "react-toastify";
 
 // --- Helpers (Hàm hỗ trợ) ---
 
@@ -35,6 +37,38 @@ const formatDate = (dateString) => {
   return new Date(dateString).toLocaleDateString("vi-VN");
 };
 
+// Component Skeleton Loading cho Table
+const SkeletonRow = () => (
+  <tr className="animate-pulse border-b border-gray-100 last:border-0">
+    <td className="px-6 py-4">
+      <div className="h-4 bg-gray-200 rounded w-8"></div>
+    </td>
+    <td className="px-6 py-4 flex items-center gap-3">
+      <div className="h-10 w-10 bg-gray-200 rounded-full"></div>
+      <div className="h-4 bg-gray-200 rounded w-24"></div>
+    </td>
+    <td className="px-6 py-4">
+      <div className="h-4 bg-gray-200 rounded w-24 mb-1"></div>
+      <div className="h-3 bg-gray-100 rounded w-16"></div>
+    </td>
+    <td className="px-6 py-4">
+      <div className="h-4 bg-gray-200 rounded w-20"></div>
+    </td>
+    <td className="px-6 py-4">
+      <div className="h-6 bg-gray-200 rounded w-12"></div>
+    </td>
+    <td className="px-6 py-4">
+      <div className="h-4 bg-gray-200 rounded w-20"></div>
+    </td>
+    <td className="px-6 py-4">
+      <div className="h-4 bg-gray-200 rounded w-24"></div>
+    </td>
+    <td className="px-6 py-4">
+      <div className="h-8 bg-gray-200 rounded w-20 ml-auto"></div>
+    </td>
+  </tr>
+);
+
 /**
  * Component chính cho trang quản lý thú cưng.
  */
@@ -56,6 +90,9 @@ const AdminPets = () => {
   const [editingPet, setEditingPet] = useState(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isConfirmDeleteModalOpen, setIsConfirmDeleteModalOpen] =
+    useState(false);
+  const [petToDeleteId, setPetToDeleteId] = useState(null);
 
   // State cho các form (Thêm/Sửa)
   const [petImageFile, setPetImageFile] = useState(null);
@@ -124,7 +161,7 @@ const AdminPets = () => {
       setTotalElements(response?.totalElements || 0);
     } catch (error) {
       console.error("Lỗi tải danh sách thú cưng:", error);
-      alert("Không thể tải dữ liệu thú cưng.");
+      toast.error("Không thể tải dữ liệu thú cưng.");
     } finally {
       setLoading(false);
     }
@@ -135,6 +172,18 @@ const AdminPets = () => {
     fetchPets();
   }, [currentPage, searchTerm, filterSpecies, filterGender]);
 
+  useEffect(() => {
+    const handleEscKey = (event) => {
+      if (event.key === "Escape") {
+        setIsDetailModalOpen(false);
+        setIsEditModalOpen(false);
+        setIsAddModalOpen(false);
+        setIsConfirmDeleteModalOpen(false);
+      }
+    };
+    document.addEventListener("keydown", handleEscKey);
+    return () => document.removeEventListener("keydown", handleEscKey);
+  }, []);
   // --- 3. Event Handlers (Hàm Xử lý Sự kiện) ---
 
   /**
@@ -174,7 +223,10 @@ const AdminPets = () => {
     if (pet.ngaySinh) {
       const d = new Date(pet.ngaySinh);
       if (!isNaN(d)) {
-        formattedDate = d.toISOString().split("T")[0];
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, "0");
+        const day = String(d.getDate()).padStart(2, "0");
+        formattedDate = `${year}-${month}-${day}`;
       }
     }
     setEditingPet({ ...pet, ngaySinh: formattedDate });
@@ -191,13 +243,18 @@ const AdminPets = () => {
       !newPet.tenChuSoHuu ||
       !newPet.soDienThoaiChuSoHuu
     ) {
-      alert("Vui lòng nhập đầy đủ thông tin bắt buộc (*)");
+      toast.warning("Vui lòng nhập đầy đủ thông tin bắt buộc (*)");
       return;
     }
 
     const formData = new FormData();
     // Gửi dữ liệu pet dưới dạng một chuỗi JSON với key 'thuCung'
-    formData.append("thuCung", JSON.stringify(newPet));
+    formData.append(
+      "thuCung",
+      new Blob([JSON.stringify(newPet)], {
+        type: "application/json",
+      })
+    );
 
     // Gửi file ảnh (nếu có) với key 'hinhAnh' để khớp với yêu cầu của backend
     if (petImageFile) {
@@ -206,7 +263,7 @@ const AdminPets = () => {
 
     try {
       await petService.createPet(formData);
-      alert("Thêm mới thành công!");
+      toast.success("Thêm mới thành công!");
       setIsAddModalOpen(false);
       setNewPet({
         tenThuCung: "",
@@ -222,7 +279,7 @@ const AdminPets = () => {
       fetchPets(); // Tải lại danh sách để hiển thị thú cưng mới
     } catch (error) {
       console.error("Lỗi thêm mới:", error);
-      alert("Thêm mới thất bại.");
+      toast.error("Thêm mới thất bại.");
     }
   };
 
@@ -243,7 +300,12 @@ const AdminPets = () => {
     };
 
     // Gửi dữ liệu pet dưới dạng một chuỗi JSON với key 'thuCung'
-    formData.append("thuCung", JSON.stringify(petData));
+    formData.append(
+      "thuCung",
+      new Blob([JSON.stringify(petData)], {
+        type: "application/json",
+      })
+    );
 
     // Gửi file ảnh (nếu có) với key 'hinhAnh' để khớp với yêu cầu của backend
     if (petImageFile) {
@@ -252,13 +314,13 @@ const AdminPets = () => {
 
     try {
       await petService.updatePet(editingPet.thuCungId, formData);
-      alert("Cập nhật thành công!");
+      toast.success("Cập nhật thành công!");
       setIsEditModalOpen(false);
       setPetImageFile(null);
       fetchPets(); // Tải lại danh sách để hiển thị thay đổi
     } catch (error) {
       console.error("Lỗi cập nhật:", error);
-      alert("Cập nhật thất bại.");
+      toast.error("Cập nhật thất bại.");
     }
   };
 
@@ -266,13 +328,16 @@ const AdminPets = () => {
    * Xử lý sự kiện xóa một thú cưng.
    * @param {number} id - ID của thú cưng cần xóa.
    */
-  const handleDelete = async (id) => {
-    if (!window.confirm("Bạn có chắc chắn muốn xóa hồ sơ thú cưng này?"))
-      return;
+  const handleDeleteClick = (id) => {
+    setPetToDeleteId(id);
+    setIsConfirmDeleteModalOpen(true);
+  };
 
+  const confirmDelete = async () => {
+    if (!petToDeleteId) return;
     try {
-      await petService.deletePet(id);
-      alert("Xóa thành công!");
+      await petService.deletePet(petToDeleteId);
+      toast.success("Xóa thành công!");
       // Nếu xóa item cuối cùng của trang, lùi về trang trước
       if (pets.length === 1 && currentPage > 1) {
         setCurrentPage(currentPage - 1);
@@ -281,9 +346,12 @@ const AdminPets = () => {
       }
     } catch (error) {
       console.error("Lỗi xóa:", error);
-      alert(
+      toast.error(
         "Xóa thất bại! Có thể thú cưng đang có lịch hẹn hoặc dữ liệu liên quan."
       );
+    } finally {
+      setIsConfirmDeleteModalOpen(false);
+      setPetToDeleteId(null);
     }
   };
 
@@ -342,9 +410,6 @@ const AdminPets = () => {
   // --- 5. UI Rendering (Kết xuất Giao diện) ---
 
   // Hiển thị trạng thái tải lần đầu tiên
-  if (loading && pets.length === 0)
-    return <div className="p-10 text-center">Đang tải hồ sơ thú cưng...</div>;
-
   return (
     <>
       {/* Tiêu đề trang */}
@@ -524,14 +589,11 @@ const AdminPets = () => {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {loading && (
-                <tr>
-                  <td colSpan="8" className="p-4 text-center">
-                    Đang tải...
-                  </td>
-                </tr>
-              )}
-              {!loading && pets.length > 0
+              {loading
+                ? Array.from({ length: ITEMS_PER_PAGE }).map((_, idx) => (
+                    <SkeletonRow key={idx} />
+                  ))
+                : pets.length > 0
                 ? pets.map((pet, index) => (
                     <tr
                       key={pet.thuCungId || index}
@@ -641,7 +703,7 @@ const AdminPets = () => {
                           <button
                             title="Xóa"
                             className="text-gray-400 hover:text-red-500 transition-colors"
-                            onClick={() => handleDelete(pet.thuCungId)}
+                            onClick={() => handleDeleteClick(pet.thuCungId)}
                           >
                             <span className="material-symbols-outlined text-base">
                               cancel
@@ -733,437 +795,590 @@ const AdminPets = () => {
       </div>
 
       {/* Modal Chi tiết Thú cưng */}
-      {isDetailModalOpen && selectedPet && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-lg p-6 max-h-[90vh] overflow-y-auto">
-            <div className="flex justify-between items-center mb-4 border-b pb-2">
-              <h3 className="text-xl font-bold text-gray-900">
-                Chi tiết Thú cưng #{selectedPet.thuCungId}
-              </h3>
-              <button
-                onClick={() => setIsDetailModalOpen(false)}
-                className="text-gray-400 hover:text-gray-600"
-              >
-                <span className="material-symbols-outlined">close</span>
-              </button>
-            </div>
-
-            <div className="space-y-4">
-              <div className="flex justify-center mb-4">
-                <img
-                  src={selectedPet.img}
-                  alt={selectedPet.tenThuCung}
-                  className="h-32 w-32 rounded-full object-cover border-4 border-gray-100 shadow-sm"
-                  onError={(e) => {
-                    e.target.src = "https://via.placeholder.com/150?text=Pet";
-                  }}
-                />
+      <AnimatePresence>
+        {isDetailModalOpen && selectedPet && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm overflow-hidden"
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.95, opacity: 0, y: 20 }}
+              transition={{ duration: 0.3, ease: "easeOut" }}
+              className="w-full max-w-3xl bg-white rounded-2xl shadow-modal flex flex-col max-h-[95vh] relative overflow-hidden font-body mx-auto my-8"
+            >
+              {/* Header */}
+              <div className="px-10 py-6 border-b border-border-light/50 flex justify-between items-center bg-white sticky top-0 z-20 backdrop-blur-sm bg-white/95">
+                <div className="flex items-center gap-5">
+                  <div className="w-12 h-12 rounded-full bg-surface border border-border-light flex items-center justify-center text-primary">
+                    <span className="material-symbols-outlined text-[24px]">
+                      visibility
+                    </span>
+                  </div>
+                  <div>
+                    <h1 className="text-xl font-semibold text-text-heading tracking-tight font-display">
+                      Chi tiết Thú cưng #{selectedPet.thuCungId}
+                    </h1>
+                    <p className="text-sm text-text-body/70 mt-1 font-light">
+                      Xem thông tin chi tiết hồ sơ
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setIsDetailModalOpen(false)}
+                  className="w-10 h-10 rounded-full flex items-center justify-center text-secondary hover:text-text-heading hover:bg-surface transition-all duration-300"
+                >
+                  <span className="material-symbols-outlined font-light">
+                    close
+                  </span>
+                </button>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-sm text-gray-500">Tên thú cưng</p>
-                  <p className="font-medium text-gray-900">
-                    {selectedPet.tenThuCung}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-500">Chủ nuôi</p>
-                  <p className="font-medium text-gray-900">
-                    {selectedPet.ownerName}
-                  </p>
-                  <p className="text-xs text-gray-500">
-                    ID: #{selectedPet.ownerId}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-500">Chủng loại</p>
-                  <p className="font-medium text-gray-900">
-                    {selectedPet.chungLoai}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-500">Giống</p>
-                  <p className="font-medium text-gray-900">
-                    {selectedPet.giongLoai}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-500">Giới tính</p>
-                  <span
-                    className={`px-2 py-1 text-xs font-medium rounded-full ${
-                      selectedPet.gioiTinh === "Đực"
-                        ? "bg-blue-100 text-blue-800"
-                        : selectedPet.gioiTinh === "Cái"
-                        ? "bg-pink-100 text-pink-800"
-                        : "bg-gray-100 text-gray-800"
-                    }`}
-                  >
-                    {selectedPet.gioiTinh}
-                  </span>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-500">Ngày sinh / Tuổi</p>
-                  <p className="font-medium text-gray-900">
-                    {formatDate(selectedPet.ngaySinh)} (
-                    {calculateAge(selectedPet.ngaySinh)})
-                  </p>
-                </div>
-                <div className="col-span-2">
-                  <p className="text-sm text-gray-500">Ghi chú sức khỏe</p>
-                  <div className="mt-1 p-3 bg-gray-50 rounded-md text-sm text-gray-700 border border-gray-100">
-                    {selectedPet.ghiChuSucKhoe}
+              {/* Body */}
+              <div className="flex-1 p-8 md:p-10 bg-white overflow-y-auto">
+                <div className="space-y-8">
+                  <div className="flex justify-center mb-8">
+                    <img
+                      src={selectedPet.img}
+                      alt={selectedPet.tenThuCung}
+                      className="h-40 w-40 rounded-full object-cover border-4 border-gray-100 shadow-sm"
+                      onError={(e) => {
+                        e.target.src =
+                          "https://via.placeholder.com/150?text=Pet";
+                      }}
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-8">
+                    <div className="input-group">
+                      <label className="form-label block text-sm font-medium text-text-heading mb-2">
+                        Tên thú cưng
+                      </label>
+                      <div className="p-3 bg-gray-50 rounded-lg border border-border-light text-text-body font-medium">
+                        {selectedPet.tenThuCung}
+                      </div>
+                    </div>
+                    <div className="input-group">
+                      <label className="form-label block text-sm font-medium text-text-heading mb-2">
+                        Chủ nuôi
+                      </label>
+                      <div className="p-3 bg-gray-50 rounded-lg border border-border-light text-text-body">
+                        {selectedPet.ownerName}
+                        <span className="text-xs text-gray-500 ml-2">
+                          (ID: #{selectedPet.ownerId})
+                        </span>
+                      </div>
+                    </div>
+                    <div className="input-group">
+                      <label className="form-label block text-sm font-medium text-text-heading mb-2">
+                        Chủng loại
+                      </label>
+                      <div className="p-3 bg-gray-50 rounded-lg border border-border-light text-text-body">
+                        {selectedPet.chungLoai}
+                      </div>
+                    </div>
+                    <div className="input-group">
+                      <label className="form-label block text-sm font-medium text-text-heading mb-2">
+                        Giống
+                      </label>
+                      <div className="p-3 bg-gray-50 rounded-lg border border-border-light text-text-body">
+                        {selectedPet.giongLoai}
+                      </div>
+                    </div>
+                    <div className="input-group">
+                      <label className="form-label block text-sm font-medium text-text-heading mb-2">
+                        Giới tính
+                      </label>
+                      <div className="mt-1">
+                        <span
+                          className={`px-2 py-1 text-xs font-medium rounded-full ${
+                            selectedPet.gioiTinh === "Đực"
+                              ? "bg-blue-100 text-blue-800"
+                              : selectedPet.gioiTinh === "Cái"
+                              ? "bg-pink-100 text-pink-800"
+                              : "bg-gray-100 text-gray-800"
+                          }`}
+                        >
+                          {selectedPet.gioiTinh}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="input-group">
+                      <label className="form-label block text-sm font-medium text-text-heading mb-2">
+                        Ngày sinh / Tuổi
+                      </label>
+                      <div className="p-3 bg-gray-50 rounded-lg border border-border-light text-text-body">
+                        {formatDate(selectedPet.ngaySinh)} (
+                        {calculateAge(selectedPet.ngaySinh)})
+                      </div>
+                    </div>
+                    <div className="col-span-1 md:col-span-2 input-group">
+                      <label className="form-label block text-sm font-medium text-text-heading mb-2">
+                        Ghi chú sức khỏe
+                      </label>
+                      <div className="p-3 bg-gray-50 rounded-lg border border-border-light text-text-body min-h-[80px]">
+                        {selectedPet.ghiChuSucKhoe}
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
 
-            <div className="flex justify-end mt-6">
-              <button
-                onClick={() => setIsDetailModalOpen(false)}
-                className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 font-medium"
-              >
-                Đóng
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+              {/* Footer */}
+              <div className="px-10 py-6 bg-white border-t border-border-light/50 flex justify-end gap-4 sticky bottom-0 z-20">
+                <button
+                  onClick={() => setIsDetailModalOpen(false)}
+                  className="px-6 py-2.5 rounded-lg text-sm font-medium text-text-body hover:bg-surface hover:text-text-heading transition-colors border border-transparent hover:border-border-light"
+                >
+                  Đóng
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Modal Chỉnh sửa Thú cưng */}
-      {isEditModalOpen && editingPet && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-lg p-6 max-h-[90vh] overflow-y-auto">
-            <div className="flex justify-between items-center mb-4 border-b pb-2">
-              <h3 className="text-xl font-bold text-gray-900">
-                Chỉnh sửa Thú cưng #{editingPet.thuCungId}
-              </h3>
-              <button
-                onClick={() => setIsEditModalOpen(false)}
-                className="text-gray-400 hover:text-gray-600"
-              >
-                <span className="material-symbols-outlined">close</span>
-              </button>
-            </div>
-
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700">
-                  Tên thú cưng
-                </label>
-                <input
-                  type="text"
-                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary focus:border-primary sm:text-sm"
-                  value={editingPet.tenThuCung || ""}
-                  onChange={(e) =>
-                    setEditingPet({ ...editingPet, tenThuCung: e.target.value })
-                  }
-                />
+      <AnimatePresence>
+        {isEditModalOpen && editingPet && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm overflow-hidden"
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.95, opacity: 0, y: 20 }}
+              transition={{ duration: 0.3, ease: "easeOut" }}
+              className="w-full max-w-3xl bg-white rounded-2xl shadow-modal flex flex-col max-h-[95vh] relative overflow-hidden font-body mx-auto my-8"
+            >
+              {/* Header */}
+              <div className="px-10 py-6 border-b border-border-light/50 flex justify-between items-center bg-white sticky top-0 z-20 backdrop-blur-sm bg-white/95">
+                <div className="flex items-center gap-5">
+                  <div className="w-12 h-12 rounded-full bg-surface border border-border-light flex items-center justify-center text-primary">
+                    <span className="material-symbols-outlined text-[24px]">
+                      edit_note
+                    </span>
+                  </div>
+                  <div>
+                    <h1 className="text-xl font-semibold text-text-heading tracking-tight font-display">
+                      Chỉnh sửa Thú cưng #{editingPet.thuCungId}
+                    </h1>
+                    <p className="text-sm text-text-body/70 mt-1 font-light">
+                      Cập nhật thông tin hồ sơ thú cưng
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setIsEditModalOpen(false)}
+                  className="w-10 h-10 rounded-full flex items-center justify-center text-secondary hover:text-text-heading hover:bg-surface transition-all duration-300"
+                >
+                  <span className="material-symbols-outlined font-light">
+                    close
+                  </span>
+                </button>
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700">
-                  Hình ảnh
-                </label>
-                <div className="mt-2 flex items-center space-x-4">
-                  <img
-                    src={
-                      petImageFile
-                        ? URL.createObjectURL(petImageFile)
-                        : editingPet.img // 'img' is already the full URL
-                    }
-                    alt="Pet Avatar"
-                    className="h-16 w-16 rounded-full object-cover"
-                  />
-                  <input
-                    type="file"
-                    className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20"
-                    onChange={(e) => setPetImageFile(e.target.files[0])}
-                  />
+              {/* Body */}
+              <div className="flex-1 p-8 md:p-10 bg-white overflow-y-auto">
+                <div className="space-y-8">
+                  <div className="input-group">
+                    <label className="form-label">Tên thú cưng</label>
+                    <input
+                      type="text"
+                      className="form-control"
+                      value={editingPet.tenThuCung || ""}
+                      onChange={(e) =>
+                        setEditingPet({
+                          ...editingPet,
+                          tenThuCung: e.target.value,
+                        })
+                      }
+                    />
+                  </div>
+
+                  <div className="input-group">
+                    <label className="form-label">Hình ảnh</label>
+                    <div className="mt-2 flex items-center space-x-4">
+                      <img
+                        src={
+                          petImageFile
+                            ? URL.createObjectURL(petImageFile)
+                            : editingPet.img // 'img' is already the full URL
+                        }
+                        alt="Pet Avatar"
+                        className="h-16 w-16 rounded-full object-cover"
+                      />
+                      <input
+                        type="file"
+                        className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20"
+                        onChange={(e) => setPetImageFile(e.target.files[0])}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div className="input-group">
+                      <label className="form-label">Chủng loại</label>
+                      <select
+                        className="form-control"
+                        value={editingPet.chungLoai || "Khác"}
+                        onChange={(e) =>
+                          setEditingPet({
+                            ...editingPet,
+                            chungLoai: e.target.value,
+                          })
+                        }
+                      >
+                        <option value="Chó">Chó</option>
+                        <option value="Mèo">Mèo</option>
+                        <option value="Khác">Khác</option>
+                      </select>
+                    </div>
+                    <div className="input-group">
+                      <label className="form-label">Giới tính</label>
+                      <select
+                        className="form-control"
+                        value={editingPet.gioiTinh || "Chưa rõ"}
+                        onChange={(e) =>
+                          setEditingPet({
+                            ...editingPet,
+                            gioiTinh: e.target.value,
+                          })
+                        }
+                      >
+                        <option value="Đực">Đực</option>
+                        <option value="Cái">Cái</option>
+                        <option value="Chưa rõ">Chưa rõ</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="input-group">
+                    <label className="form-label">Giống loài</label>
+                    <input
+                      type="text"
+                      className="form-control"
+                      value={editingPet.giongLoai || ""}
+                      onChange={(e) =>
+                        setEditingPet({
+                          ...editingPet,
+                          giongLoai: e.target.value,
+                        })
+                      }
+                    />
+                  </div>
+
+                  <div className="input-group">
+                    <label className="form-label">Ngày sinh</label>
+                    <input
+                      type="date"
+                      className="form-control"
+                      value={editingPet.ngaySinh || ""}
+                      onChange={(e) =>
+                        setEditingPet({
+                          ...editingPet,
+                          ngaySinh: e.target.value,
+                        })
+                      }
+                    />
+                  </div>
+
+                  <div className="input-group">
+                    <label className="form-label">Ghi chú sức khỏe</label>
+                    <textarea
+                      rows={3}
+                      className="form-control"
+                      value={editingPet.ghiChuSucKhoe || ""}
+                      onChange={(e) =>
+                        setEditingPet({
+                          ...editingPet,
+                          ghiChuSucKhoe: e.target.value,
+                        })
+                      }
+                    />
+                  </div>
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">
-                    Chủng loại
-                  </label>
-                  <select
-                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary focus:border-primary sm:text-sm"
-                    value={editingPet.chungLoai || "Khác"}
-                    onChange={(e) =>
-                      setEditingPet({
-                        ...editingPet,
-                        chungLoai: e.target.value,
-                      })
-                    }
-                  >
-                    <option value="Chó">Chó</option>
-                    <option value="Mèo">Mèo</option>
-                    <option value="Khác">Khác</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">
-                    Giới tính
-                  </label>
-                  <select
-                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary focus:border-primary sm:text-sm"
-                    value={editingPet.gioiTinh || "Chưa rõ"}
-                    onChange={(e) =>
-                      setEditingPet({ ...editingPet, gioiTinh: e.target.value })
-                    }
-                  >
-                    <option value="Đực">Đực</option>
-                    <option value="Cái">Cái</option>
-                    <option value="Chưa rõ">Chưa rõ</option>
-                  </select>
-                </div>
+              {/* Footer */}
+              <div className="px-10 py-6 bg-white border-t border-border-light/50 flex justify-end gap-4 sticky bottom-0 z-20">
+                <button
+                  onClick={() => setIsEditModalOpen(false)}
+                  className="px-6 py-2.5 rounded-lg text-sm font-medium text-text-body hover:bg-surface hover:text-text-heading transition-colors border border-transparent hover:border-border-light"
+                >
+                  Hủy bỏ
+                </button>
+                <button
+                  onClick={handleSavePet}
+                  className="px-8 py-2.5 rounded-lg text-sm font-medium text-white bg-primary hover:bg-primary-hover shadow-lg shadow-primary/20 hover:shadow-primary/30 transition-all duration-200 transform hover:-translate-y-0.5 active:translate-y-0 flex items-center gap-2 tracking-wide"
+                >
+                  <span className="material-symbols-outlined text-[18px]">
+                    save
+                  </span>
+                  Lưu thay đổi
+                </button>
               </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700">
-                  Giống loài
-                </label>
-                <input
-                  type="text"
-                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary focus:border-primary sm:text-sm"
-                  value={editingPet.giongLoai || ""}
-                  onChange={(e) =>
-                    setEditingPet({ ...editingPet, giongLoai: e.target.value })
-                  }
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700">
-                  Ngày sinh
-                </label>
-                <input
-                  type="date"
-                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary focus:border-primary sm:text-sm"
-                  value={editingPet.ngaySinh || ""}
-                  onChange={(e) =>
-                    setEditingPet({ ...editingPet, ngaySinh: e.target.value })
-                  }
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700">
-                  Ghi chú sức khỏe
-                </label>
-                <textarea
-                  rows={3}
-                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary focus:border-primary sm:text-sm"
-                  value={editingPet.ghiChuSucKhoe || ""}
-                  onChange={(e) =>
-                    setEditingPet({
-                      ...editingPet,
-                      ghiChuSucKhoe: e.target.value,
-                    })
-                  }
-                />
-              </div>
-            </div>
-
-            <div className="flex justify-end mt-6 space-x-3">
-              <button
-                onClick={() => setIsEditModalOpen(false)}
-                className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 font-medium"
-              >
-                Hủy
-              </button>
-              <button
-                onClick={handleSavePet}
-                className="px-4 py-2 bg-primary text-white rounded-md hover:bg-green-600 font-medium"
-              >
-                Lưu thay đổi
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Modal Thêm mới Thú cưng */}
-      {isAddModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-lg p-6 max-h-[90vh] overflow-y-auto">
-            <div className="flex justify-between items-center mb-4 border-b pb-2">
-              <h3 className="text-xl font-bold text-gray-900">
-                Thêm Thú cưng mới
-              </h3>
-              <button
-                onClick={() => setIsAddModalOpen(false)}
-                className="text-gray-400 hover:text-gray-600"
-              >
-                <span className="material-symbols-outlined">close</span>
-              </button>
-            </div>
-
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700">
-                  Tên thú cưng <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary focus:border-primary sm:text-sm"
-                  value={newPet.tenThuCung}
-                  onChange={(e) =>
-                    setNewPet({ ...newPet, tenThuCung: e.target.value })
-                  }
-                />
+      <AnimatePresence>
+        {isAddModalOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm overflow-hidden"
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.95, opacity: 0, y: 20 }}
+              transition={{ duration: 0.3, ease: "easeOut" }}
+              className="w-full max-w-3xl bg-white rounded-2xl shadow-modal flex flex-col max-h-[95vh] relative overflow-hidden font-body mx-auto my-8"
+            >
+              {/* Header */}
+              <div className="px-10 py-6 border-b border-border-light/50 flex justify-between items-center bg-white sticky top-0 z-20 backdrop-blur-sm bg-white/95">
+                <div className="flex items-center gap-5">
+                  <div className="w-12 h-12 rounded-full bg-surface border border-border-light flex items-center justify-center text-primary">
+                    <span className="material-symbols-outlined text-[24px]">
+                      add_circle
+                    </span>
+                  </div>
+                  <div>
+                    <h1 className="text-xl font-semibold text-text-heading tracking-tight font-display">
+                      Thêm Thú cưng mới
+                    </h1>
+                    <p className="text-sm text-text-body/70 mt-1 font-light">
+                      Tạo hồ sơ thú cưng mới
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setIsAddModalOpen(false)}
+                  className="w-10 h-10 rounded-full flex items-center justify-center text-secondary hover:text-text-heading hover:bg-surface transition-all duration-300"
+                >
+                  <span className="material-symbols-outlined font-light">
+                    close
+                  </span>
+                </button>
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700">
-                  Hình ảnh
-                </label>
-                <div className="mt-2 flex items-center space-x-4">
-                  <img
-                    src={
-                      petImageFile
-                        ? URL.createObjectURL(petImageFile)
-                        : "https://placehold.co/100x100?text=Pet"
-                    }
-                    alt="Pet Preview"
-                    className="h-16 w-16 rounded-full object-cover"
-                  />
-                  <input
-                    type="file"
-                    className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20"
-                    onChange={(e) => setPetImageFile(e.target.files[0])}
-                  />
+              {/* Body */}
+              <div className="flex-1 p-8 md:p-10 bg-white overflow-y-auto">
+                <div className="space-y-8">
+                  <div className="input-group">
+                    <label className="form-label">
+                      Tên thú cưng <span className="text-primary">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      className="form-control"
+                      value={newPet.tenThuCung}
+                      onChange={(e) =>
+                        setNewPet({ ...newPet, tenThuCung: e.target.value })
+                      }
+                    />
+                  </div>
+
+                  <div className="input-group">
+                    <label className="form-label">Hình ảnh</label>
+                    <div className="mt-2 flex items-center space-x-4">
+                      <img
+                        src={
+                          petImageFile
+                            ? URL.createObjectURL(petImageFile)
+                            : "https://placehold.co/100x100?text=Pet"
+                        }
+                        alt="Pet Preview"
+                        className="h-16 w-16 rounded-full object-cover"
+                      />
+                      <input
+                        type="file"
+                        className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20"
+                        onChange={(e) => setPetImageFile(e.target.files[0])}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div className="input-group">
+                      <label className="form-label">Chủng loại</label>
+                      <select
+                        className="form-control"
+                        value={newPet.chungLoai}
+                        onChange={(e) =>
+                          setNewPet({ ...newPet, chungLoai: e.target.value })
+                        }
+                      >
+                        <option value="Chó">Chó</option>
+                        <option value="Mèo">Mèo</option>
+                        <option value="Khác">Khác</option>
+                      </select>
+                    </div>
+                    <div className="input-group">
+                      <label className="form-label">Giới tính</label>
+                      <select
+                        className="form-control"
+                        value={newPet.gioiTinh}
+                        onChange={(e) =>
+                          setNewPet({ ...newPet, gioiTinh: e.target.value })
+                        }
+                      >
+                        <option value="Đực">Đực</option>
+                        <option value="Cái">Cái</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="input-group">
+                    <label className="form-label">Giống loài</label>
+                    <input
+                      type="text"
+                      className="form-control"
+                      value={newPet.giongLoai}
+                      onChange={(e) =>
+                        setNewPet({ ...newPet, giongLoai: e.target.value })
+                      }
+                    />
+                  </div>
+
+                  <div className="input-group">
+                    <label className="form-label">Ngày sinh</label>
+                    <input
+                      type="date"
+                      className="form-control"
+                      value={newPet.ngaySinh}
+                      onChange={(e) =>
+                        setNewPet({ ...newPet, ngaySinh: e.target.value })
+                      }
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div className="input-group">
+                      <label className="form-label">
+                        Tên chủ sở hữu <span className="text-primary">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        className="form-control"
+                        value={newPet.tenChuSoHuu}
+                        onChange={(e) =>
+                          setNewPet({ ...newPet, tenChuSoHuu: e.target.value })
+                        }
+                      />
+                    </div>
+                    <div className="input-group">
+                      <label className="form-label">
+                        SĐT chủ sở hữu <span className="text-primary">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        className="form-control"
+                        value={newPet.soDienThoaiChuSoHuu}
+                        onChange={(e) =>
+                          setNewPet({
+                            ...newPet,
+                            soDienThoaiChuSoHuu: e.target.value,
+                          })
+                        }
+                      />
+                    </div>
+                  </div>
+
+                  <div className="input-group">
+                    <label className="form-label">Ghi chú sức khỏe</label>
+                    <textarea
+                      rows={3}
+                      className="form-control"
+                      value={newPet.ghiChuSucKhoe}
+                      onChange={(e) =>
+                        setNewPet({ ...newPet, ghiChuSucKhoe: e.target.value })
+                      }
+                    />
+                  </div>
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">
-                    Chủng loại
-                  </label>
-                  <select
-                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary focus:border-primary sm:text-sm"
-                    value={newPet.chungLoai}
-                    onChange={(e) =>
-                      setNewPet({ ...newPet, chungLoai: e.target.value })
-                    }
-                  >
-                    <option value="Chó">Chó</option>
-                    <option value="Mèo">Mèo</option>
-                    <option value="Khác">Khác</option>
-                  </select>
+              {/* Footer */}
+              <div className="px-10 py-6 bg-white border-t border-border-light/50 flex justify-end gap-4 sticky bottom-0 z-20">
+                <button
+                  onClick={() => setIsAddModalOpen(false)}
+                  className="px-6 py-2.5 rounded-lg text-sm font-medium text-text-body hover:bg-surface hover:text-text-heading transition-colors border border-transparent hover:border-border-light"
+                >
+                  Hủy bỏ
+                </button>
+                <button
+                  onClick={handleCreatePet}
+                  className="px-8 py-2.5 rounded-lg text-sm font-medium text-white bg-primary hover:bg-primary-hover shadow-lg shadow-primary/20 hover:shadow-primary/30 transition-all duration-200 transform hover:-translate-y-0.5 active:translate-y-0 flex items-center gap-2 tracking-wide"
+                >
+                  <span className="material-symbols-outlined text-[18px]">
+                    check
+                  </span>
+                  Tạo Thú Cưng
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* --- MODAL XÁC NHẬN XÓA --- */}
+      <AnimatePresence>
+        {isConfirmDeleteModalOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.95, opacity: 0, y: 20 }}
+              className="bg-white rounded-lg shadow-xl w-full max-w-md p-6"
+            >
+              <div className="text-center">
+                <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-red-100">
+                  <span className="material-symbols-outlined text-red-600 text-3xl">
+                    warning
+                  </span>
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">
-                    Giới tính
-                  </label>
-                  <select
-                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary focus:border-primary sm:text-sm"
-                    value={newPet.gioiTinh}
-                    onChange={(e) =>
-                      setNewPet({ ...newPet, gioiTinh: e.target.value })
-                    }
-                  >
-                    <option value="Đực">Đực</option>
-                    <option value="Cái">Cái</option>
-                  </select>
-                </div>
+                <h3 className="mt-5 text-lg font-semibold text-gray-900">
+                  Xác nhận xóa
+                </h3>
+                <p className="mt-2 text-sm text-gray-500">
+                  Bạn có chắc chắn muốn xóa hồ sơ thú cưng này? Hành động này
+                  không thể hoàn tác và có thể ảnh hưởng đến dữ liệu liên quan.
+                </p>
               </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700">
-                  Giống loài
-                </label>
-                <input
-                  type="text"
-                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary focus:border-primary sm:text-sm"
-                  value={newPet.giongLoai}
-                  onChange={(e) =>
-                    setNewPet({ ...newPet, giongLoai: e.target.value })
-                  }
-                />
+              <div className="mt-6 grid grid-cols-2 gap-3">
+                <button
+                  onClick={() => setIsConfirmDeleteModalOpen(false)}
+                  className="inline-flex w-full justify-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
+                >
+                  Hủy
+                </button>
+                <button
+                  onClick={confirmDelete}
+                  className="inline-flex w-full justify-center rounded-md bg-red-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-red-500"
+                >
+                  Xóa
+                </button>
               </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700">
-                  Ngày sinh
-                </label>
-                <input
-                  type="date"
-                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary focus:border-primary sm:text-sm"
-                  value={newPet.ngaySinh}
-                  onChange={(e) =>
-                    setNewPet({ ...newPet, ngaySinh: e.target.value })
-                  }
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">
-                    Tên chủ sở hữu <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary focus:border-primary sm:text-sm"
-                    value={newPet.tenChuSoHuu}
-                    onChange={(e) =>
-                      setNewPet({ ...newPet, tenChuSoHuu: e.target.value })
-                    }
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">
-                    SĐT chủ sở hữu <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary focus:border-primary sm:text-sm"
-                    value={newPet.soDienThoaiChuSoHuu}
-                    onChange={(e) =>
-                      setNewPet({
-                        ...newPet,
-                        soDienThoaiChuSoHuu: e.target.value,
-                      })
-                    }
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700">
-                  Ghi chú sức khỏe
-                </label>
-                <textarea
-                  rows={3}
-                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary focus:border-primary sm:text-sm"
-                  value={newPet.ghiChuSucKhoe}
-                  onChange={(e) =>
-                    setNewPet({ ...newPet, ghiChuSucKhoe: e.target.value })
-                  }
-                />
-              </div>
-            </div>
-
-            <div className="flex justify-end mt-6 space-x-3">
-              <button
-                onClick={() => setIsAddModalOpen(false)}
-                className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 font-medium"
-              >
-                Hủy
-              </button>
-              <button
-                onClick={handleCreatePet}
-                className="px-4 py-2 bg-primary text-white rounded-md hover:bg-green-600 font-medium"
-              >
-                Thêm mới
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </>
   );
 };

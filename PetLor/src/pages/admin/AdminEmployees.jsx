@@ -32,6 +32,37 @@ const getPositionBadge = (position) => {
   return "bg-gray-100 text-gray-800 border-gray-200";
 };
 
+// Component Skeleton Loading cho Table
+const SkeletonRow = () => (
+  <tr className="animate-pulse border-b border-gray-100 last:border-0">
+    <td className="px-6 py-4">
+      <div className="h-4 bg-gray-200 rounded w-8"></div>
+    </td>
+    <td className="px-6 py-4 flex items-center gap-3">
+      <div className="h-10 w-10 bg-gray-200 rounded-full"></div>
+      <div className="space-y-2">
+        <div className="h-4 bg-gray-200 rounded w-32"></div>
+      </div>
+    </td>
+    <td className="px-6 py-4">
+      <div className="h-4 bg-gray-200 rounded w-40 mb-2"></div>
+      <div className="h-3 bg-gray-100 rounded w-24"></div>
+    </td>
+    <td className="px-6 py-4">
+      <div className="h-4 bg-gray-200 rounded w-24"></div>
+    </td>
+    <td className="px-6 py-4">
+      <div className="h-6 bg-gray-200 rounded w-20"></div>
+    </td>
+    <td className="px-6 py-4">
+      <div className="h-4 bg-gray-200 rounded w-24"></div>
+    </td>
+    <td className="px-6 py-4">
+      <div className="h-8 bg-gray-200 rounded w-20 ml-auto"></div>
+    </td>
+  </tr>
+);
+
 /**
  * Component chính cho trang quản lý nhân viên.
  */
@@ -125,31 +156,6 @@ const AdminEmployees = () => {
   useEffect(() => {
     fetchEmployees();
   }, [currentPage, searchTerm, filterPosition]);
-
-  // Khóa cuộn trang khi có bất kỳ modal nào đang mở
-  useEffect(() => {
-    const isAnyModalOpen =
-      isAddModalOpen ||
-      isDetailModalOpen ||
-      isEditModalOpen ||
-      isConfirmDeleteModalOpen;
-
-    if (isAnyModalOpen) {
-      document.body.style.overflow = "hidden";
-    } else {
-      document.body.style.overflow = "";
-    }
-
-    // Hàm cleanup để khôi phục cuộn khi component unmount
-    return () => {
-      document.body.style.overflow = "";
-    };
-  }, [
-    isAddModalOpen,
-    isDetailModalOpen,
-    isEditModalOpen,
-    isConfirmDeleteModalOpen,
-  ]);
 
   // Xử lý phím ESC để đóng modal
   useEffect(() => {
@@ -361,11 +367,6 @@ const AdminEmployees = () => {
   // --- 6. UI Rendering (Kết xuất Giao diện) ---
 
   // Hiển thị màn hình tải dữ liệu
-  if (loading)
-    return (
-      <div className="p-10 text-center">Đang tải danh sách nhân viên...</div>
-    );
-
   return (
     <>
       {/* Tiêu đề trang */}
@@ -504,7 +505,11 @@ const AdminEmployees = () => {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {employees.length > 0 ? (
+              {loading ? (
+                Array.from({ length: ITEMS_PER_PAGE }).map((_, idx) => (
+                  <SkeletonRow key={idx} />
+                ))
+              ) : employees.length > 0 ? (
                 employees.map((emp, index) => (
                   <tr
                     key={emp.nhanVienId || index}
@@ -700,10 +705,10 @@ const AdminEmployees = () => {
               animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.95, opacity: 0, y: 20 }}
               transition={{ duration: 0.3, ease: "easeOut" }}
-              className="w-full max-w-2xl bg-white rounded-2xl shadow-modal flex flex-col max-h-[95vh] relative overflow-hidden font-body mx-auto my-8"
+              className="w-full max-w-3xl bg-white rounded-2xl shadow-modal flex flex-col max-h-[95vh] relative overflow-hidden font-body mx-auto my-8"
             >
               {/* Header */}
-              <div className="px-10 py-6 border-b border-border-light/50 flex justify-between items-center bg-white sticky top-0 z-20">
+              <div className="px-10 py-6 border-b border-border-light/50 flex justify-between items-center bg-white sticky top-0 z-20 backdrop-blur-sm bg-white/95">
                 <div className="flex items-center gap-5">
                   <div className="w-12 h-12 rounded-full bg-surface border border-border-light flex items-center justify-center text-primary">
                     <span className="material-symbols-outlined text-[24px]">
@@ -825,10 +830,10 @@ const AdminEmployees = () => {
               animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.95, opacity: 0, y: 20 }}
               transition={{ duration: 0.3, ease: "easeOut" }}
-              className="w-full max-w-2xl bg-white rounded-2xl shadow-modal flex flex-col max-h-[95vh] relative overflow-hidden font-body mx-auto my-8"
+              className="w-full max-w-3xl bg-white rounded-2xl shadow-modal flex flex-col max-h-[95vh] relative overflow-hidden font-body mx-auto my-8"
             >
               {/* Header */}
-              <div className="px-10 py-6 border-b border-border-light/50 flex justify-between items-center bg-white sticky top-0 z-20">
+              <div className="px-10 py-6 border-b border-border-light/50 flex justify-between items-center bg-white sticky top-0 z-20 backdrop-blur-sm bg-white/95">
                 <div className="flex items-center gap-5">
                   <div className="w-12 h-12 rounded-full bg-surface border border-border-light flex items-center justify-center text-primary">
                     <span className="material-symbols-outlined text-[24px]">
@@ -1006,7 +1011,7 @@ const AdminEmployees = () => {
               className="w-full max-w-3xl bg-white rounded-2xl shadow-modal flex flex-col max-h-[95vh] relative overflow-hidden font-body mx-auto my-8"
             >
               {/* Header */}
-              <div className="px-10 py-6 border-b border-border-light/50 flex justify-between items-center bg-white sticky top-0 z-20">
+              <div className="px-10 py-6 border-b border-border-light/50 flex justify-between items-center bg-white sticky top-0 z-20 backdrop-blur-sm bg-white/95">
                 <div className="flex items-center gap-5">
                   <div className="w-12 h-12 rounded-full bg-surface border border-border-light flex items-center justify-center text-primary">
                     <span className="material-symbols-outlined text-[24px]">

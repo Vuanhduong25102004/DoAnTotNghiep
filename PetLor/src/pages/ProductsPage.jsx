@@ -1,96 +1,23 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 // 1. Import AOS
 import AOS from "aos";
 import "aos/dist/aos.css";
+import productService from "../services/productService";
 
-// Dữ liệu mẫu cho sản phẩm
-const products = [
-  {
-    id: 1,
-    category: "Vệ sinh",
-    name: "Sữa Tắm Dưỡng Lông Cho Chó Poodle (500ml)",
-    price: "150.000₫",
-    oldPrice: "190.000₫",
-    image:
-      "https://lh3.googleusercontent.com/aida-public/AB6AXuAlUPzYQu3Kt8yja-2KhY76pWJ0xDZWKyiOoNvFMlh1OBOV6EUc91DSZbgiFIn0gBelh6GmTQ3wjYVIqDl6hAlm1HnDEjACsz5OrbP67UJ9kSzqsGBlVgzpBuH1q8BOWG_kcmxOT8jQ91wlzsmyHTrTGsCoyNdHSrIHTltp8WmwUAzILv3L1SbxlKZblF6SM7uNi_5C19M_FlveT1XnqeYMErOyINY_Ic-7oEs52S3-lvlIuV6P3nTnY7vZFDcHt7bjjmcjnb3hWMUV",
-    tag: "-20%",
-    tagColor: "bg-red-500",
-  },
-  {
-    id: 2,
-    category: "Thức ăn",
-    name: "Pate Cho Mèo Vị Cá Ngừ Đại Dương",
-    price: "25.000₫",
-    oldPrice: null,
-    image:
-      "https://lh3.googleusercontent.com/aida-public/AB6AXuCDAHUwBeXZGS8t9hdUFHNWKEfUj9ccXlh5YrAi3jBq4PyImz8oQmjFpHQ3AzT_Hs-nCipMuUGX6bnsCdTWSw5cV-5g9e13BvNVKRGG6HIo836UVpcBVvgf-bzePOFY28w9Mgif8_OHCkUZjykLZrQS5Tk9zfvON3QEfoekeCz4H6CFxzEb1IsyN6dV6ssPxvdvdJbnLbdeRhnB7-u4Qwkg5W-KNoHHEFwXMUY5gb8dc0Nyyki54IkesnDNQKj6ig5DS2YFrFyvWhXT",
-    tag: null,
-  },
-  {
-    id: 3,
-    category: "Đồ chơi",
-    name: "Bóng Cao Su Đàn Hồi Cho Chó Lớn",
-    price: "85.000₫",
-    oldPrice: null,
-    image:
-      "https://lh3.googleusercontent.com/aida-public/AB6AXuD2ORUkBfRHB-ck4eWeR3YQGZ6B86xk16AoSJz7-nDKfUYFuD5huDUtgmrbaQvnE8TYj1WKiDgA-fPBNPB0PcMfZ520m0OmLyfI9iiX0w2ME1WMJ9u6UeC0m6OuUhVLhC1k3f0-f11cshyE0o4-lQ6TtZmEdpS8ioxa_9wF4mb4gowmVrT-mDGaB7UoIsUG-QdIHFzAHA95hJlpUUKgzuby_iDUnc_xkXtGA7mkD6jha07H9du5JvJh87ssaFFyPwX0JPr7X9dXcf8o",
-    tag: "Bán chạy",
-    tagColor: "bg-primary text-text-main",
-  },
-  {
-    id: 4,
-    category: "Phụ kiện",
-    name: "Dây Dắt Chó Đi Dạo Phản Quang 2M",
-    price: "120.000₫",
-    oldPrice: null,
-    image:
-      "https://lh3.googleusercontent.com/aida-public/AB6AXuAvqPwwLHeV4gGAVGlEkJ1m9CgmkLPjbbjw_pQ0Vda030ZMhycuw8WW1cdzIlemhJFq-vl6ElifVOmK05lJn5Fx3CvgKbEou2GAxGGi-Bl4UBcOaLfbpKF2E-Z3lw6r0xZFVTZx3IBU4I474Mq4Xkh7JfCouwWPBGYSK1MrLCe2I-p4gCKt9x4tvfus5M9ir7YXnXS8C8wbZbnrhPEg4a8cD-MAE_onZeedmd7SlyerwDPLeEsgkJaODojZpsytNVRkGT8ggMynkvs9",
-    tag: null,
-  },
-  {
-    id: 5,
-    category: "Phụ kiện",
-    name: "Vòng Cổ Chống Liếm Cho Thú Cưng",
-    price: "65.000₫",
-    oldPrice: null,
-    image:
-      "https://lh3.googleusercontent.com/aida-public/AB6AXuAvqPwwLHeV4gGAVGlEkJ1m9CgmkLPjbbjw_pQ0Vda030ZMhycuw8WW1cdzIlemhJFq-vl6ElifVOmK05lJn5Fx3CvgKbEou2GAxGGi-Bl4UBcOaLfbpKF2E-Z3lw6r0xZFVTZx3IBU4I474Mq4Xkh7JfCouwWPBGYSK1MrLCe2I-p4gCKt9x4tvfus5M9ir7YXnXS8C8wbZbnrhPEg4a8cD-MAE_onZeedmd7SlyerwDPLeEsgkJaODojZpsytNVRkGT8ggMynkvs9",
-    tag: null,
-  },
-  {
-    id: 6,
-    category: "Đồ chơi",
-    name: "Xương Gặm Sạch Răng Hương Bò",
-    price: "45.000₫",
-    oldPrice: null,
-    image:
-      "https://lh3.googleusercontent.com/aida-public/AB6AXuD2ORUkBfRHB-ck4eWeR3YQGZ6B86xk16AoSJz7-nDKfUYFuD5huDUtgmrbaQvnE8TYj1WKiDgA-fPBNPB0PcMfZ520m0OmLyfI9iiX0w2ME1WMJ9u6UeC0m6OuUhVLhC1k3f0-f11cshyE0o4-lQ6TtZmEdpS8ioxa_9wF4mb4gowmVrT-mDGaB7UoIsUG-QdIHFzAHA95hJlpUUKgzuby_iDUnc_xkXtGA7mkD6jha07H9du5JvJh87ssaFFyPwX0JPr7X9dXcf8o",
-    tag: "Mới",
-    tagColor: "bg-red-500",
-  },
-  {
-    id: 7,
-    category: "Vệ sinh",
-    name: "Lược Chải Lông Tĩnh Điện Gỡ Rối",
-    price: "95.000₫",
-    oldPrice: "120.000₫",
-    image:
-      "https://lh3.googleusercontent.com/aida-public/AB6AXuAlUPzYQu3Kt8yja-2KhY76pWJ0xDZWKyiOoNvFMlh1OBOV6EUc91DSZbgiFIn0gBelh6GmTQ3wjYVIqDl6hAlm1HnDEjACsz5OrbP67UJ9kSzqsGBlVgzpBuH1q8BOWG_kcmxOT8jQ91wlzsmyHTrTGsCoyNdHSrIHTltp8WmwUAzILv3L1SbxlKZblF6SM7uNi_5C19M_FlveT1XnqeYMErOyINY_Ic-7oEs52S3-lvlIuV6P3nTnY7vZFDcHt7bjjmcjnb3hWMUV",
-    tag: null,
-  },
-  {
-    id: 8,
-    category: "Thức ăn",
-    name: "Thức Ăn Hạt Royal Canin Cho Chó Con (1kg)",
-    price: "220.000₫",
-    oldPrice: null,
-    image:
-      "https://lh3.googleusercontent.com/aida-public/AB6AXuCDAHUwBeXZGS8t9hdUFHNWKEfUj9ccXlh5YrAi3jBq4PyImz8oQmjFpHQ3AzT_Hs-nCipMuUGX6bnsCdTWSw5cV-5g9e13BvNVKRGG6HIo836UVpcBVvgf-bzePOFY28w9Mgif8_OHCkUZjykLZrQS5Tk9zfvON3QEfoekeCz4H6CFxzEb1IsyN6dV6ssPxvdvdJbnLbdeRhnB7-u4Qwkg5W-KNoHHEFwXMUY5gb8dc0Nyyki54IkesnDNQKj6ig5DS2YFrFyvWhXT",
-    tag: null,
-  },
-];
+const formatPrice = (price) => {
+  if (price === null || price === undefined) return "";
+  if (typeof price === "number") {
+    return new Intl.NumberFormat("vi-VN", {
+      style: "currency",
+      currency: "VND",
+    }).format(price);
+  }
+  return price;
+};
 
 const ProductsPage = () => {
+  const [products, setProducts] = useState([]);
+
   useEffect(() => {
     const aosInit = setTimeout(() => {
       AOS.init({
@@ -104,6 +31,48 @@ const ProductsPage = () => {
     }, 100);
     return () => clearTimeout(aosInit);
   }, []);
+
+  useEffect(() => {
+    const fetchProducts = async () => {
+      try {
+        const response = await productService.getAllProducts();
+
+        // Xử lý dữ liệu trả về từ API (hỗ trợ cả dạng mảng và dạng phân trang)
+        let data = [];
+        if (Array.isArray(response)) data = response;
+        else if (response?.data && Array.isArray(response.data))
+          data = response.data;
+        else if (response?.content && Array.isArray(response.content))
+          data = response.content;
+        else if (
+          response?.data?.content &&
+          Array.isArray(response.data.content)
+        )
+          data = response.data.content;
+
+        // Map dữ liệu API sang format hiển thị
+        const mappedProducts = data.map((product) => ({
+          ...product,
+          id: product.sanPhamId || product.id,
+          name: product.tenSanPham || product.name,
+          price: product.gia || product.price,
+          image: product.hinhAnh
+            ? `http://localhost:8080/uploads/${product.hinhAnh}`
+            : product.image,
+          category: product.tenDanhMuc || product.category || "Sản phẩm",
+        }));
+
+        setProducts(mappedProducts);
+      } catch (error) {
+        console.error("Failed to fetch products:", error);
+      }
+    };
+    fetchProducts();
+  }, []);
+
+  useEffect(() => {
+    AOS.refresh();
+  }, [products]);
 
   return (
     <div className="relative flex min-h-screen w-full flex-col bg-background-light font-display text-text-main overflow-x-hidden">
@@ -263,11 +232,11 @@ const ProductsPage = () => {
                         {" "}
                         {/* mt-auto để đẩy giá xuống nếu tên ngắn */}
                         <span className="text-lg font-bold text-primary">
-                          {product.price}
+                          {formatPrice(product.price)}
                         </span>
                         {product.oldPrice && (
                           <span className="text-sm text-text-gray-500 line-through">
-                            {product.oldPrice}
+                            {formatPrice(product.oldPrice)}
                           </span>
                         )}
                       </div>

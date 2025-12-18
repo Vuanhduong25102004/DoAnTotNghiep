@@ -5,6 +5,8 @@
  */
 import React, { useEffect, useState } from "react";
 import productService from "../../services/productService";
+import { motion, AnimatePresence } from "framer-motion";
+import { toast } from "react-toastify";
 
 // --- Helpers (Hàm hỗ trợ) ---
 
@@ -54,6 +56,34 @@ const getImageUrl = (imagePath, fallbackText = "Product") => {
   return `http://localhost:8080/uploads/${imagePath}`;
 };
 
+// Component Skeleton Loading cho Table
+const SkeletonRow = () => (
+  <tr className="animate-pulse border-b border-gray-100 last:border-0">
+    <td className="px-6 py-4">
+      <div className="h-4 bg-gray-200 rounded w-8"></div>
+    </td>
+    <td className="px-6 py-4 flex items-center gap-3">
+      <div className="h-10 w-10 bg-gray-200 rounded-md"></div>
+      <div className="space-y-2">
+        <div className="h-4 bg-gray-200 rounded w-32"></div>
+        <div className="h-3 bg-gray-100 rounded w-20"></div>
+      </div>
+    </td>
+    <td className="px-6 py-4">
+      <div className="h-4 bg-gray-200 rounded w-20"></div>
+    </td>
+    <td className="px-6 py-4">
+      <div className="h-4 bg-gray-200 rounded w-16"></div>
+    </td>
+    <td className="px-6 py-4">
+      <div className="h-4 bg-gray-200 rounded w-32"></div>
+    </td>
+    <td className="px-6 py-4">
+      <div className="h-8 bg-gray-200 rounded w-20 ml-auto"></div>
+    </td>
+  </tr>
+);
+
 const AdminProducts = () => {
   // 1. State
   // --- 1. State Management (Quản lý Trạng thái) ---
@@ -76,6 +106,9 @@ const AdminProducts = () => {
 
   // State cho các form (Thêm/Sửa)
   const [isModalOpen, setIsModalOpen] = useState(false); // Mở/đóng modal thêm/sửa
+  const [isConfirmDeleteModalOpen, setIsConfirmDeleteModalOpen] =
+    useState(false);
+  const [productToDeleteId, setProductToDeleteId] = useState(null);
   const [editingId, setEditingId] = useState(null); // ID của sản phẩm đang sửa, null nếu là thêm mới
   const [formData, setFormData] = useState({
     tenSanPham: "",
@@ -128,11 +161,24 @@ const AdminProducts = () => {
       setTotalElements(response?.totalElements || 0);
     } catch (error) {
       console.error("Lỗi tải dữ liệu sản phẩm:", error);
-      alert("Không thể tải dữ liệu sản phẩm.");
+      toast.error("Không thể tải dữ liệu sản phẩm.");
     } finally {
       setLoading(false);
     }
   };
+
+  // Xử lý phím ESC để đóng modal
+  useEffect(() => {
+    const handleEscKey = (event) => {
+      if (event.key === "Escape") {
+        setIsModalOpen(false);
+        setIsDetailModalOpen(false);
+        setIsConfirmDeleteModalOpen(false);
+      }
+    };
+    document.addEventListener("keydown", handleEscKey);
+    return () => document.removeEventListener("keydown", handleEscKey);
+  }, []);
 
   // Effect: Lấy danh sách danh mục một lần khi component được mount.
   useEffect(() => {
@@ -142,7 +188,7 @@ const AdminProducts = () => {
         setCategories(categoriesRes || []);
       } catch (error) {
         console.error("Lỗi tải danh mục:", error);
-        alert("Không thể tải danh mục sản phẩm.");
+        toast.error("Không thể tải danh mục sản phẩm.");
       }
     };
     fetchCategories();
@@ -202,18 +248,23 @@ const AdminProducts = () => {
    * Xử lý sự kiện xóa một sản phẩm.
    * @param {number} id - ID của sản phẩm cần xóa.
    */
-  const handleDelete = async (id) => {
-    if (!window.confirm(`Bạn có chắc chắn muốn xóa sản phẩm ID: ${id}?`))
-      return;
+  const handleDeleteClick = (id) => {
+    setProductToDeleteId(id);
+    setIsConfirmDeleteModalOpen(true);
+  };
 
+  const confirmDelete = async () => {
+    if (!productToDeleteId) return;
     try {
-      await productService.deleteProduct(id);
-      // Tải lại dữ liệu trên trang hiện tại để phản ánh thay đổi
+      await productService.deleteProduct(productToDeleteId);
+      toast.success("Xóa sản phẩm thành công!");
       fetchProducts();
-      alert("Xóa sản phẩm thành công!");
     } catch (error) {
       console.error("Lỗi xóa:", error);
-      alert("Xóa thất bại! Có thể sản phẩm đang có trong đơn hàng.");
+      toast.error("Xóa thất bại! Có thể sản phẩm đang có trong đơn hàng.");
+    } finally {
+      setIsConfirmDeleteModalOpen(false);
+      setProductToDeleteId(null);
     }
   };
 
@@ -222,14 +273,14 @@ const AdminProducts = () => {
    */
   const handleSave = async () => {
     if (!formData.tenSanPham || !formData.danhMucId || !formData.gia) {
-      alert("Vui lòng nhập tên, danh mục và giá sản phẩm!");
+      toast.warning("Vui lòng nhập tên, danh mục và giá sản phẩm!");
       return;
     }
 
     const formDataPayload = new FormData();
     const productData = {
       ...formData,
-      gia: parseFloat(formData.gia),
+      gia: parseFloat(formData.gia) || 0,
       soLuongTonKho: parseInt(formData.soLuongTonKho) || 0,
       danhMucId: parseInt(formData.danhMucId),
     };
@@ -251,10 +302,10 @@ const AdminProducts = () => {
     try {
       if (editingId) {
         await productService.updateProduct(editingId, formDataPayload);
-        alert("Cập nhật sản phẩm thành công!");
+        toast.success("Cập nhật sản phẩm thành công!");
       } else {
         await productService.createProduct(formDataPayload);
-        alert("Thêm sản phẩm thành công!");
+        toast.success("Thêm sản phẩm thành công!");
       }
       setIsModalOpen(false);
       setProductImageFile(null);
@@ -262,7 +313,7 @@ const AdminProducts = () => {
       fetchProducts();
     } catch (error) {
       console.error("Lỗi lưu sản phẩm:", error);
-      alert("Thao tác thất bại!");
+      toast.error("Thao tác thất bại!");
     }
   };
 
@@ -283,7 +334,7 @@ const AdminProducts = () => {
       setIsDetailModalOpen(true);
     } catch (error) {
       console.error("Lỗi tải chi tiết:", error);
-      alert("Không thể tải chi tiết sản phẩm từ server.");
+      toast.error("Không thể tải chi tiết sản phẩm từ server.");
     }
   };
 
@@ -339,12 +390,6 @@ const AdminProducts = () => {
   ];
 
   // --- 5. UI Rendering (Kết xuất Giao diện) ---
-
-  // Hiển thị trạng thái tải lần đầu tiên
-  if (loading && products.length === 0)
-    return (
-      <div className="p-10 text-center">Đang tải danh sách sản phẩm...</div>
-    );
 
   return (
     <>
@@ -521,14 +566,11 @@ const AdminProducts = () => {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {loading && (
-                <tr>
-                  <td colSpan="6" className="p-4 text-center">
-                    Đang tải...
-                  </td>
-                </tr>
-              )}
-              {!loading && products.length > 0
+              {loading
+                ? Array.from({ length: ITEMS_PER_PAGE }).map((_, idx) => (
+                    <SkeletonRow key={idx} />
+                  ))
+                : products.length > 0
                 ? products.map((product, index) => {
                     const stockStatus = getStockStatus(product.soLuongTonKho);
                     return (
@@ -626,7 +668,9 @@ const AdminProducts = () => {
                             <button
                               title="Xóa"
                               className="text-gray-400 hover:text-red-500 transition-colors"
-                              onClick={() => handleDelete(product.sanPhamId)}
+                              onClick={() =>
+                                handleDeleteClick(product.sanPhamId)
+                              }
                             >
                               <span className="material-symbols-outlined text-base">
                                 cancel
@@ -725,222 +769,348 @@ const AdminProducts = () => {
       </div>
 
       {/* Modal Thêm/Sửa Sản phẩm */}
-      {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl p-6 max-h-[90vh] overflow-y-auto">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-bold text-gray-900">
-                {editingId ? "Cập nhật Sản phẩm" : "Thêm Sản phẩm Mới"}
-              </h3>
-              <button
-                onClick={() => setIsModalOpen(false)}
-                className="text-gray-400 hover:text-gray-600"
-              >
-                <span className="material-symbols-outlined">close</span>
-              </button>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="col-span-2">
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Tên sản phẩm *
-                </label>
-                <input
-                  type="text"
-                  className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-primary focus:border-primary"
-                  value={formData.tenSanPham}
-                  onChange={(e) =>
-                    setFormData({ ...formData, tenSanPham: e.target.value })
-                  }
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Danh mục *
-                </label>
-                <select
-                  className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-primary focus:border-primary"
-                  value={formData.danhMucId || ""}
-                  onChange={(e) =>
-                    setFormData({ ...formData, danhMucId: e.target.value })
-                  }
+      <AnimatePresence>
+        {isModalOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm overflow-hidden"
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.95, opacity: 0, y: 20 }}
+              transition={{ duration: 0.3, ease: "easeOut" }}
+              className="w-full max-w-4xl bg-white rounded-2xl shadow-modal flex flex-col max-h-[95vh] relative overflow-hidden font-body mx-auto my-8"
+            >
+              {/* Header */}
+              <div className="px-10 py-6 border-b border-border-light/50 flex justify-between items-center bg-white sticky top-0 z-20 backdrop-blur-sm bg-white/95">
+                <div className="flex items-center gap-5">
+                  <div className="w-12 h-12 rounded-full bg-surface border border-border-light flex items-center justify-center text-primary">
+                    <span className="material-symbols-outlined text-[24px]">
+                      {editingId ? "edit_note" : "add_circle"}
+                    </span>
+                  </div>
+                  <div>
+                    <h1 className="text-xl font-semibold text-text-heading tracking-tight font-display">
+                      {editingId ? "Cập nhật Sản phẩm" : "Thêm Sản phẩm Mới"}
+                    </h1>
+                    <p className="text-sm text-text-body/70 mt-1 font-light">
+                      {editingId
+                        ? "Chỉnh sửa thông tin sản phẩm"
+                        : "Tạo sản phẩm mới cho cửa hàng"}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setIsModalOpen(false)}
+                  className="w-10 h-10 rounded-full flex items-center justify-center text-secondary hover:text-text-heading hover:bg-surface transition-all duration-300"
                 >
-                  <option value="">-- Chọn danh mục --</option>
-                  {categories && categories.length > 0 ? (
-                    categories.map((cat) => (
-                      <option
-                        key={cat.id || cat.danhMucId}
-                        value={cat.id || cat.danhMucId}
-                      >
-                        {cat.tenDanhMuc}
-                      </option>
-                    ))
-                  ) : (
-                    <option disabled>Không có dữ liệu danh mục</option>
-                  )}
-                </select>
+                  <span className="material-symbols-outlined font-light">
+                    close
+                  </span>
+                </button>
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Giá bán (VNĐ) *
-                </label>
-                <input
-                  type="number"
-                  className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-primary focus:border-primary"
-                  value={formData.gia}
-                  onChange={(e) =>
-                    setFormData({ ...formData, gia: e.target.value })
-                  }
-                />
-              </div>
+              {/* Body */}
+              <div className="flex-1 p-8 md:p-10 bg-white overflow-y-auto">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                  <div className="col-span-1 md:col-span-2 input-group">
+                    <label className="form-label">
+                      Tên sản phẩm <span className="text-primary">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      className="form-control"
+                      value={formData.tenSanPham}
+                      onChange={(e) =>
+                        setFormData({ ...formData, tenSanPham: e.target.value })
+                      }
+                    />
+                  </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Số lượng tồn kho
-                </label>
-                <input
-                  type="number"
-                  className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-primary focus:border-primary"
-                  value={formData.soLuongTonKho}
-                  onChange={(e) =>
-                    setFormData({ ...formData, soLuongTonKho: e.target.value })
-                  }
-                />
-              </div>
+                  <div className="input-group">
+                    <label className="form-label">
+                      Danh mục <span className="text-primary">*</span>
+                    </label>
+                    <select
+                      className="form-control"
+                      value={formData.danhMucId || ""}
+                      onChange={(e) =>
+                        setFormData({ ...formData, danhMucId: e.target.value })
+                      }
+                    >
+                      <option value="">-- Chọn danh mục --</option>
+                      {categories && categories.length > 0 ? (
+                        categories.map((cat) => (
+                          <option
+                            key={cat.id || cat.danhMucId}
+                            value={cat.id || cat.danhMucId}
+                          >
+                            {cat.tenDanhMuc}
+                          </option>
+                        ))
+                      ) : (
+                        <option disabled>Không có dữ liệu danh mục</option>
+                      )}
+                    </select>
+                  </div>
 
-              <div className="col-span-2">
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Hình ảnh
-                </label>
-                <div className="mt-2 flex items-center space-x-4">
-                  <img
-                    src={
-                      productImageFile
-                        ? URL.createObjectURL(productImageFile)
-                        : getImageUrl(formData.hinhAnh, "Product")
-                    }
-                    alt="Product Preview"
-                    className="h-16 w-16 rounded-md object-cover"
-                  />
-                  <input
-                    type="file"
-                    className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20"
-                    onChange={(e) => setProductImageFile(e.target.files[0])}
-                  />
+                  <div className="input-group">
+                    <label className="form-label">
+                      Giá bán (VNĐ) <span className="text-primary">*</span>
+                    </label>
+                    <input
+                      type="number"
+                      className="form-control"
+                      value={formData.gia}
+                      onChange={(e) =>
+                        setFormData({ ...formData, gia: e.target.value })
+                      }
+                    />
+                  </div>
+
+                  <div className="input-group">
+                    <label className="form-label">Số lượng tồn kho</label>
+                    <input
+                      type="number"
+                      className="form-control"
+                      value={formData.soLuongTonKho}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          soLuongTonKho: e.target.value,
+                        })
+                      }
+                    />
+                  </div>
+
+                  <div className="col-span-1 md:col-span-2 input-group">
+                    <label className="form-label">Hình ảnh</label>
+                    <div className="mt-2 flex items-center space-x-4">
+                      <img
+                        src={
+                          productImageFile
+                            ? URL.createObjectURL(productImageFile)
+                            : getImageUrl(formData.hinhAnh, "Product")
+                        }
+                        alt="Product Preview"
+                        className="h-16 w-16 rounded-md object-cover"
+                      />
+                      <input
+                        type="file"
+                        className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20"
+                        onChange={(e) => setProductImageFile(e.target.files[0])}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="col-span-1 md:col-span-2 input-group">
+                    <label className="form-label">Mô tả chi tiết</label>
+                    <textarea
+                      rows="4"
+                      className="form-control"
+                      value={formData.moTaChiTiet}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          moTaChiTiet: e.target.value,
+                        })
+                      }
+                    ></textarea>
+                  </div>
                 </div>
               </div>
 
-              <div className="col-span-2">
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Mô tả chi tiết
-                </label>
-                <textarea
-                  rows="4"
-                  className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-primary focus:border-primary"
-                  value={formData.moTaChiTiet}
-                  onChange={(e) =>
-                    setFormData({ ...formData, moTaChiTiet: e.target.value })
-                  }
-                ></textarea>
+              {/* Footer */}
+              <div className="px-10 py-6 bg-white border-t border-border-light/50 flex justify-end gap-4 sticky bottom-0 z-20">
+                <button
+                  onClick={() => setIsModalOpen(false)}
+                  className="px-6 py-2.5 rounded-lg text-sm font-medium text-text-body hover:bg-surface hover:text-text-heading transition-colors border border-transparent hover:border-border-light"
+                >
+                  Hủy bỏ
+                </button>
+                <button
+                  onClick={handleSave}
+                  className="px-8 py-2.5 rounded-lg text-sm font-medium text-white bg-primary hover:bg-primary-hover shadow-lg shadow-primary/20 hover:shadow-primary/30 transition-all duration-200 transform hover:-translate-y-0.5 active:translate-y-0 flex items-center gap-2 tracking-wide"
+                >
+                  <span className="material-symbols-outlined text-[18px]">
+                    save
+                  </span>
+                  {editingId ? "Lưu thay đổi" : "Tạo sản phẩm"}
+                </button>
               </div>
-            </div>
-
-            <div className="flex justify-end space-x-3 mt-6">
-              <button
-                onClick={() => setIsModalOpen(false)}
-                className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
-              >
-                Hủy
-              </button>
-              <button
-                onClick={handleSave}
-                className="px-4 py-2 bg-primary text-white rounded-md hover:bg-green-600"
-              >
-                Lưu lại
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Modal Chi tiết Sản phẩm */}
-      {isDetailModalOpen && selectedProduct && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-lg p-6 max-h-[90vh] overflow-y-auto">
-            <div className="flex justify-between items-center mb-4 border-b pb-2">
-              <h3 className="text-xl font-bold text-gray-900">
-                Chi tiết Sản phẩm #
-                {selectedProduct.id || selectedProduct.sanPhamId}
-              </h3>
-              <button
-                onClick={() => setIsDetailModalOpen(false)}
-                className="text-gray-400 hover:text-gray-600"
-              >
-                <span className="material-symbols-outlined">close</span>
-              </button>
-            </div>
-
-            <div className="space-y-4">
-              <div className="flex justify-center">
-                <img
-                  src={getImageUrl(selectedProduct.hinhAnh)}
-                  alt={selectedProduct.tenSanPham}
-                  className="h-48 w-48 object-cover rounded-lg border border-gray-200"
-                  onError={(e) => {
-                    e.target.src =
-                      "https://via.placeholder.com/150?text=No+Image";
-                  }}
-                />
+      <AnimatePresence>
+        {isDetailModalOpen && selectedProduct && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm overflow-hidden"
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.95, opacity: 0, y: 20 }}
+              transition={{ duration: 0.3, ease: "easeOut" }}
+              className="w-full max-w-3xl bg-white rounded-2xl shadow-modal flex flex-col max-h-[95vh] relative overflow-hidden font-body mx-auto my-8"
+            >
+              {/* Header */}
+              <div className="px-10 py-6 border-b border-border-light/50 flex justify-between items-center bg-white sticky top-0 z-20 backdrop-blur-sm bg-white/95">
+                <div className="flex items-center gap-5">
+                  <div className="w-12 h-12 rounded-full bg-surface border border-border-light flex items-center justify-center text-primary">
+                    <span className="material-symbols-outlined text-[24px]">
+                      visibility
+                    </span>
+                  </div>
+                  <div>
+                    <h1 className="text-xl font-semibold text-text-heading tracking-tight font-display">
+                      Chi tiết Sản phẩm #
+                      {selectedProduct.id || selectedProduct.sanPhamId}
+                    </h1>
+                    <p className="text-sm text-text-body/70 mt-1 font-light">
+                      Xem thông tin chi tiết sản phẩm
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setIsDetailModalOpen(false)}
+                  className="w-10 h-10 rounded-full flex items-center justify-center text-secondary hover:text-text-heading hover:bg-surface transition-all duration-300"
+                >
+                  <span className="material-symbols-outlined font-light">
+                    close
+                  </span>
+                </button>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-sm text-gray-500">Tên sản phẩm</p>
-                  <p className="font-medium text-gray-900">
-                    {selectedProduct.tenSanPham || selectedProduct.name}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-500">Danh mục</p>
-                  <p className="font-medium text-gray-900">
-                    {selectedProduct.categoryName}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-500">Giá bán</p>
-                  <p className="font-bold text-primary">
-                    {formatCurrency(selectedProduct.gia)}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-500">Tồn kho</p>
-                  <p className="font-medium text-gray-900">
-                    {selectedProduct.soLuongTonKho}
-                  </p>
+              {/* Body */}
+              <div className="flex-1 p-8 md:p-10 bg-white overflow-y-auto">
+                <div className="space-y-8">
+                  <div className="flex justify-center mb-8">
+                    <img
+                      src={getImageUrl(selectedProduct.hinhAnh)}
+                      alt={selectedProduct.tenSanPham}
+                      className="h-48 w-48 object-cover rounded-lg border border-gray-200 shadow-sm"
+                      onError={(e) => {
+                        e.target.src =
+                          "https://via.placeholder.com/150?text=No+Image";
+                      }}
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-8">
+                    <div className="input-group">
+                      <label className="form-label block text-sm font-medium text-text-heading mb-2">
+                        Tên sản phẩm
+                      </label>
+                      <div className="p-3 bg-gray-50 rounded-lg border border-border-light text-text-body font-medium">
+                        {selectedProduct.tenSanPham || selectedProduct.name}
+                      </div>
+                    </div>
+                    <div className="input-group">
+                      <label className="form-label block text-sm font-medium text-text-heading mb-2">
+                        Danh mục
+                      </label>
+                      <div className="p-3 bg-gray-50 rounded-lg border border-border-light text-text-body">
+                        {selectedProduct.categoryName}
+                      </div>
+                    </div>
+                    <div className="input-group">
+                      <label className="form-label block text-sm font-medium text-text-heading mb-2">
+                        Giá bán
+                      </label>
+                      <div className="p-3 bg-gray-50 rounded-lg border border-border-light text-text-body font-bold text-primary">
+                        {formatCurrency(selectedProduct.gia)}
+                      </div>
+                    </div>
+                    <div className="input-group">
+                      <label className="form-label block text-sm font-medium text-text-heading mb-2">
+                        Tồn kho
+                      </label>
+                      <div className="p-3 bg-gray-50 rounded-lg border border-border-light text-text-body">
+                        {selectedProduct.soLuongTonKho}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="input-group">
+                    <label className="form-label block text-sm font-medium text-text-heading mb-2">
+                      Mô tả chi tiết
+                    </label>
+                    <div className="p-3 bg-gray-50 rounded-lg border border-border-light text-text-body min-h-[80px]">
+                      {selectedProduct.moTaChiTiet || "Không có mô tả"}
+                    </div>
+                  </div>
                 </div>
               </div>
 
-              <div>
-                <p className="text-sm text-gray-500">Mô tả chi tiết</p>
-                <div className="mt-1 p-3 bg-gray-50 rounded-md text-sm text-gray-700 min-h-[80px] border border-gray-100">
-                  {selectedProduct.moTaChiTiet || "Không có mô tả"}
-                </div>
+              {/* Footer */}
+              <div className="px-10 py-6 bg-white border-t border-border-light/50 flex justify-end gap-4 sticky bottom-0 z-20">
+                <button
+                  onClick={() => setIsDetailModalOpen(false)}
+                  className="px-6 py-2.5 rounded-lg text-sm font-medium text-text-body hover:bg-surface hover:text-text-heading transition-colors border border-transparent hover:border-border-light"
+                >
+                  Đóng
+                </button>
               </div>
-            </div>
-
-            <div className="flex justify-end mt-6">
-              <button
-                onClick={() => setIsDetailModalOpen(false)}
-                className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300"
-              >
-                Đóng
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+      {/* --- MODAL XÁC NHẬN XÓA --- */}
+      <AnimatePresence>
+        {isConfirmDeleteModalOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.95, opacity: 0, y: 20 }}
+              className="bg-white rounded-lg shadow-xl w-full max-w-md p-6"
+            >
+              <div className="text-center">
+                <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-red-100">
+                  <span className="material-symbols-outlined text-red-600 text-3xl">
+                    warning
+                  </span>
+                </div>
+                <h3 className="mt-5 text-lg font-semibold text-gray-900">
+                  Xác nhận xóa
+                </h3>
+                <p className="mt-2 text-sm text-gray-500">
+                  Bạn có chắc chắn muốn xóa sản phẩm này? Hành động này không
+                  thể hoàn tác và có thể ảnh hưởng đến dữ liệu liên quan.
+                </p>
+              </div>
+              <div className="mt-6 grid grid-cols-2 gap-3">
+                <button
+                  onClick={() => setIsConfirmDeleteModalOpen(false)}
+                  className="inline-flex w-full justify-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
+                >
+                  Hủy
+                </button>
+                <button
+                  onClick={confirmDelete}
+                  className="inline-flex w-full justify-center rounded-md bg-red-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-red-500"
+                >
+                  Xóa
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </>
   );
 };

@@ -1,6 +1,25 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useLayoutEffect } from "react";
 import productService from "../../services/productService"; // Đảm bảo bạn đã tạo file này như hướng dẫn trước
 import { motion, AnimatePresence } from "framer-motion";
+import { toast } from "react-toastify";
+
+// Component Skeleton Loading cho Table
+const SkeletonRow = () => (
+  <tr className="animate-pulse border-b border-gray-100 last:border-0">
+    <td className="px-6 py-4">
+      <div className="h-4 bg-gray-200 rounded w-8"></div>
+    </td>
+    <td className="px-6 py-4">
+      <div className="h-4 bg-gray-200 rounded w-32"></div>
+    </td>
+    <td className="px-6 py-4">
+      <div className="h-4 bg-gray-200 rounded w-48"></div>
+    </td>
+    <td className="px-6 py-4">
+      <div className="h-8 bg-gray-200 rounded w-20 ml-auto"></div>
+    </td>
+  </tr>
+);
 
 const AdminCategories = () => {
   // 1. State lưu dữ liệu và trạng thái tải
@@ -37,11 +56,45 @@ const AdminCategories = () => {
       setCategories(formattedData);
     } catch (error) {
       console.error("Lỗi khi tải danh mục:", error);
-      alert("Không thể tải danh sách danh mục!");
+      toast.error("Không thể tải danh sách danh mục!");
     } finally {
       setLoading(false);
     }
   };
+  // Xử lý phím ESC để đóng modal
+  useEffect(() => {
+    const handleEscKey = (event) => {
+      if (event.key === "Escape") {
+        setIsModalOpen(false);
+        setIsDetailModalOpen(false);
+        setIsConfirmDeleteModalOpen(false);
+      }
+    };
+    document.addEventListener("keydown", handleEscKey);
+    return () => document.removeEventListener("keydown", handleEscKey);
+  }, []);
+
+  // Thay useEffect bằng useLayoutEffect để chặn render trước khi cuộn hiện ra
+  useLayoutEffect(() => {
+    const isAnyModalOpen =
+      isModalOpen || isDetailModalOpen || isConfirmDeleteModalOpen;
+    const contentArea = document.getElementById("admin-content-area");
+
+    if (contentArea) {
+      if (isAnyModalOpen) {
+        contentArea.style.overflow = "hidden";
+      } else {
+        contentArea.style.overflow = "auto";
+      }
+    }
+
+    // Cleanup
+    return () => {
+      if (contentArea) {
+        contentArea.style.overflow = "auto";
+      }
+    };
+  }, [isModalOpen, isDetailModalOpen, isConfirmDeleteModalOpen]);
 
   // 3. useEffect chạy một lần khi component được mount để tải dữ liệu
   useEffect(() => {
@@ -53,7 +106,7 @@ const AdminCategories = () => {
   // Hàm xử lý Lưu (Thêm mới hoặc Cập nhật)
   const handleSave = async () => {
     if (!newCategory.tenDanhMuc.trim()) {
-      alert("Vui lòng nhập tên danh mục!");
+      toast.warning("Vui lòng nhập tên danh mục!");
       return;
     }
 
@@ -62,18 +115,18 @@ const AdminCategories = () => {
       if (editingId) {
         // Cập nhật danh mục đã có
         await productService.updateCategory(editingId, newCategory);
-        alert("Cập nhật danh mục thành công!");
+        toast.success("Cập nhật danh mục thành công!");
       } else {
         // Thêm danh mục mới
         await productService.createCategory(newCategory);
-        alert("Thêm danh mục thành công!");
+        toast.success("Thêm danh mục thành công!");
       }
       // Đóng modal và reset form sau khi lưu thành công
       handleCloseModals();
       await fetchCategories(); // Tải lại danh sách danh mục để cập nhật UI
     } catch (error) {
       console.error("Lỗi lưu danh mục:", error);
-      alert("Thao tác thất bại! Vui lòng thử lại.");
+      toast.error("Thao tác thất bại! Vui lòng thử lại.");
     } finally {
       setLoading(false); // Ẩn loading
     }
@@ -93,10 +146,10 @@ const AdminCategories = () => {
       setCategories((prev) =>
         prev.filter((cat) => cat.danhMucId !== categoryToDeleteId)
       );
-      alert("Xóa danh mục thành công!");
+      toast.success("Xóa danh mục thành công!");
     } catch (error) {
       console.error("Lỗi xóa danh mục:", error);
-      alert("Xóa thất bại! Có thể danh mục này đang chứa sản phẩm.");
+      toast.error("Xóa thất bại! Có thể danh mục này đang chứa sản phẩm.");
     } finally {
       setIsConfirmDeleteModalOpen(false);
       setCategoryToDeleteId(null);
@@ -177,10 +230,6 @@ const AdminCategories = () => {
   ];
 
   // 7. Render giao diện
-  // Hiển thị thông báo tải trong khi chờ dữ liệu từ API
-  if (loading)
-    return <div className="p-10 text-center">Đang tải dữ liệu danh mục...</div>;
-
   return (
     <>
       {/* Tiêu đề trang */}
@@ -256,7 +305,11 @@ const AdminCategories = () => {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {categories.length > 0 ? (
+              {loading ? (
+                Array.from({ length: 5 }).map((_, idx) => (
+                  <SkeletonRow key={idx} />
+                ))
+              ) : categories.length > 0 ? (
                 categories.map((cat, index) => (
                   <tr
                     key={cat.danhMucId || index} // Sử dụng ID làm key, fallback về index nếu ID không có
@@ -340,7 +393,7 @@ const AdminCategories = () => {
               animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.95, opacity: 0, y: 20 }}
               transition={{ duration: 0.3, ease: "easeOut" }}
-              className="w-full max-w-2xl bg-white rounded-2xl shadow-modal flex flex-col max-h-[95vh] relative overflow-hidden font-body mx-auto my-8"
+              className="w-full max-w-3xl bg-white rounded-2xl shadow-modal flex flex-col max-h-[95vh] relative overflow-hidden font-body mx-auto my-8"
             >
               {/* Header */}
               <div className="px-10 py-6 border-b border-border-light/50 flex justify-between items-center bg-white sticky top-0 z-20 backdrop-blur-sm bg-white/95">
@@ -445,7 +498,7 @@ const AdminCategories = () => {
               animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.95, opacity: 0, y: 20 }}
               transition={{ duration: 0.3, ease: "easeOut" }}
-              className="w-full max-w-2xl bg-white rounded-2xl shadow-modal flex flex-col max-h-[95vh] relative overflow-hidden font-body mx-auto my-8"
+              className="w-full max-w-3xl bg-white rounded-2xl shadow-modal flex flex-col max-h-[95vh] relative overflow-hidden font-body mx-auto my-8"
             >
               {/* Header */}
               <div className="px-10 py-6 border-b border-border-light/50 flex justify-between items-center bg-white sticky top-0 z-20 backdrop-blur-sm bg-white/95">

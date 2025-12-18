@@ -6,8 +6,7 @@ import React, { useState, useEffect } from "react";
 import petService from "../../services/petService";
 import userService from "../../services/userService";
 import { motion, AnimatePresence } from "framer-motion";
-import { ToastContainer, toast } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
+import { toast } from "react-toastify";
 
 // --- Helpers (Hàm hỗ trợ) ---
 const formatDate = (dateString) => {
@@ -236,38 +235,6 @@ const AdminAppointments = () => {
   useEffect(() => {
     fetchAppointments();
   }, [currentPage, debouncedSearchTerm, statusFilter]);
-
-  // Khóa cuộn trang khi có bất kỳ modal nào đang mở
-  useEffect(() => {
-    const isAnyModalOpen =
-      isAddModalOpen ||
-      isDetailModalOpen ||
-      isEditModalOpen ||
-      isConfirmDeleteModalOpen;
-
-    if (isAnyModalOpen) {
-      document.body.style.overflow = "hidden";
-      document.documentElement.style.overflow = "hidden";
-      document.body.style.overscrollBehavior = "none";
-    } else {
-      document.body.style.overflow = "";
-      document.documentElement.style.overflow = "";
-      document.body.style.overscrollBehavior = "";
-    }
-
-    // Hàm cleanup để khôi phục cuộn khi component unmount
-    return () => {
-      document.body.style.overflow = "";
-      document.documentElement.style.overflow = "";
-      document.body.style.overscrollBehavior = "";
-    };
-  }, [
-    isAddModalOpen,
-    isDetailModalOpen,
-    isEditModalOpen,
-    isConfirmDeleteModalOpen,
-  ]);
-
   // Xử lý phím ESC để đóng modal
   useEffect(() => {
     const handleEscKey = (event) => {
@@ -460,20 +427,6 @@ const AdminAppointments = () => {
 
   return (
     <>
-      {/* Toast Container để hiển thị thông báo */}
-      <ToastContainer
-        position="top-right"
-        autoClose={3000}
-        hideProgressBar={false}
-        newestOnTop={false}
-        closeOnClick
-        rtl={false}
-        pauseOnFocusLoss
-        draggable
-        pauseOnHover
-        theme="light"
-      />
-
       {/* --- PHẦN HEADER & THỐNG KÊ (GIỮ NGUYÊN) --- */}
       <div className="flex flex-wrap justify-between gap-3">
         <p className="text-gray-900 text-4xl font-black leading-tight tracking-[-0.033em] min-w-72">

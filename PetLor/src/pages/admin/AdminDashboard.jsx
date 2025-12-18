@@ -69,15 +69,15 @@ const AdminDashboard = () => {
             <table className="w-full text-sm text-left text-gray-500">
               <thead className="text-xs text-gray-700 uppercase bg-gray-50">
                 <tr>
-                  <th className="px-4 py-3 font-semibold">ID Đơn</th>
+                  <th className="px-6 py-3 font-semibold">ID Đơn</th>
 
-                  <th className="px-4 py-3 font-semibold">Khách hàng</th>
+                  <th className="px-6 py-3 font-semibold">Khách hàng</th>
 
-                  <th className="px-4 py-3 font-semibold">Ngày</th>
+                  <th className="px-6 py-3 font-semibold">Ngày</th>
 
-                  <th className="px-4 py-3 font-semibold">Tổng tiền</th>
+                  <th className="px-6 py-3 font-semibold">Tổng tiền</th>
 
-                  <th className="px-4 py-3 font-semibold">Trạng thái</th>
+                  <th className="px-6 py-3 font-semibold">Trạng thái</th>
                 </tr>
               </thead>
 
@@ -87,17 +87,17 @@ const AdminDashboard = () => {
                     key={order.id} // Sử dụng `id` của đơn hàng làm key để tối ưu việc render
                     className="border-b last:border-b-0 hover:bg-gray-50 transition-colors"
                   >
-                    <td className="px-4 py-3 font-medium text-gray-900">
+                    <td className="px-6 py-4 font-medium text-gray-900">
                       {order.id}
                     </td>
 
-                    <td className="px-4 py-3">{order.customer}</td>
+                    <td className="px-6 py-4">{order.customer}</td>
 
-                    <td className="px-4 py-3">{order.date}</td>
+                    <td className="px-6 py-4">{order.date}</td>
 
-                    <td className="px-4 py-3 font-medium">{order.total}</td>
+                    <td className="px-6 py-4 font-medium">{order.total}</td>
 
-                    <td className="px-4 py-3">
+                    <td className="px-6 py-4">
                       <span
                         className={`px-2 py-1 text-xs font-medium rounded-full ${order.statusColor}`}
                       >

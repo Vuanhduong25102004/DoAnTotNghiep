@@ -1,4 +1,7 @@
 @import "tailwindcss";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
 @theme {
   /* --- CẤU HÌNH CỦA BẠN (GIỮ NGUYÊN) --- */
@@ -84,6 +87,23 @@ select.form-control {
 
 .section-title {
   @apply text-base font-semibold text-text-heading tracking-tight;
+}
+/* THÊM ĐOẠN NÀY */
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  width: 100%;
+  overflow: hidden; /* Khóa cuộn trang web ở cấp độ gốc */
+}
+
+/* Tùy chọn: Class để ẩn thanh cuộn nhưng vẫn cho phép cuộn nội dung (như mobile) */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
 }
 
 /* Icon Setup */

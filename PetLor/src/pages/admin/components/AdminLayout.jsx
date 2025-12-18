@@ -5,6 +5,8 @@ import userService from "../../../services/userService";
 import AdminHeader from "./AdminHeader";
 import AdminSidebar from "./AdminSidebar";
 import { jwtDecode } from "jwt-decode";
+import { ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 /**
  * AdminLayout là component khung chính cho toàn bộ trang quản trị.
@@ -25,7 +27,7 @@ const AdminLayout = () => {
         try {
           // Giải mã token để lấy ID người dùng.
           const decodedToken = jwtDecode(token);
-          
+
           // Nếu token chứa userId, dùng nó để gọi API lấy thông tin đầy đủ của người dùng.
           if (decodedToken.userId) {
             const fullUserData = await userService.getUserById(
@@ -54,21 +56,23 @@ const AdminLayout = () => {
   };
 
   return (
-    // Cấu trúc layout chính sử dụng Flexbox.
-    <div className="flex h-screen overflow-hidden bg-background-light font-display text-text-main">
-      {/* Sidebar chung cho toàn trang admin, truyền hàm logout vào. */}
+    // 1. Khung bao ngoài cùng: h-screen, w-screen và overflow-hidden
+    <div className="flex h-screen w-screen overflow-hidden bg-background-light font-display text-text-main">
+      <ToastContainer position="top-right" autoClose={3000} theme="light" />
+
       <AdminSidebar onLogout={handleLogout} />
 
-      {/* Khu vực nội dung chính */}
-      <main className="flex-1 flex flex-col overflow-hidden">
-        {/* Header chung, truyền thông tin người dùng vào để hiển thị. */}
+      {/* 2. Khu vực chính bên phải Sidebar */}
+      <main className="flex-1 flex flex-col h-full overflow-hidden relative">
         <AdminHeader user={user} />
 
-        {/* 
-          Khu vực hiển thị nội dung của các trang con (nested routes).
-          <Outlet /> là một component của React Router, nó sẽ render component con tương ứng với URL hiện tại.
-        */}
-        <div className="p-6 space-y-6 overflow-y-auto flex-1">
+        {/* 3. Vùng nội dung: Đây là nơi DUY NHẤT được phép cuộn */}
+        <div
+          id="admin-content-area"
+          // overflow-y-auto: Cho phép cuộn nội dung nếu dài
+          // no-scrollbar: (Tùy chọn) Thêm class này nếu bạn muốn cuộn được nhưng KHÔNG nhìn thấy thanh scrollbar
+          className="flex-1 overflow-y-auto p-6 space-y-6 no-scrollbar"
+        >
           <Outlet />
         </div>
       </main>
