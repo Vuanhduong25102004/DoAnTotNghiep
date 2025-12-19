@@ -11,7 +11,10 @@ import java.util.List;
 
 @Repository
 public interface NhanVienRepository extends JpaRepository<NhanVien, Integer> {
-    
+
     @Query("SELECT nv FROM NhanVien nv WHERE nv.nguoiDung.role = :role")
     List<NhanVien> findByRole(@Param("role") Role role);
+
+    @Query("SELECT n FROM NhanVien n WHERE LOWER(n.hoTen) LIKE LOWER(CONCAT('%', :keyword, '%')) OR LOWER(n.chucVu) LIKE LOWER(CONCAT('%', :keyword, '%')) OR n.soDienThoai LIKE CONCAT('%', :keyword, '%') OR LOWER(n.email) LIKE LOWER(CONCAT('%', :keyword, '%')) OR LOWER(n.chuyenKhoa) LIKE LOWER(CONCAT('%', :keyword, '%'))")
+    List<NhanVien> searchByKeyword(@Param("keyword") String keyword);
 }

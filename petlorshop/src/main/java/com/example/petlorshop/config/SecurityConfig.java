@@ -59,6 +59,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         // == PUBLIC ENDPOINTS ==
                         .requestMatchers("/api/auth/**").permitAll()
+                        .requestMatchers("/api/search/**").permitAll()
                         .requestMatchers("/uploads/**").permitAll() // Cho phép truy cập ảnh
                         .requestMatchers(HttpMethod.GET, "/api/san-pham/**", "/api/dich-vu/**", "/api/danh-muc-san-pham/**").permitAll()
 
@@ -66,6 +67,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/nhan-vien/*/lich-trong").authenticated() // Cho phép xem lịch trống
 
                         // == ADMIN ONLY ==
+                        .requestMatchers("/api/admin/**").hasAuthority(admin) // Rule for all admin endpoints
                         .requestMatchers("/api/nguoi-dung/**").hasAuthority(admin)
                         .requestMatchers(HttpMethod.POST, "/api/nhan-vien/**").hasAuthority(admin)
                         .requestMatchers(HttpMethod.PUT, "/api/nhan-vien/**").hasAuthority(admin)

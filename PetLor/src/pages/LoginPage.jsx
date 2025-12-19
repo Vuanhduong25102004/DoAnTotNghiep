@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import authService from "../services/authService";
+import loginImageUrl from "../assets/cat.gif";
 
 const LoginPage = () => {
   const [credentials, setCredentials] = useState({ email: "", password: "" });
@@ -35,7 +36,7 @@ const LoginPage = () => {
           <div
             className="absolute inset-0 bg-cover bg-center"
             style={{
-              backgroundImage: `url("https://lh3.googleusercontent.com/aida-public/AB6AXuA_UNW1GhXAwfbEEq7zTC-7F7mBesduw-0fGhArHDXoS8eE9kD-08lx6_BH_ZO-OAoWE2wLXjnB2lSeS3aqd2kp9plEzL5oVTtP5ySsRq0M4x0033JkPOVJUNU50h8oQodARU1iMRPg01pN_VLcxcAQL807iuaOxzYsp9U_kDnnuOTbFy9wWA1QRNOP8qkiK-ZvhTQkwEm2AVcrXzPdsCsLQ9Eescn-0rZsVp7dYgAsP5d3Ez2o_32Zxq7gfin_2XhnIAkGNE40ouTi")`,
+              backgroundImage: `url(${loginImageUrl})`,
             }}
           ></div>
           <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent"></div>

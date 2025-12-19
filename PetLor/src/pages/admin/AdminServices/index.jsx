@@ -3,8 +3,8 @@
  * @description Trang quản lý Dịch vụ (Container).
  */
 import React, { useEffect, useState } from "react";
-// Giữ nguyên import petService như yêu cầu gốc
-import petService from "../../../services/petService";
+// Giữ nguyên import productService như yêu cầu gốc
+import productService from "../../../services/productService";
 import { toast } from "react-toastify";
 
 // Components
@@ -42,14 +42,35 @@ const AdminServices = () => {
   const fetchServices = async () => {
     setLoading(true);
     try {
-      const page = currentPage - 1;
-      const response = await petService.getAllServices({
-        page,
-        size: ITEMS_PER_PAGE,
-        search: searchTerm,
-      });
+      let servicesData = [];
+      let totalP = 0;
+      let totalE = 0;
 
-      const servicesData = response?.content || [];
+      const term = searchTerm ? searchTerm.trim() : "";
+
+      if (term) {
+        const data = await productService.searchGlobal(term);
+        const allSearchResults = data.dichVus || [];
+
+        totalE = allSearchResults.length;
+        totalP = Math.ceil(totalE / ITEMS_PER_PAGE);
+
+        const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+        servicesData = allSearchResults.slice(
+          startIndex,
+          startIndex + ITEMS_PER_PAGE
+        );
+      } else {
+        const page = currentPage - 1;
+        const response = await productService.getAllServices({
+          page,
+          size: ITEMS_PER_PAGE,
+        });
+        servicesData = response?.content || [];
+        totalP = response?.totalPages || 0;
+        totalE = response?.totalElements || 0;
+      }
+
       const formattedData = servicesData.map((svc) => ({
         ...svc,
         dichVuId: svc.id || svc.dichVuId,
@@ -62,8 +83,8 @@ const AdminServices = () => {
       }));
 
       setServices(formattedData);
-      setTotalPages(response?.totalPages || 0);
-      setTotalElements(response?.totalElements || 0);
+      setTotalPages(totalP);
+      setTotalElements(totalE);
     } catch (error) {
       console.error("Lỗi tải dịch vụ:", error);
       toast.error("Không thể tải danh sách dịch vụ.");
@@ -76,7 +97,7 @@ const AdminServices = () => {
   useEffect(() => {
     const fetchServiceCategories = async () => {
       try {
-        const response = await petService.getAllServices({
+        const response = await productService.getAllServices({
           page: 0,
           size: 200,
         });
@@ -131,7 +152,7 @@ const AdminServices = () => {
   const confirmDelete = async () => {
     if (!serviceToDeleteId) return;
     try {
-      await petService.deleteService(serviceToDeleteId);
+      await productService.deleteService(serviceToDeleteId);
       toast.success("Xóa thành công!");
       fetchServices();
     } catch (error) {
@@ -146,7 +167,7 @@ const AdminServices = () => {
   // Chi tiết
   const handleViewDetail = async (id) => {
     try {
-      const data = await petService.getServiceById(id);
+      const data = await productService.getServiceById(id);
       setSelectedService(data);
       setIsDetailModalOpen(true);
     } catch (error) {
@@ -193,11 +214,11 @@ const AdminServices = () => {
     try {
       if (editingService) {
         // Update logic
-        await petService.updateService(editingService.dichVuId, payload);
+        await productService.updateService(editingService.dichVuId, payload);
         toast.success("Cập nhật thành công!");
       } else {
         // Create logic
-        await petService.createService(payload);
+        await productService.createService(payload);
         toast.success("Thêm dịch vụ thành công!");
       }
       setIsFormModalOpen(false);

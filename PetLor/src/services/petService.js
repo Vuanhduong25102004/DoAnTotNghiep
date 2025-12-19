@@ -1,6 +1,11 @@
 import apiClient from './apiClient';
 
 const petService = {
+  searchGlobal: (keyword) => {
+    return apiClient.get('/search', { 
+      params: { keyword } 
+    });
+  },
   // --- THÚ CƯNG --- // Updated for pagination
   getAllPets: (params) => apiClient.get('/thu-cung', { params }),
   

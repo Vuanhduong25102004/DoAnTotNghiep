@@ -1,4 +1,5 @@
 import React from "react";
+import registerImageUrl from "../assets/cat1.gif";
 
 const RegisterPage = () => {
   return (
@@ -261,7 +262,7 @@ const RegisterPage = () => {
           <div
             className="absolute inset-0 h-full w-full object-cover bg-cover bg-center bg-no-repeat"
             style={{
-              backgroundImage: `url("https://lh3.googleusercontent.com/aida-public/AB6AXuDZzjj5EKgBhc03wWYUZG_JhbM0m5T8oo_9x2wow9jppRoMVPsUFXdNLkWgD5O-8w9cL3WzWNSZiBBTt-XiCl2Jzhp_QdZlUErVflczznwbPJhmXzeNln1giYzkGsUv9ZijCfG6w2skVAAXJ9GWP67BWJtTfAUpoYQcqVzrgnhcV8tWQEQQx7deLfOw0SdpCWf9gcAiYVnYxCt9b0sz3MlKUWYfCD1nULtih7zZQH0ETZyuU6kLgt-7o8I6QnDTn5OnE2_q1iFLNmft")`,
+              backgroundImage: `url(${registerImageUrl})`,
             }}
           ></div>
         </div>

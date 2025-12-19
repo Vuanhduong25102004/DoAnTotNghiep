@@ -20,4 +20,7 @@ public interface LichHenRepository extends JpaRepository<LichHen, Integer> {
     @Query("SELECT lh FROM LichHen lh WHERE lh.nhanVien.id = :nhanVienId AND FUNCTION('DATE', lh.thoiGianBatDau) = :date ORDER BY lh.thoiGianBatDau")
     List<LichHen> findByNhanVienIdAndDate(@Param("nhanVienId") Integer nhanVienId,
                                         @Param("date") java.time.LocalDate date);
+
+    @Query("SELECT l FROM LichHen l WHERE LOWER(l.ghiChuKhachHang) LIKE LOWER(CONCAT('%', :keyword, '%'))")
+    List<LichHen> searchByKeyword(@Param("keyword") String keyword);
 }

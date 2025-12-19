@@ -18,35 +18,38 @@ const AdminLayout = () => {
   const [user, setUser] = useState(null);
   const navigate = useNavigate();
 
-  // Sử dụng useEffect để lấy dữ liệu người dùng khi component được mount.
+  // Sử dụng useEffect để xử lý các tác vụ khi component mount
   useEffect(() => {
+    // Khóa cuộn trên body
+    const originalStyle = window.getComputedStyle(document.body).overflow;
+    document.body.style.overflow = "hidden";
+
+    // Lấy dữ liệu người dùng
     const fetchUserData = async () => {
-      // Lấy token xác thực từ localStorage.
       const token = localStorage.getItem("accessToken");
       if (token) {
         try {
-          // Giải mã token để lấy ID người dùng.
           const decodedToken = jwtDecode(token);
-
-          // Nếu token chứa userId, dùng nó để gọi API lấy thông tin đầy đủ của người dùng.
           if (decodedToken.userId) {
             const fullUserData = await userService.getUserById(
               decodedToken.userId
             );
-            // Cập nhật state với dữ liệu người dùng đầy đủ.
             setUser(fullUserData);
           }
         } catch (error) {
           console.error("Lỗi khi lấy dữ liệu người dùng:", error);
-          // Nếu có lỗi (ví dụ: token không hợp lệ), đặt state người dùng về null.
-          // Việc chuyển hướng đã được xử lý bởi AdminRoute, ở đây chỉ cần xử lý lỗi dữ liệu.
           setUser(null);
         }
       }
     };
 
     fetchUserData();
-  }, []); // Mảng rỗng đảm bảo useEffect chỉ chạy một lần sau khi component mount.
+
+    // Cleanup function: khôi phục lại style cũ khi component unmount
+    return () => {
+      document.body.style.overflow = originalStyle;
+    };
+  }, []); // Mảng rỗng đảm bảo effect chỉ chạy một lần khi mount và cleanup khi unmount
 
   // Hàm xử lý việc đăng xuất.
   const handleLogout = () => {

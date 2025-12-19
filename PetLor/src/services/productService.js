@@ -2,6 +2,11 @@ import apiClient from './apiClient';
 
 const productService = {
   // --- SẢN PHẨM ---
+  searchGlobal: (keyword) => {
+    return apiClient.get('/search', { 
+      params: { keyword } 
+    });
+  },
   // Sửa: Chấp nhận tham số (params) để lọc và phân trang
   getAllProducts: (params) => apiClient.get('/san-pham', { params }),
   

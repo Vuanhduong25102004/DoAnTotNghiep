@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 
 const ServiceFilters = ({
   searchTerm,
@@ -6,6 +6,22 @@ const ServiceFilters = ({
   setCurrentPage,
   onOpenCreateModal,
 }) => {
+  const [localSearchTerm, setLocalSearchTerm] = useState(searchTerm || "");
+
+  useEffect(() => {
+    setLocalSearchTerm(searchTerm || "");
+  }, [searchTerm]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (localSearchTerm !== searchTerm) {
+        setSearchTerm(localSearchTerm);
+        if (setCurrentPage) setCurrentPage(1);
+      }
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [localSearchTerm, searchTerm, setSearchTerm, setCurrentPage]);
+
   return (
     <div className="bg-white shadow-sm rounded-xl border border-gray-200 p-6 mt-6">
       <div className="flex flex-col md:flex-row justify-between md:items-center space-y-4 md:space-y-0">
@@ -20,11 +36,8 @@ const ServiceFilters = ({
               className="focus:ring-primary focus:border-primary block w-full pl-10 sm:text-sm border-gray-300 rounded-md h-10"
               placeholder="Tìm tên dịch vụ, mô tả..."
               type="text"
-              value={searchTerm}
-              onChange={(e) => {
-                setSearchTerm(e.target.value);
-                setCurrentPage(1);
-              }}
+              value={localSearchTerm}
+              onChange={(e) => setLocalSearchTerm(e.target.value)}
             />
           </div>
         </div>

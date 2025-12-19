@@ -43,20 +43,40 @@ const AdminPets = () => {
   const fetchPets = async () => {
     setLoading(true);
     try {
-      const page = currentPage - 1;
-      const params = {
-        page,
-        size: ITEMS_PER_PAGE,
-        search: searchTerm,
-        species: filterSpecies,
-        gender: filterGender,
-      };
-      if (!params.search) delete params.search;
-      if (!params.species) delete params.species;
-      if (!params.gender) delete params.gender;
+      let petsData = [];
+      let totalP = 0;
+      let totalE = 0;
 
-      const response = await petService.getAllPets(params);
-      const petsData = response?.content || [];
+      const term = searchTerm ? searchTerm.trim() : "";
+
+      if (term) {
+        const data = await petService.searchGlobal(term);
+        const allSearchResults = data.thuCungs || [];
+        
+        totalE = allSearchResults.length;
+        totalP = Math.ceil(totalE / ITEMS_PER_PAGE);
+
+        const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+        petsData = allSearchResults.slice(
+          startIndex,
+          startIndex + ITEMS_PER_PAGE
+        );
+      } else {
+        const page = currentPage - 1;
+        const params = {
+          page,
+          size: ITEMS_PER_PAGE,
+          species: filterSpecies,
+          gender: filterGender,
+        };
+        if (!params.species) delete params.species;
+        if (!params.gender) delete params.gender;
+
+        const response = await petService.getAllPets(params);
+        petsData = response?.content || [];
+        totalP = response?.totalPages || 0;
+        totalE = response?.totalElements || 0;
+      }
 
       // Map Data
       const formattedData = petsData.map((pet) => ({
@@ -76,8 +96,8 @@ const AdminPets = () => {
       }));
 
       setPets(formattedData);
-      setTotalPages(response?.totalPages || 0);
-      setTotalElements(response?.totalElements || 0);
+      setTotalPages(totalP);
+      setTotalElements(totalE);
     } catch (error) {
       console.error("Lỗi tải danh sách thú cưng:", error);
       toast.error("Không thể tải dữ liệu thú cưng.");

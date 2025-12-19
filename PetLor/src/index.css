@@ -94,7 +94,7 @@ html, body {
   padding: 0;
   height: 100%;
   width: 100%;
-  overflow: hidden; /* Khóa cuộn trang web ở cấp độ gốc */
+/* Khóa cuộn trang web ở cấp độ gốc */
 }
 
 /* Tùy chọn: Class để ẩn thanh cuộn nhưng vẫn cho phép cuộn nội dung (như mobile) */

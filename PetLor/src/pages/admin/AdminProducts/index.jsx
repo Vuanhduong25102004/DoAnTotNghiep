@@ -55,16 +55,48 @@ const AdminProducts = () => {
   const fetchProducts = async () => {
     setLoading(true);
     try {
-      const page = currentPage - 1;
-      const response = await productService.getAllProducts({
-        page,
-        size: ITEMS_PER_PAGE,
-        search: searchTerm,
-        categoryId: filterCategory,
-        stockStatus: filterStock,
-      });
+      let productsData = [];
+      let totalP = 0;
+      let totalE = 0;
 
-      const productsData = response?.content || [];
+      // Trim để loại bỏ khoảng trắng thừa đầu/cuối
+      const term = searchTerm ? searchTerm.trim() : "";
+
+      if (term) {
+        // --- LOGIC MỚI: SỬ DỤNG SERVICE ---
+        console.log(`Đang tìm kiếm qua Service: "${term}"`);
+
+        // 1. Gọi API qua productService (đã tách file)
+        const data = await productService.searchGlobal(term);
+
+        // 2. Lấy danh sách sản phẩm từ kết quả trả về (sanPhams, dichVus, thuCungs)
+        const allSearchResults = data.sanPhams || [];
+
+        // 3. Xử lý phân trang phía Client (Do API Search trả về all)
+        totalE = allSearchResults.length;
+        totalP = Math.ceil(totalE / ITEMS_PER_PAGE);
+
+        // Cắt mảng để lấy đúng trang hiện tại
+        const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+        productsData = allSearchResults.slice(
+          startIndex,
+          startIndex + ITEMS_PER_PAGE
+        );
+      } else {
+        // --- LOGIC CŨ: Lấy tất cả (Server-side Pagination) ---
+        const page = currentPage - 1;
+        const response = await productService.getAllProducts({
+          page,
+          size: ITEMS_PER_PAGE,
+          categoryId: filterCategory,
+          stockStatus: filterStock,
+        });
+        productsData = response?.content || [];
+        totalP = response?.totalPages || 0;
+        totalE = response?.totalElements || 0;
+      }
+
+      // Map dữ liệu để hiển thị
       const formattedProducts = productsData.map((p) => ({
         ...p,
         sanPhamId: p.sanPhamId,
@@ -76,8 +108,8 @@ const AdminProducts = () => {
       }));
 
       setProducts(formattedProducts);
-      setTotalPages(response?.totalPages || 0);
-      setTotalElements(response?.totalElements || 0);
+      setTotalPages(totalP);
+      setTotalElements(totalE);
     } catch (error) {
       console.error("Lỗi tải dữ liệu sản phẩm:", error);
       toast.error("Không thể tải dữ liệu sản phẩm.");
@@ -289,6 +321,7 @@ const AdminProducts = () => {
         categories={categories}
         setCurrentPage={setCurrentPage}
         onOpenAddModal={handleOpenAddModal}
+        placeholder="Tìm tên SP, mã SP..."
       />
 
       <ProductTable
