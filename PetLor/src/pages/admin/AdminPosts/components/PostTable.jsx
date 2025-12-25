@@ -1,14 +1,18 @@
 import React, { useState, useEffect } from "react";
-import { formatDate, getPostStatusBadge, getFullImageUrl } from "../utils"; // Import từ utils
+import {
+  formatDate,
+  PostStatusBadge,
+  getImageUrl,
+} from "../../components/utils";
 
 // --- COMPONENT CON: Xử lý hiển thị ảnh an toàn ---
 const PostImage = ({ src, alt }) => {
   // Dùng hàm getFullImageUrl đã import
-  const [imgSrc, setImgSrc] = useState(getFullImageUrl(src));
+  const [imgSrc, setImgSrc] = useState(getImageUrl(src));
   const [isError, setIsError] = useState(false);
 
   useEffect(() => {
-    setImgSrc(getFullImageUrl(src));
+    setImgSrc(getImageUrl(src));
     setIsError(false);
   }, [src]);
 
@@ -125,7 +129,7 @@ const PostTable = ({
                     {formatDate(post.ngayDang).split(",")[0]}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm">
-                    {getPostStatusBadge(post.trangThai)}
+                    {PostStatusBadge(post.trangThai)}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                     <div className="flex items-center justify-end space-x-2">

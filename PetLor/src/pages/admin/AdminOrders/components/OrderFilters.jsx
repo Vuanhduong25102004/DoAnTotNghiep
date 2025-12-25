@@ -1,6 +1,6 @@
 import React from "react";
 import useEscapeKey from "../../../../hooks/useEscapeKey";
-import { ORDER_STATUSES } from "../utils";
+import { ORDER_STATUSES } from "../../components/utils";
 
 const OrderFilters = ({
   searchTerm,

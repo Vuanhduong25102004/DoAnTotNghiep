@@ -1,6 +1,6 @@
 import React from "react";
 import useEscapeKey from "../../../../hooks/useEscapeKey";
-import { getPositionBadge } from "../utils";
+import { PositionBadge } from "../../components/utils";
 
 const SkeletonRow = () => (
   <tr className="animate-pulse border-b border-gray-100 last:border-0">
@@ -113,13 +113,7 @@ const EmployeeTable = ({
                     {emp.soDienThoai}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <span
-                      className={`px-2 py-1 text-xs font-medium rounded-full border ${getPositionBadge(
-                        emp.chucVu
-                      )}`}
-                    >
-                      {emp.chucVu}
-                    </span>
+                    <PositionBadge position={emp.chucVu} />
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                     {emp.chuyenKhoa}

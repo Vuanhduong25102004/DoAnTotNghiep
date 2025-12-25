@@ -14,10 +14,14 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/thu-cung")
@@ -55,6 +59,36 @@ public class ThuCungController {
         return thuCungService.getThuCungById(id)
                 .map(thuCung -> ResponseEntity.ok(toThuCungResponse(thuCung)))
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy thú cưng với ID: " + id));
+    }
+
+    @GetMapping("/me")
+    public ResponseEntity<List<ThuCungResponse>> getMyPets() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String userEmail = authentication.getName();
+        List<ThuCung> myPets = thuCungService.getMyPets(userEmail);
+        List<ThuCungResponse> response = myPets.stream()
+                .map(this::toThuCungResponse)
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/me/{id}")
+    public ResponseEntity<ThuCungResponse> getMyPetById(@PathVariable Integer id) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String userEmail = authentication.getName();
+        ThuCung thuCung = thuCungService.getMyPetById(userEmail, id);
+        return ResponseEntity.ok(toThuCungResponse(thuCung));
+    }
+
+    @PostMapping(value = "/me", consumes = { MediaType.MULTIPART_FORM_DATA_VALUE })
+    public ResponseEntity<ThuCungResponse> addMyPet(@RequestPart("thuCung") String thuCungJson,
+                                                    @RequestPart(name = "hinhAnh", required = false) MultipartFile hinhAnh) throws JsonProcessingException {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String userEmail = authentication.getName();
+        
+        ThuCungRequest request = objectMapper.readValue(thuCungJson, ThuCungRequest.class);
+        ThuCung createdThuCung = thuCungService.addMyPet(userEmail, request, hinhAnh);
+        return new ResponseEntity<>(toThuCungResponse(createdThuCung), HttpStatus.CREATED);
     }
 
     @PostMapping(consumes = { MediaType.MULTIPART_FORM_DATA_VALUE })

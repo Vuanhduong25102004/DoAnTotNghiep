@@ -3,9 +3,9 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   formatCurrency,
   formatDate,
-  getStatusBadge,
+  StockBadge,
   getDiscountTypeLabel,
-} from "../../utils";
+} from "../../../components/utils";
 import useEscapeKey from "../../../../../hooks/useEscapeKey";
 
 const PromotionDetailModal = ({ isOpen, onClose, promotion }) => {
@@ -31,7 +31,7 @@ const PromotionDetailModal = ({ isOpen, onClose, promotion }) => {
               <div>
                 <h1 className="text-xl font-bold text-gray-900 tracking-tight flex items-center gap-3">
                   Chi tiết Khuyến Mãi
-                  {getStatusBadge(promotion.trangThai, promotion.ngayKetThuc)}
+                  {StockBadge(promotion.trangThai, promotion.ngayKetThuc)}
                 </h1>
               </div>
               <button

@@ -1,7 +1,12 @@
 import React from "react";
 import useEscapeKey from "../../../../hooks/useEscapeKey";
 
-const ImportFilters = ({ searchTerm, setSearchTerm, onRefresh }) => {
+const ImportFilters = ({
+  searchTerm,
+  setSearchTerm,
+  onRefresh,
+  onNewImportClick,
+}) => {
   return (
     <div className="bg-white shadow-sm rounded-xl border border-gray-200 p-6 mt-6">
       <div className="flex flex-col md:flex-row justify-between md:items-center gap-4">
@@ -35,7 +40,7 @@ const ImportFilters = ({ searchTerm, setSearchTerm, onRefresh }) => {
             Làm mới
           </button>
           <button
-            onClick={() => setIsFormModalOpen(true)}
+            onClick={onNewImportClick}
             className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-primary hover:bg-primary-hover focus:outline-none transition-all"
           >
             <span className="material-symbols-outlined text-[20px]">

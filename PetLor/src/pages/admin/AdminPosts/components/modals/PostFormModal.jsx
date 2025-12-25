@@ -5,8 +5,8 @@ import {
   POST_STATUSES,
   POST_STATUS_MAP,
   createPostFormData,
-  getFullImageUrl,
-} from "../../utils";
+  getImageUrl,
+} from "../../../components/utils";
 
 const PostFormModal = ({
   isOpen,
@@ -77,7 +77,7 @@ const PostFormModal = ({
           trangThai: initialData.trangThai || "NHAP",
         });
 
-        setPreviewUrl(getFullImageUrl(initialData.anhBia));
+        setPreviewUrl(getImageUrl(initialData.anhBia));
       } else {
         // Reset form khi tạo mới
         setFormData({

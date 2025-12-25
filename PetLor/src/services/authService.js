@@ -13,7 +13,6 @@ const authService = {
   
   logout: () => {
     localStorage.removeItem('accessToken');
-    // Có thể thêm logic redirect về trang login ở đây nếu cần
   },
 
   getAuthHeader: () => {

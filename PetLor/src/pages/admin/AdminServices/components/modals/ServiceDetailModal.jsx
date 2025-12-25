@@ -1,7 +1,7 @@
 import React from "react";
 import useEscapeKey from "../../../../../hooks/useEscapeKey";
 import { motion, AnimatePresence } from "framer-motion";
-import { formatCurrency, getImageUrl } from "../../utils";
+import { formatCurrency, getImageUrl } from "../../../components/utils";
 
 const ServiceDetailModal = ({ isOpen, onClose, service }) => {
   return (

@@ -1,6 +1,7 @@
 import { Routes, Route } from "react-router-dom";
 import MainLayout from "../components/MainLayout";
 import AdminRoute from "./AdminRoute";
+import ProtectedRoute from "./ProtectedRoute";
 
 // Pages
 import HomePage from "../pages/HomePage";
@@ -30,6 +31,9 @@ import AdminVaccinations from "../pages/admin/AdminVaccinations";
 import AdminReviews from "../pages/admin/AdminReviews";
 import AdminPosts from "../pages/admin/AdminPosts";
 
+//user pages
+import UserProfile from "../pages/user/UserProfile";
+
 const AppRoutes = () => {
   return (
     <Routes>
@@ -40,6 +44,12 @@ const AppRoutes = () => {
         <Route path="/blog" element={<BlogPage />} />
         <Route path="/contact" element={<ContactPage />} />
         <Route path="/products" element={<ProductsPage />} />
+        <Route element={<ProtectedRoute />}>
+          <Route path="/profile" element={<UserProfile />} />
+          {/* Sau này thêm các trang user khác vào đây */}
+          {/* <Route path="/my-pets" element={<MyPetsPage />} /> */}
+          {/* <Route path="/change-password" element={<ChangePasswordPage />} /> */}
+        </Route>
       </Route>
 
       <Route path="/login" element={<LoginPage />} />

@@ -65,12 +65,31 @@ public class NguoiDungController {
         return ResponseEntity.ok(toNguoiDungResponse(user));
     }
 
+    @GetMapping("/me")
+    public ResponseEntity<NguoiDungResponse> getMyProfile() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String userEmail = authentication.getName();
+        NguoiDung user = nguoiDungService.getNguoiDungByEmail(userEmail);
+        return ResponseEntity.ok(toNguoiDungResponse(user));
+    }
+
     @PutMapping(value = "/{id}", consumes = { MediaType.MULTIPART_FORM_DATA_VALUE })
     public ResponseEntity<NguoiDungResponse> updateNguoiDung(@PathVariable Integer id,
                                              @RequestPart("nguoiDung") String nguoiDungJson,
                                              @RequestPart(name = "anhDaiDien", required = false) MultipartFile anhDaiDien) throws JsonProcessingException {
         NguoiDungUpdateRequest request = objectMapper.readValue(nguoiDungJson, NguoiDungUpdateRequest.class);
         NguoiDung updatedNguoiDung = nguoiDungService.updateNguoiDung(id, request, anhDaiDien);
+        return ResponseEntity.ok(toNguoiDungResponse(updatedNguoiDung));
+    }
+
+    @PutMapping(value = "/me", consumes = { MediaType.MULTIPART_FORM_DATA_VALUE })
+    public ResponseEntity<NguoiDungResponse> updateMyProfile(@RequestPart("nguoiDung") String nguoiDungJson,
+                                             @RequestPart(name = "anhDaiDien", required = false) MultipartFile anhDaiDien) throws JsonProcessingException {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String userEmail = authentication.getName();
+        
+        NguoiDungUpdateRequest request = objectMapper.readValue(nguoiDungJson, NguoiDungUpdateRequest.class);
+        NguoiDung updatedNguoiDung = nguoiDungService.updateMyProfile(userEmail, request, anhDaiDien);
         return ResponseEntity.ok(toNguoiDungResponse(updatedNguoiDung));
     }
 

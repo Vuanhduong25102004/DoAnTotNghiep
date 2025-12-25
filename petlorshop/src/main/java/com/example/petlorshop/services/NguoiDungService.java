@@ -124,11 +124,31 @@ public class NguoiDungService {
         return nguoiDungRepository.findById(id);
     }
 
+    public NguoiDung getNguoiDungByEmail(String email) {
+        return nguoiDungRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy người dùng với email: " + email));
+    }
+
     @Transactional
     public NguoiDung updateNguoiDung(Integer id, NguoiDungUpdateRequest request, MultipartFile anhDaiDien) {
         NguoiDung nguoiDung = nguoiDungRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("NguoiDung not found with id: " + id));
 
+        return updateNguoiDungInternal(nguoiDung, request, anhDaiDien);
+    }
+
+    @Transactional
+    public NguoiDung updateMyProfile(String email, NguoiDungUpdateRequest request, MultipartFile anhDaiDien) {
+        NguoiDung nguoiDung = nguoiDungRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("User not found with email: " + email));
+        
+        // Prevent users from changing their own role via profile update
+        request.setRole(null); 
+        
+        return updateNguoiDungInternal(nguoiDung, request, anhDaiDien);
+    }
+
+    private NguoiDung updateNguoiDungInternal(NguoiDung nguoiDung, NguoiDungUpdateRequest request, MultipartFile anhDaiDien) {
         if (StringUtils.hasText(request.getEmail()) && !request.getEmail().equals(nguoiDung.getEmail())) {
             nguoiDungRepository.findByEmail(request.getEmail()).ifPresent(existingUser -> {
                 throw new RuntimeException("Email đã được sử dụng bởi người dùng khác.");

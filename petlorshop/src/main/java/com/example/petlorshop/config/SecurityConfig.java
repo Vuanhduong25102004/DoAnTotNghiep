@@ -66,6 +66,10 @@ public class SecurityConfig {
 
                         // == SPECIFIC RULES FIRST ==
                         .requestMatchers(HttpMethod.GET, "/api/nhan-vien/*/lich-trong").authenticated() // Cho phép xem lịch trống
+                        
+                        // == USER PROFILE (Authenticated Users) ==
+                        // Phải đặt trước rule ADMIN của /api/nguoi-dung/**
+                        .requestMatchers("/api/nguoi-dung/me/**").authenticated()
 
                         // == ADMIN ONLY ==
                         .requestMatchers("/api/admin/**").hasAuthority(admin) // Rule for all admin endpoints
@@ -82,7 +86,6 @@ public class SecurityConfig {
                         .requestMatchers("/api/nha-cung-cap/**").hasAuthority(admin) // Nhà cung cấp chỉ admin được quản lý
 
                         // == ANY AUTHENTICATED USER ==
-                        .requestMatchers(HttpMethod.PUT, "/api/nguoi-dung/me/avatar").authenticated()
                         .requestMatchers(HttpMethod.GET, "/api/nhan-vien/**").authenticated()
                         .requestMatchers("/api/thu-cung/**").authenticated()
                         .requestMatchers(HttpMethod.POST, "/api/don-hang").authenticated()

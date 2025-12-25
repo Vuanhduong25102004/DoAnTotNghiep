@@ -1,7 +1,11 @@
 import React from "react";
 import useEscapeKey from "../../../../../hooks/useEscapeKey";
 import { motion, AnimatePresence } from "framer-motion";
-import { calculateAge, formatDate, getImageUrl } from "../../utils";
+import {
+  calculateAge,
+  formatDate,
+  getImageUrl,
+} from "../../../components/utils";
 
 const PetDetailModal = ({ isOpen, onClose, pet }) => {
   return (

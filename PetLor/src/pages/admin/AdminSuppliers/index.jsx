@@ -141,6 +141,7 @@ const AdminSuppliers = () => {
           setCurrentPage(1);
         }}
         onRefresh={fetchSuppliers}
+        onOpenCreate={handleCreateClick}
       />
 
       {/* Table */}

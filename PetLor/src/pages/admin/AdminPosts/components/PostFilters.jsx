@@ -1,5 +1,5 @@
 import React from "react";
-import { POST_STATUSES, POST_STATUS_MAP } from "../utils";
+import { POST_STATUSES, POST_STATUS_MAP } from "../../components/utils";
 
 const PostFilters = ({
   searchTerm,

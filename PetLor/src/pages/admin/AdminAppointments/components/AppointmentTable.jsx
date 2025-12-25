@@ -1,6 +1,9 @@
 import React from "react";
 import useEscapeKey from "../../../../hooks/useEscapeKey";
-import { getStatusBadge, formatAppointmentTime } from "../utils";
+import {
+  AppointmentStatusBadge,
+  formatAppointmentTime,
+} from "../../components/utils";
 
 const SkeletonRow = () => (
   <tr className="animate-pulse border-b border-gray-100 last:border-0">
@@ -123,7 +126,7 @@ const AppointmentTable = ({
                   </td>
 
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {getStatusBadge(apt.trangThaiLichHen)}
+                    <AppointmentStatusBadge status={apt.trangThaiLichHen} />
                   </td>
 
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 max-w-xs truncate">

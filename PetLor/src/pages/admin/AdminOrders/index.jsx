@@ -6,7 +6,7 @@ import React, { useEffect, useState } from "react";
 import useEscapeKey from "../../../hooks/useEscapeKey";
 import orderService from "../../../services/orderService"; // Đảm bảo đường dẫn đúng
 import { toast } from "react-toastify";
-import { formatCurrency } from "./utils";
+import { formatCurrency } from "../components/utils";
 
 // Components
 import OrderStats from "./components/OrderStats";

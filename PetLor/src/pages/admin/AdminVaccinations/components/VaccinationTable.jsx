@@ -1,5 +1,5 @@
 import React from "react";
-import { formatDate, renderStatusBadge } from "../utils";
+import { formatDate, VaccinationStatusBadge } from "../../components/utils";
 
 const SkeletonRow = () => (
   <tr className="animate-pulse border-b border-gray-100 last:border-0">
@@ -102,7 +102,9 @@ const VaccinationTable = ({
                       <span className="text-gray-900 font-medium">
                         {formatDate(item.ngayTaiChung)}
                       </span>
-                      {renderStatusBadge(item.ngayTaiChung)}
+                      <VaccinationStatusBadge
+                        reVaccinationDate={item.ngayTaiChung}
+                      />
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">

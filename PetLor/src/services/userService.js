@@ -7,21 +7,30 @@ const userService = {
 
   getUserById: (id) => apiClient.get(`/nguoi-dung/${id}`),
 
+  getMe: () => apiClient.get("/nguoi-dung/me"),
+
   // This is a unified endpoint for creating both users and employees
   // The backend expects multipart/form-data with a JSON part 'nguoiDung' and an optional file part 'anhDaiDien'
   createUnifiedUser: (data) => {
-    const headers =
-      data instanceof FormData ? { "Content-Type": "multipart/form-data" } : {};
-    return apiClient.post("/nguoi-dung/register", data, { headers });
+    return apiClient.post("/nguoi-dung/register", data);
   },
 
   updateUser: (id, data) => {
-    const headers =
-      data instanceof FormData ? { "Content-Type": "multipart/form-data" } : {};
-    return apiClient.put(`/nguoi-dung/${id}`, data, { headers });
+    // Axios tự động xử lý header 'multipart/form-data' khi dữ liệu là FormData
+    return apiClient.put(`/nguoi-dung/${id}`, data);
   },
 
+  updateMe: (data) => apiClient.put("/nguoi-dung/me", data, {
+    // Thêm config headers để ghi đè Content-Type mặc định.
+    // Axios sẽ tự động thêm 'boundary' cần thiết cho multipart/form-data.
+    headers: {
+      "Content-Type": "multipart/form-data",
+    },
+  }),
+
   deleteUser: (id) => apiClient.delete(`/nguoi-dung/${id}`),
+
+
 
   // --- NHÂN VIÊN ---
   // This endpoint is used by other pages like AdminAppointments
@@ -31,15 +40,11 @@ const userService = {
   getStaffById: (id) => apiClient.get(`/nhan-vien/${id}`),
 
   createStaff: (data) => {
-    const headers =
-      data instanceof FormData ? { "Content-Type": "multipart/form-data" } : {};
-    return apiClient.post("/nhan-vien", data, { headers });
+    return apiClient.post("/nhan-vien", data);
   },
 
   updateStaff: (id, data) => {
-    const headers =
-      data instanceof FormData ? { "Content-Type": "multipart/form-data" } : {};
-    return apiClient.put(`/nhan-vien/${id}`, data, { headers });
+    return apiClient.put(`/nhan-vien/${id}`, data);
   },
 
   deleteStaff: (id) => apiClient.delete(`/nhan-vien/${id}`),

@@ -7,7 +7,7 @@ import useEscapeKey from "../../../hooks/useEscapeKey";
 // Đảm bảo đường dẫn đúng (thêm một cấp ../)
 import productService from "../../../services/productService";
 import { toast } from "react-toastify";
-import { formatCurrency } from "./utils";
+import { formatCurrency } from "../components/utils";
 
 // Components
 import ProductStats from "./components/ProductStats";

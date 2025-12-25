@@ -1,6 +1,6 @@
 import React from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { formatDate, getStatusBadge } from "../../utils";
+import { formatDate, AppointmentStatusBadge } from "../../../components/utils";
 import useEscapeKey from "../../../../../hooks/useEscapeKey";
 
 const AppointmentDetailModal = ({ isOpen, onClose, appointment }) => {
@@ -93,7 +93,7 @@ const AppointmentDetailModal = ({ isOpen, onClose, appointment }) => {
                         Trạng thái
                       </label>
                       <div className="mt-1">
-                        {getStatusBadge(appointment.trangThai)}
+                        {AppointmentStatusBadge(appointment.trangThai)}
                       </div>
                     </div>
                     {appointment.ghiChuKhachHang && (

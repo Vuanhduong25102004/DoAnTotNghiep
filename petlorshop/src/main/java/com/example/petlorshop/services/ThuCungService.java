@@ -16,6 +16,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.util.List;
 import java.util.Optional;
 
 @Service
@@ -41,10 +42,36 @@ public class ThuCungService {
         return thuCungRepository.findById(id);
     }
 
+    public List<ThuCung> getMyPets(String email) {
+        return thuCungRepository.findByNguoiDung_Email(email);
+    }
+
+    public ThuCung getMyPetById(String email, Integer id) {
+        ThuCung thuCung = thuCungRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy thú cưng với ID: " + id));
+
+        if (!thuCung.getNguoiDung().getEmail().equals(email)) {
+            throw new RuntimeException("Bạn không có quyền truy cập thông tin thú cưng này.");
+        }
+
+        return thuCung;
+    }
+
     @Transactional
     public ThuCung createThuCung(ThuCungRequest request, MultipartFile hinhAnh) {
         NguoiDung chuSoHuu = findOrCreateOwner(request.getUserId(), request.getTenChuSoHuu(), request.getSoDienThoaiChuSoHuu());
+        return saveThuCungInternal(request, hinhAnh, chuSoHuu);
+    }
 
+    @Transactional
+    public ThuCung addMyPet(String email, ThuCungRequest request, MultipartFile hinhAnh) {
+        NguoiDung currentUser = nguoiDungRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy người dùng với email: " + email));
+        
+        return saveThuCungInternal(request, hinhAnh, currentUser);
+    }
+
+    private ThuCung saveThuCungInternal(ThuCungRequest request, MultipartFile hinhAnh, NguoiDung chuSoHuu) {
         String fileName = null;
         if (hinhAnh != null && !hinhAnh.isEmpty()) {
             fileName = fileStorageService.storeFile(hinhAnh);

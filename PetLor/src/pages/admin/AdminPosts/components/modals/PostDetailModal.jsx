@@ -1,6 +1,10 @@
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { formatDate, getPostStatusBadge, getFullImageUrl } from "../../utils";
+import {
+  formatDate,
+  PostStatusBadge,
+  getImageUrl,
+} from "../../../components/utils";
 import useEscapeKey from "../../../../../hooks/useEscapeKey";
 
 const PostDetailModal = ({ isOpen, onClose, post }) => {
@@ -109,7 +113,7 @@ const PostDetailModal = ({ isOpen, onClose, post }) => {
                 {/* Meta bar */}
                 <div className="flex items-center justify-between border-b border-gray-100 pb-6 mb-8">
                   <div className="flex items-center gap-4">
-                    {getPostStatusBadge(post.trangThai)}
+                    {PostStatusBadge(post.trangThai)}
                     <span className="text-gray-400 text-sm italic">
                       /{post.slug}
                     </span>

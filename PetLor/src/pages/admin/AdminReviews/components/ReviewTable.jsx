@@ -1,10 +1,10 @@
 import React from "react";
 import {
   formatDate,
-  renderStars,
+  StarRating,
   getReviewTargetInfo,
   getImageUrl,
-} from "../utils";
+} from "../../components/utils";
 
 const SkeletonRow = () => (
   <tr className="animate-pulse border-b border-gray-100 last:border-0">
@@ -144,7 +144,7 @@ const ReviewTable = ({
                       </div>
                     </td>
                     <td className="px-6 py-4">
-                      <div className="mb-1">{renderStars(review.soSao)}</div>
+                      <div className="mb-1">{StarRating(review.soSao)}</div>
                       <p className="text-sm text-gray-600 line-clamp-2 max-w-xs">
                         {review.noiDung}
                       </p>

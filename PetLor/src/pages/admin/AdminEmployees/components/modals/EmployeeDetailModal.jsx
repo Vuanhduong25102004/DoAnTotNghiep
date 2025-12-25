@@ -1,7 +1,7 @@
 import React from "react";
 import useEscapeKey from "../../../../../hooks/useEscapeKey";
 import { motion, AnimatePresence } from "framer-motion";
-import { getPositionBadge } from "../../utils";
+import { PositionBadge } from "../../../components/utils";
 
 const EmployeeDetailModal = ({ isOpen, onClose, employee }) => {
   return (
@@ -68,7 +68,7 @@ const EmployeeDetailModal = ({ isOpen, onClose, employee }) => {
                       {employee.hoTen}
                     </h2>
                     <span
-                      className={`mt-2 inline-block px-3 py-1 text-sm font-medium rounded-full border ${getPositionBadge(
+                      className={`mt-2 inline-block px-3 py-1 text-sm font-medium rounded-full border ${PositionBadge(
                         employee.chucVu
                       )}`}
                     >

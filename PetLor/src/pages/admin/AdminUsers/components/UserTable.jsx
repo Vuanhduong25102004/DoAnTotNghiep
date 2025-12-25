@@ -1,6 +1,6 @@
 import React from "react";
 import useEscapeKey from "../../../../hooks/useEscapeKey";
-import { formatDate, getRoleBadge } from "../utils";
+import { formatDate, RoleBadge } from "../../components/utils";
 
 const SkeletonRow = () => (
   <tr className="animate-pulse border-b border-gray-100 last:border-0">
@@ -129,7 +129,7 @@ const UserTable = ({
                     {user.diaChi}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    {getRoleBadge(user.role)}
+                    {RoleBadge(user.role)}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                     {formatDate(user.ngayTao)}

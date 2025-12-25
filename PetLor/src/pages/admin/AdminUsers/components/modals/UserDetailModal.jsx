@@ -1,7 +1,7 @@
 import React from "react";
 import useEscapeKey from "../../../../../hooks/useEscapeKey";
 import { motion, AnimatePresence } from "framer-motion";
-import { formatDate, getRoleBadge } from "../../utils";
+import { formatDate, RoleBadge } from "../../../components/utils";
 
 const UserDetailModal = ({ isOpen, onClose, user }) => {
   return (
@@ -61,7 +61,7 @@ const UserDetailModal = ({ isOpen, onClose, user }) => {
                 <h2 className="text-2xl font-bold text-gray-900">
                   {user.hoTen}
                 </h2>
-                <div className="mt-2">{getRoleBadge(user.role)}</div>
+                <div className="mt-2">{RoleBadge(user.role)}</div>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

@@ -1,5 +1,5 @@
 import React from "react";
-import { formatCurrency, formatDate, getStatusBadge } from "../utils";
+import { formatCurrency, formatDate, StockBadge } from "../../components/utils";
 
 const SkeletonRow = () => (
   <tr className="animate-pulse border-b border-gray-100 last:border-0">
@@ -108,7 +108,7 @@ const PromotionTable = ({
                     {item.soLuongGioiHan}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm">
-                    {getStatusBadge(item.trangThai, item.ngayKetThuc)}
+                    {StockBadge(item.trangThai, item.ngayKetThuc)}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                     <div className="flex items-center justify-end space-x-2">

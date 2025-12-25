@@ -1,7 +1,11 @@
 import React from "react";
 import useEscapeKey from "../../../../../hooks/useEscapeKey";
 import { motion, AnimatePresence } from "framer-motion";
-import { formatCurrency, formatDateTime, getStatusBadge } from "../../utils";
+import {
+  formatCurrency,
+  AppointmentStatusBadge,
+  formatDate,
+} from "../../../components/utils";
 
 const OrderDetailModal = ({ isOpen, onClose, order, orderItems }) => {
   return (
@@ -74,7 +78,7 @@ const OrderDetailModal = ({ isOpen, onClose, order, orderItems }) => {
                         Ngày đặt
                       </label>
                       <div className="font-medium text-text-heading">
-                        {formatDateTime(order.ngayDatHang)}
+                        {formatDate(order.ngayDatHang)}
                       </div>
                     </div>
                     <div className="space-y-2">
@@ -83,7 +87,7 @@ const OrderDetailModal = ({ isOpen, onClose, order, orderItems }) => {
                       </label>
                       <div>
                         <span
-                          className={`inline-block px-2 py-1 text-xs font-medium rounded-full border ${getStatusBadge(
+                          className={`inline-block px-2 py-1 text-xs font-medium rounded-full border ${AppointmentStatusBadge(
                             order.trangThai
                           )}`}
                         >

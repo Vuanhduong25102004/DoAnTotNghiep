@@ -162,6 +162,7 @@ const AdminImports = () => {
         searchTerm={searchTerm}
         setSearchTerm={setSearchTerm}
         onRefresh={fetchAllData}
+        onNewImportClick={() => setIsFormModalOpen(true)}
       />
 
       {/* Table */}

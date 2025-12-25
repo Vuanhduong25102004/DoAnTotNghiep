@@ -1,6 +1,10 @@
 import React from "react";
 import useEscapeKey from "../../../../hooks/useEscapeKey";
-import { formatCurrency, getStockStatus, getImageUrl } from "../utils";
+import {
+  formatCurrency,
+  StockBadge,
+  getImageUrl,
+} from "../../components/utils";
 
 const SkeletonRow = () => (
   <tr className="animate-pulse border-b border-gray-100 last:border-0">
@@ -75,7 +79,7 @@ const ProductTable = ({
                 ))
               : products.length > 0
               ? products.map((product, index) => {
-                  const stockStatus = getStockStatus(product.soLuongTonKho);
+                  const stockStatus = StockBadge(product.soLuongTonKho);
                   return (
                     <tr
                       key={product.sanPhamId || index}
@@ -122,11 +126,8 @@ const ProductTable = ({
                           <span className="text-sm text-gray-900 font-medium">
                             {product.soLuongTonKho}
                           </span>
-                          <span
-                            className={`px-2 py-0.5 text-[10px] font-bold uppercase rounded-full border ${stockStatus.color}`}
-                          >
-                            {stockStatus.label}
-                          </span>
+
+                          <StockBadge quantity={product.soLuongTonKho} />
                         </div>
                       </td>
                       <td

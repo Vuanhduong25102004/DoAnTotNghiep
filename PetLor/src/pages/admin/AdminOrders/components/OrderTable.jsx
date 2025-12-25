@@ -1,6 +1,10 @@
 import React from "react";
-import useEscapeKey from "../../../../hooks/useEscapeKey";
-import { formatCurrency, formatDateTime, getStatusBadge } from "../utils";
+// import useEscapeKey from "../../../../hooks/useEscapeKey"; // (Giữ lại nếu bạn có dùng hook này)
+import {
+  formatCurrency,
+  OrderStatusBadge, // <--- SỬA: Import đúng Badge cho đơn hàng
+  formatDate,
+} from "../../components/utils"; // <-- Kiểm tra lại đường dẫn import này cho đúng file utils của bạn
 
 const SkeletonRow = () => (
   <tr className="animate-pulse border-b border-gray-100 last:border-0">
@@ -114,7 +118,7 @@ const OrderTable = ({
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {formatDateTime(order.ngayDatHang)}
+                    {formatDate(order.ngayDatHang)}
                   </td>
                   <td
                     className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 max-w-[200px] truncate"
@@ -126,13 +130,9 @@ const OrderTable = ({
                     {formatCurrency(order.tongTien)}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <span
-                      className={`px-2 py-1 text-xs font-medium rounded-full border ${getStatusBadge(
-                        order.trangThai
-                      )}`}
-                    >
-                      {order.trangThai}
-                    </span>
+                    {/* --- SỬA LẠI PHẦN NÀY --- */}
+                    {/* Sử dụng Component OrderStatusBadge thay vì tự viết class */}
+                    <OrderStatusBadge status={order.trangThai} />
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                     <div className="flex items-center justify-end space-x-2">

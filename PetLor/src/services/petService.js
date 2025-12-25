@@ -8,6 +8,16 @@ const petService = {
   },
   // --- THÚ CƯNG --- // Updated for pagination
   getAllPets: (params) => apiClient.get('/thu-cung', { params }),
+
+  getMyPets: () => apiClient.get('/thu-cung/me'),
+
+  createMyPet: (data) => {
+    const config = {};
+    if (data instanceof FormData) {
+      config.headers = {'Content-Type': undefined };
+    }
+    return apiClient.post('/thu-cung/me', data, config);
+  },
   
   getPetById: (id) => apiClient.get(`/thu-cung/${id}`),
   

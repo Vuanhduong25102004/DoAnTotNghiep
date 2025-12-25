@@ -8,7 +8,7 @@ const SupplierFilters = ({
   onOpenCreate,
 }) => {
   return (
-    <div className="bg-white p-4 rounded-xl border border-border-light shadow-sm mb-6">
+    <div className="bg-white shadow-sm rounded-xl border border-gray-200 p-6 mt-6">
       <div className="flex flex-col md:flex-row justify-between md:items-center gap-4">
         {/* Search Input */}
         <div className="flex-1 max-w-md relative">

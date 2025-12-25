@@ -1,6 +1,6 @@
 import React from "react";
 import useEscapeKey from "../../../../hooks/useEscapeKey";
-import { formatCurrency, getImageUrl } from "../utils";
+import { formatCurrency, getImageUrl } from "../../components/utils";
 
 const SkeletonRow = () => (
   <tr className="animate-pulse border-b border-gray-100 last:border-0">

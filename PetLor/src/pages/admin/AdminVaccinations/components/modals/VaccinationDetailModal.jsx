@@ -1,6 +1,6 @@
 import React from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { formatDate, renderStatusBadge } from "../../utils";
+import { formatDate, VaccinationStatusBadge } from "../../../components/utils";
 import useEscapeKey from "../../../../../hooks/useEscapeKey";
 
 const VaccinationDetailModal = ({ isOpen, onClose, data }) => {
@@ -122,7 +122,7 @@ const VaccinationDetailModal = ({ isOpen, onClose, data }) => {
                       <p className="text-lg font-bold text-amber-900">
                         {formatDate(data.ngayTaiChung)}
                       </p>
-                      {renderStatusBadge(data.ngayTaiChung)}
+                      {VaccinationStatusBadge(data.ngayTaiChung)}
                     </div>
                   </div>
                   <div className="p-4 rounded-lg border border-gray-200 md:col-span-1">

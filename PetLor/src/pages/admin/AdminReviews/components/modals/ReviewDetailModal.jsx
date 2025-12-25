@@ -1,6 +1,10 @@
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { formatDate, renderStars, getReviewTargetInfo } from "../../utils";
+import {
+  formatDate,
+  StarRating,
+  getReviewTargetInfo,
+} from "../../../components/utils";
 import useEscapeKey from "../../../../../hooks/useEscapeKey";
 
 const ReviewDetailModal = ({ isOpen, onClose, review, onReply }) => {
@@ -109,7 +113,7 @@ const ReviewDetailModal = ({ isOpen, onClose, review, onReply }) => {
               {/* 2. Nội dung đánh giá */}
               <div>
                 <div className="flex items-center gap-2 mb-2">
-                  {renderStars(review.soSao)}
+                  {StarRating(review.soSao)}
                   <span className="text-sm font-medium text-gray-700">
                     ({review.soSao}/5)
                   </span>

@@ -1,7 +1,7 @@
 import React from "react";
 import useEscapeKey from "../../../../../hooks/useEscapeKey";
 import { motion, AnimatePresence } from "framer-motion";
-import { ORDER_STATUSES } from "../../utils";
+import { ORDER_STATUSES } from "../../../components/utils";
 
 const OrderEditModal = ({
   isOpen,

@@ -1,7 +1,7 @@
 import React from "react";
 import useEscapeKey from "../../../../../hooks/useEscapeKey";
 import { motion, AnimatePresence } from "framer-motion";
-import { getImageUrl } from "../../utils";
+import { getImageUrl } from "../../../components/utils";
 
 const ProductFormModal = ({
   isOpen,

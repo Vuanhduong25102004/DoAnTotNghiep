@@ -93,7 +93,7 @@ const ProductsPage = () => {
                   data-aos="fade-up"
                   data-aos-delay="100"
                 >
-                  Siêu Sale Mùa Đ <br />
+                  Siêu Sale Mùa Đông <br />
                   <span className="text-primary">Giảm tới 50%</span>
                 </h1>
                 <p

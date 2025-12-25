@@ -1,60 +1,9 @@
-import React, { useState, useEffect } from "react";
+import React from "react"; // Xóa import useState, useEffect, axios, authService
 import useEscapeKey from "../../../hooks/useEscapeKey";
-import axios from "axios";
-import authService from "../../../services/authService";
-
-// URL ảnh đại diện mặc định
-const DEFAULT_AVATAR_URL = "https://placehold.co/40x40?text=A";
+import { UserAvatar } from "./utils"; // Import Component mới từ file utils
 
 const AdminHeader = ({ user, title }) => {
-  // State để lưu trữ URL của ảnh đại diện
-  const [avatarUrl, setAvatarUrl] = useState(DEFAULT_AVATAR_URL);
-
-  // useEffect để tải ảnh đại diện của người dùng khi component được mount hoặc khi `user` thay đổi
-  useEffect(() => {
-    // Biến để lưu trữ object URL, cần được truy cập trong cả hàm fetch và hàm cleanup
-    let objectUrl = null;
-
-    // Hàm bất đồng bộ để tải ảnh đại diện
-    const fetchAvatar = async () => {
-      // Kiểm tra xem người dùng có thông tin ảnh đại diện không
-      if (user?.anhDaiDien) {
-        try {
-          // Xây dựng URL đầy đủ để lấy ảnh từ server
-          // Lưu ý: Chúng ta không gọi API mà là một endpoint phục vụ file tĩnh, nhưng cần xác thực
-          const imageUrl = `http://localhost:8080/uploads/${user.anhDaiDien}`;
-
-          // Sử dụng axios để gửi yêu cầu GET với header xác thực
-          // responseType: "blob" để nhận dữ liệu dưới dạng file nhị phân (ảnh)
-          const response = await axios.get(imageUrl, {
-            headers: authService.getAuthHeader(), // Thêm token xác thực
-            responseType: "blob",
-          });
-
-          // Tạo một URL tạm thời từ dữ liệu blob nhận được
-          objectUrl = URL.createObjectURL(response.data);
-          setAvatarUrl(objectUrl);
-        } catch (error) {
-          // Nếu có lỗi, log ra console và sử dụng ảnh mặc định
-          console.error("Không thể tải ảnh đại diện:", error);
-          setAvatarUrl(DEFAULT_AVATAR_URL);
-        }
-      } else {
-        // Nếu người dùng không có ảnh đại diện, sử dụng ảnh mặc định
-        setAvatarUrl(DEFAULT_AVATAR_URL);
-      }
-    };
-
-    fetchAvatar();
-
-    // Hàm cleanup: sẽ được gọi khi component bị unmount hoặc trước khi effect chạy lại
-    // Mục đích là để giải phóng bộ nhớ bằng cách thu hồi object URL đã tạo
-    return () => {
-      if (objectUrl) {
-        URL.revokeObjectURL(objectUrl);
-      }
-    };
-  }, [user]); // Dependency array: effect sẽ chạy lại nếu `user` thay đổi
+  // Không cần logic fetch ảnh ở đây nữa
 
   return (
     <header className="sticky top-0 z-10 flex items-center justify-between whitespace-nowrap border-b border-gray-200 bg-white px-6 py-3">
@@ -84,16 +33,9 @@ const AdminHeader = ({ user, title }) => {
         </button>
         {/* Thông tin người dùng và ảnh đại diện */}
         <div className="flex items-center">
-          <img
-            alt="Admin Avatar"
-            className="h-8 w-8 rounded-full border border-gray-200 object-cover"
-            src={avatarUrl}
-            // Xử lý lỗi nếu không tải được ảnh, sẽ thay bằng ảnh mặc định
-            onError={(e) => {
-              e.target.onerror = null; // Ngăn vòng lặp vô hạn nếu ảnh mặc định cũng lỗi
-              e.target.src = DEFAULT_AVATAR_URL;
-            }}
-          />
+          {/* 👇 Thay thế thẻ img cũ bằng UserAvatar */}
+          <UserAvatar user={user} className="h-8 w-8" />
+
           <span className="ml-2 hidden text-sm font-medium text-gray-700 md:block">
             {user?.hoTen || "Admin"}
           </span>

@@ -10,7 +10,7 @@ const AdminSidebar = ({ onLogout }) => {
   const location = useLocation();
 
   // --- HELPER FUNCTIONS ---
-  const isActive = (path) => location.pathname.startsWith(path); // Dùng startsWith để active cả khi vào trang con (VD: /admin/products/add)
+  const isActive = (path) => location.pathname.startsWith(path);
 
   const linkClass = (path) =>
     `flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors ${
