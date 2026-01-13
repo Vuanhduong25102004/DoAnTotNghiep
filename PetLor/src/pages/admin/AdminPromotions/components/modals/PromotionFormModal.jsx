@@ -26,7 +26,7 @@ const PromotionFormModal = ({ isOpen, onClose, initialData, onSubmit }) => {
           moTa: initialData.moTa,
           loaiGiamGia: initialData.loaiGiamGia,
           giaTriGiam: initialData.giaTriGiam,
-          ngayBatDau: initialData.ngayBatDau.split("T")[0], // Lấy YYYY-MM-DD
+          ngayBatDau: initialData.ngayBatDau.split("T")[0],
           ngayKetThuc: initialData.ngayKetThuc.split("T")[0],
           soLuongGioiHan: initialData.soLuongGioiHan,
           donToiThieu: initialData.donToiThieu,
@@ -66,13 +66,12 @@ const PromotionFormModal = ({ isOpen, onClose, initialData, onSubmit }) => {
       return;
     }
 
-    // Format lại dữ liệu chuẩn bị gửi đi (thêm time vào date nếu cần)
+    // Format lại dữ liệu chuẩn bị gửi đi
     const submitData = {
       ...formData,
       giaTriGiam: parseFloat(formData.giaTriGiam),
       soLuongGioiHan: parseInt(formData.soLuongGioiHan),
       donToiThieu: parseFloat(formData.donToiThieu),
-      // Thêm giờ mặc định nếu API yêu cầu datetime đầy đủ
       ngayBatDau: formData.ngayBatDau.includes("T")
         ? formData.ngayBatDau
         : `${formData.ngayBatDau}T00:00:00`,
@@ -83,6 +82,12 @@ const PromotionFormModal = ({ isOpen, onClose, initialData, onSubmit }) => {
     onSubmit(submitData);
   };
 
+  // Shared Styles (Design System)
+  const inputClass =
+    "w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-xl text-slate-700 font-medium focus:ring-0 transition-all focus:border-primary outline-none placeholder:text-slate-400";
+  const labelClass =
+    "text-[11px] font-bold text-slate-400 uppercase tracking-widest ml-1 mb-1.5 block";
+
   return (
     <AnimatePresence>
       {isOpen && (
@@ -90,52 +95,66 @@ const PromotionFormModal = ({ isOpen, onClose, initialData, onSubmit }) => {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm overflow-hidden"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm overflow-hidden p-4"
         >
           <motion.div
             initial={{ scale: 0.95, opacity: 0, y: 20 }}
             animate={{ scale: 1, opacity: 1, y: 0 }}
             exit={{ scale: 0.95, opacity: 0, y: 20 }}
-            className="w-full max-w-4xl bg-white rounded-2xl shadow-modal flex flex-col max-h-[95vh] font-body mx-auto my-8"
+            className="w-full max-w-4xl bg-white rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[95vh]"
           >
-            {/* Header */}
-            <div className="px-10 py-6 border-b border-gray-100 flex justify-between items-center bg-white rounded-t-2xl">
-              <div className="flex items-center gap-5">
-                <div className="w-12 h-12 rounded-full bg-blue-50 border border-blue-100 flex items-center justify-center text-primary">
-                  <span className="material-symbols-outlined text-[24px]">
-                    {isEdit ? "edit_note" : "add_circle"}
+            {/* --- HEADER --- */}
+            <div className="px-8 py-6 border-b border-slate-100 flex justify-between items-center bg-white sticky top-0 z-10 shrink-0">
+              <div className="flex items-center gap-4">
+                <div className="w-14 h-14 rounded-2xl bg-teal-50 flex items-center justify-center text-primary border border-teal-100/50">
+                  <span className="material-symbols-outlined text-3xl">
+                    {isEdit ? "edit_note" : "local_offer"}
                   </span>
                 </div>
                 <div>
-                  <h1 className="text-xl font-semibold text-gray-900">
+                  <h2 className="text-2xl font-extrabold text-slate-900 tracking-tight">
+                    {isEdit ? (
+                      <>
+                        Cập nhật Khuyến mãi{" "}
+                        <span className="text-primary">
+                          {initialData.maCode}
+                        </span>
+                      </>
+                    ) : (
+                      "Tạo Mã Khuyến Mãi Mới"
+                    )}
+                  </h2>
+                  <p className="text-sm text-slate-500">
                     {isEdit
-                      ? `Cập nhật Mã: ${initialData.maCode}`
-                      : "Tạo Mã Khuyến Mãi"}
-                  </h1>
-                  <p className="text-sm text-gray-500 mt-1">
-                    {isEdit
-                      ? "Điều chỉnh thông tin ưu đãi"
-                      : "Thiết lập chương trình khuyến mãi mới"}
+                      ? "Điều chỉnh thông tin và thời gian áp dụng ưu đãi"
+                      : "Thiết lập chương trình khuyến mãi và giảm giá"}
                   </p>
                 </div>
               </div>
               <button
                 onClick={onClose}
-                className="w-10 h-10 rounded-full flex items-center justify-center hover:bg-gray-100 transition-all"
+                className="text-slate-400 hover:text-slate-600 transition-colors p-2 hover:bg-slate-100 rounded-full"
               >
-                <span className="material-symbols-outlined text-gray-500">
-                  close
-                </span>
+                <span className="material-symbols-outlined">close</span>
               </button>
             </div>
 
-            {/* Body */}
-            <div className="flex-1 p-8 overflow-y-auto bg-white">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
-                {/* Cột Trái */}
-                <div className="space-y-6">
-                  <div className="input-group">
-                    <label className="form-label block text-sm font-medium mb-1">
+            {/* --- BODY --- */}
+            <div className="p-8 space-y-8 overflow-y-auto custom-scrollbar flex-1">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-10 gap-y-8">
+                {/* CỘT TRÁI: Thông tin cơ bản */}
+                <section className="space-y-6">
+                  <div className="flex items-center gap-3 mb-2">
+                    <span className="material-symbols-outlined text-primary bg-teal-50 p-1.5 rounded-lg text-xl">
+                      badge
+                    </span>
+                    <h3 className="text-lg font-bold text-slate-900">
+                      Thông tin cơ bản
+                    </h3>
+                  </div>
+
+                  <div>
+                    <label className={labelClass}>
                       Mã Code <span className="text-red-500">*</span>
                     </label>
                     <input
@@ -143,40 +162,55 @@ const PromotionFormModal = ({ isOpen, onClose, initialData, onSubmit }) => {
                       name="maCode"
                       value={formData.maCode}
                       onChange={handleChange}
-                      className="form-control w-full border border-gray-300 rounded-lg p-2.5 focus:ring-primary focus:border-primary uppercase"
+                      className={`${inputClass} uppercase tracking-wider font-bold`}
                       placeholder="VD: SALE50K"
-                      disabled={isEdit} // Thường mã code không cho sửa
+                      disabled={isEdit}
                     />
+                    {isEdit && (
+                      <p className="text-xs text-slate-400 mt-1.5 ml-1">
+                        * Mã khuyến mãi không thể thay đổi sau khi tạo
+                      </p>
+                    )}
                   </div>
-                  <div className="input-group">
-                    <label className="form-label block text-sm font-medium mb-1">
-                      Mô tả
-                    </label>
+
+                  <div>
+                    <label className={labelClass}>Mô tả chương trình</label>
                     <textarea
                       name="moTa"
                       value={formData.moTa}
                       onChange={handleChange}
-                      className="form-control w-full border border-gray-300 rounded-lg p-2.5 h-24"
-                      placeholder="Mô tả chi tiết..."
+                      className={`${inputClass} resize-none h-32`}
+                      placeholder="Mô tả chi tiết về chương trình..."
                     />
                   </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="input-group">
-                      <label className="form-label block text-sm font-medium mb-1">
-                        Loại giảm
-                      </label>
+                </section>
+
+                {/* CỘT PHẢI: Giá trị & Thời gian */}
+                <section className="space-y-6">
+                  <div className="flex items-center gap-3 mb-2">
+                    <span className="material-symbols-outlined text-orange-500 bg-orange-50 p-1.5 rounded-lg text-xl">
+                      savings
+                    </span>
+                    <h3 className="text-lg font-bold text-slate-900">
+                      Giá trị & Thời gian
+                    </h3>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-5">
+                    <div>
+                      <label className={labelClass}>Loại giảm</label>
                       <select
                         name="loaiGiamGia"
                         value={formData.loaiGiamGia}
                         onChange={handleChange}
-                        className="form-control w-full border border-gray-300 rounded-lg p-2.5"
+                        className={inputClass}
                       >
                         <option value="SO_TIEN">Số tiền (VND)</option>
                         <option value="PHAN_TRAM">Phần trăm (%)</option>
                       </select>
                     </div>
-                    <div className="input-group">
-                      <label className="form-label block text-sm font-medium mb-1">
+                    <div>
+                      <label className={labelClass}>
                         Giá trị giảm <span className="text-red-500">*</span>
                       </label>
                       <input
@@ -184,29 +218,25 @@ const PromotionFormModal = ({ isOpen, onClose, initialData, onSubmit }) => {
                         name="giaTriGiam"
                         value={formData.giaTriGiam}
                         onChange={handleChange}
-                        className="form-control w-full border border-gray-300 rounded-lg p-2.5"
+                        className={inputClass}
+                        placeholder="0"
                       />
                     </div>
                   </div>
-                </div>
 
-                {/* Cột Phải */}
-                <div className="space-y-6">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="input-group">
-                      <label className="form-label block text-sm font-medium mb-1">
-                        Ngày bắt đầu
-                      </label>
+                  <div className="grid grid-cols-2 gap-5">
+                    <div>
+                      <label className={labelClass}>Ngày bắt đầu</label>
                       <input
                         type="date"
                         name="ngayBatDau"
                         value={formData.ngayBatDau}
                         onChange={handleChange}
-                        className="form-control w-full border border-gray-300 rounded-lg p-2.5"
+                        className={inputClass}
                       />
                     </div>
-                    <div className="input-group">
-                      <label className="form-label block text-sm font-medium mb-1">
+                    <div>
+                      <label className={labelClass}>
                         Ngày kết thúc <span className="text-red-500">*</span>
                       </label>
                       <input
@@ -214,71 +244,74 @@ const PromotionFormModal = ({ isOpen, onClose, initialData, onSubmit }) => {
                         name="ngayKetThuc"
                         value={formData.ngayKetThuc}
                         onChange={handleChange}
-                        className="form-control w-full border border-gray-300 rounded-lg p-2.5"
+                        className={inputClass}
                       />
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="input-group">
-                      <label className="form-label block text-sm font-medium mb-1">
-                        Số lượng giới hạn
-                      </label>
+                  <div className="grid grid-cols-2 gap-5">
+                    <div>
+                      <label className={labelClass}>Số lượng giới hạn</label>
                       <input
                         type="number"
                         name="soLuongGioiHan"
                         value={formData.soLuongGioiHan}
                         onChange={handleChange}
-                        className="form-control w-full border border-gray-300 rounded-lg p-2.5"
+                        className={inputClass}
                       />
                     </div>
-                    <div className="input-group">
-                      <label className="form-label block text-sm font-medium mb-1">
-                        Đơn tối thiểu
-                      </label>
+                    <div>
+                      <label className={labelClass}>Đơn tối thiểu</label>
                       <input
                         type="number"
                         name="donToiThieu"
                         value={formData.donToiThieu}
                         onChange={handleChange}
-                        className="form-control w-full border border-gray-300 rounded-lg p-2.5"
+                        className={inputClass}
                       />
                     </div>
                   </div>
+                </section>
+              </div>
 
-                  <div className="input-group pt-4">
-                    <label className="flex items-center space-x-3 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        name="trangThai"
-                        checked={formData.trangThai}
-                        onChange={handleChange}
-                        className="w-5 h-5 text-primary border-gray-300 rounded focus:ring-primary"
-                      />
-                      <span className="text-sm font-medium text-gray-900">
-                        Kích hoạt chương trình này ngay lập tức
-                      </span>
-                    </label>
+              {/* Toggle Status */}
+              <div className="pt-4 border-t border-slate-100">
+                <label className="flex items-center gap-4 cursor-pointer group">
+                  <div className="relative">
+                    <input
+                      type="checkbox"
+                      name="trangThai"
+                      checked={formData.trangThai}
+                      onChange={handleChange}
+                      className="peer sr-only"
+                    />
+                    <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
                   </div>
-                </div>
+                  <div className="flex flex-col">
+                    <span className="text-sm font-bold text-slate-700 group-hover:text-primary transition-colors">
+                      Kích hoạt chương trình
+                    </span>
+                    <span className="text-xs text-slate-500">
+                      Mã khuyến mãi sẽ có hiệu lực ngay lập tức
+                    </span>
+                  </div>
+                </label>
               </div>
             </div>
 
-            {/* Footer */}
-            <div className="px-10 py-6 bg-gray-50 border-t border-gray-100 flex justify-end gap-4 rounded-b-2xl">
+            {/* --- FOOTER --- */}
+            <div className="p-8 border-t border-slate-100 flex justify-end items-center gap-6 bg-slate-50/30 shrink-0">
               <button
                 onClick={onClose}
-                className="px-6 py-2.5 rounded-lg text-sm font-medium text-gray-700 hover:bg-white border border-transparent hover:border-gray-200 transition-all"
+                className="text-slate-500 hover:text-slate-700 font-semibold transition-colors"
               >
                 Hủy bỏ
               </button>
               <button
                 onClick={handleSubmit}
-                className="px-8 py-2.5 rounded-lg text-sm font-medium text-white bg-primary hover:bg-green-600 shadow-lg flex items-center gap-2 transition-all"
+                className="flex items-center gap-2 px-10 py-3.5 bg-primary hover:bg-primary-dark text-white font-bold rounded-xl shadow-lg shadow-teal-500/25 transition-all transform hover:-translate-y-0.5 active:scale-95"
               >
-                <span className="material-symbols-outlined text-[18px]">
-                  save
-                </span>
+                <span className="material-symbols-outlined text-xl">save</span>
                 {isEdit ? "Lưu thay đổi" : "Tạo khuyến mãi"}
               </button>
             </div>

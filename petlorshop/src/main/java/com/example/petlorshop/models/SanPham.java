@@ -47,6 +47,9 @@ public class SanPham {
 
     @Column(name = "hinh_anh", columnDefinition = "TEXT")
     private String hinhAnh;
+    
+    @Column(name = "trong_luong")
+    private Integer trongLuong = 500; // Đơn vị: gram
 
     @Column(name = "da_xoa")
     private boolean daXoa = false;

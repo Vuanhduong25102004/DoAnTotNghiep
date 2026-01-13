@@ -59,6 +59,7 @@ public class SanPhamService {
         newSanPham.setGia(request.getGia());
         newSanPham.setGiaGiam(request.getGiaGiam());
         newSanPham.setSoLuongTonKho(request.getSoLuongTonKho());
+        newSanPham.setTrongLuong(request.getTrongLuong() != null ? request.getTrongLuong() : 500); // Mặc định 500g
         newSanPham.setDanhMucSanPham(danhMuc);
 
         if (hinhAnh != null && !hinhAnh.isEmpty()) {
@@ -79,6 +80,10 @@ public class SanPhamService {
         sanPham.setGia(request.getGia());
         sanPham.setGiaGiam(request.getGiaGiam());
         sanPham.setSoLuongTonKho(request.getSoLuongTonKho());
+        
+        if (request.getTrongLuong() != null) {
+            sanPham.setTrongLuong(request.getTrongLuong());
+        }
 
         if (hinhAnh != null && !hinhAnh.isEmpty()) {
             String fileName = fileStorageService.storeFile(hinhAnh);
@@ -108,6 +113,7 @@ public class SanPhamService {
                 sanPham.getGiaGiam(),
                 sanPham.getSoLuongTonKho(),
                 sanPham.getHinhAnh(),
+                sanPham.getTrongLuong(),
                 sanPham.getDanhMucSanPham() != null ? sanPham.getDanhMucSanPham().getDanhMucId() : null,
                 sanPham.getDanhMucSanPham() != null ? sanPham.getDanhMucSanPham().getTenDanhMuc() : null
         );

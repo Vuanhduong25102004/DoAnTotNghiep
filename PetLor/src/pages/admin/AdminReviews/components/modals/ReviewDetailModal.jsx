@@ -30,6 +30,12 @@ const ReviewDetailModal = ({ isOpen, onClose, review, onReply }) => {
 
   const target = getReviewTargetInfo(review);
 
+  // Shared Styles
+  const labelClass =
+    "text-[11px] font-bold text-slate-400 uppercase tracking-widest ml-1 mb-1.5 block";
+  const inputClass =
+    "w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-xl text-slate-700 font-medium focus:ring-0 transition-all focus:border-primary outline-none placeholder:text-slate-400";
+
   return (
     <AnimatePresence>
       {isOpen && (
@@ -37,32 +43,44 @@ const ReviewDetailModal = ({ isOpen, onClose, review, onReply }) => {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm overflow-hidden"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm overflow-hidden p-4"
         >
           <motion.div
             initial={{ scale: 0.95, opacity: 0, y: 20 }}
             animate={{ scale: 1, opacity: 1, y: 0 }}
             exit={{ scale: 0.95, opacity: 0, y: 20 }}
-            className="w-full max-w-2xl bg-white rounded-2xl shadow-modal flex flex-col font-body mx-auto my-8 overflow-hidden max-h-[90vh]"
+            className="w-full max-w-2xl bg-white rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
           >
-            {/* Header */}
-            <div className="px-8 py-6 border-b border-gray-100 flex justify-between items-center bg-white">
-              <h1 className="text-xl font-bold text-gray-900">
-                Chi tiết Đánh giá
-              </h1>
+            {/* --- HEADER --- */}
+            <div className="px-8 py-6 border-b border-slate-100 flex justify-between items-center bg-white sticky top-0 z-10 shrink-0">
+              <div className="flex items-center gap-4">
+                <div className="w-14 h-14 rounded-2xl bg-yellow-50 flex items-center justify-center text-yellow-600 border border-yellow-100/50">
+                  <span className="material-symbols-outlined text-3xl">
+                    rate_review
+                  </span>
+                </div>
+                <div>
+                  <h2 className="text-2xl font-extrabold text-slate-900 tracking-tight">
+                    Chi tiết Đánh giá
+                  </h2>
+                  <p className="text-sm text-slate-500">
+                    Xem nội dung và phản hồi khách hàng
+                  </p>
+                </div>
+              </div>
               <button
                 onClick={onClose}
-                className="text-gray-400 hover:text-gray-600"
+                className="text-slate-400 hover:text-slate-600 transition-colors p-2 hover:bg-slate-100 rounded-full"
               >
                 <span className="material-symbols-outlined">close</span>
               </button>
             </div>
 
-            {/* Body */}
-            <div className="p-8 space-y-6 bg-white overflow-y-auto">
+            {/* --- BODY --- */}
+            <div className="p-8 overflow-y-auto custom-scrollbar flex-1 space-y-8">
               {/* 1. Thông tin người dùng & Đối tượng */}
-              <div className="flex gap-4 p-4 bg-gray-50 rounded-xl border border-gray-100">
-                <div className="h-12 w-12 rounded-full bg-gray-200 overflow-hidden flex-shrink-0">
+              <div className="bg-slate-50/50 p-5 rounded-2xl border border-slate-100 flex items-start gap-4">
+                <div className="h-14 w-14 rounded-full bg-white border border-slate-200 shadow-sm overflow-hidden flex-shrink-0 flex items-center justify-center">
                   {review.nguoiDung?.anhDaiDien ? (
                     <img
                       src={review.nguoiDung.anhDaiDien}
@@ -70,103 +88,116 @@ const ReviewDetailModal = ({ isOpen, onClose, review, onReply }) => {
                       className="w-full h-full object-cover"
                     />
                   ) : (
-                    <div className="flex items-center justify-center h-full text-gray-400">
-                      <span className="material-symbols-outlined">person</span>
-                    </div>
+                    <span className="material-symbols-outlined text-slate-300 text-2xl">
+                      person
+                    </span>
                   )}
                 </div>
+
                 <div className="flex-1">
-                  <h3 className="text-sm font-bold text-gray-900">
-                    {review.nguoiDung?.hoTen}
-                  </h3>
-                  <p className="text-xs text-gray-500 mb-2">
-                    {review.nguoiDung?.email}
-                  </p>
-                  <div className="flex items-center gap-2 text-xs">
-                    <span className="text-gray-400">Đánh giá cho:</span>
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <h3 className="text-base font-bold text-slate-900">
+                        {review.nguoiDung?.hoTen || "Khách hàng ẩn danh"}
+                      </h3>
+                      <p className="text-xs text-slate-500 mb-2">
+                        {review.nguoiDung?.email}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <span className="text-xs font-bold text-slate-400 block mb-1">
+                        {formatDate(review.ngayTao)}
+                      </span>
+                      {review.trangThai ? (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold bg-green-100 text-green-700">
+                          Hiển thị
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold bg-slate-200 text-slate-600">
+                          Đang ẩn
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 mt-1 text-sm bg-white px-3 py-1.5 rounded-lg border border-slate-100 w-fit shadow-sm">
+                    <span className="text-slate-400 text-xs uppercase font-bold">
+                      Mục tiêu:
+                    </span>
                     <span
-                      className={`px-2 py-0.5 rounded ${target.badgeColor} font-medium`}
+                      className={`px-2 py-0.5 rounded text-xs font-bold ${target.badgeColor}`}
                     >
                       {target.type}
                     </span>
-                    <span className="font-medium text-gray-700">
+                    <span className="font-semibold text-slate-700 truncate max-w-[200px]">
                       {target.name}
                     </span>
                   </div>
-                </div>
-                <div className="text-right">
-                  <div className="text-xs text-gray-400 mb-1">
-                    {formatDate(review.ngayTao)}
-                  </div>
-                  {review.trangThai ? (
-                    <span className="text-xs font-bold text-green-600 bg-green-50 px-2 py-1 rounded-full">
-                      Hiển thị
-                    </span>
-                  ) : (
-                    <span className="text-xs font-bold text-gray-600 bg-gray-100 px-2 py-1 rounded-full">
-                      Đang ẩn
-                    </span>
-                  )}
                 </div>
               </div>
 
               {/* 2. Nội dung đánh giá */}
               <div>
-                <div className="flex items-center gap-2 mb-2">
-                  {StarRating(review.soSao)}
-                  <span className="text-sm font-medium text-gray-700">
-                    ({review.soSao}/5)
-                  </span>
-                </div>
-                <div className="text-gray-800 leading-relaxed bg-white p-4 border border-gray-100 rounded-xl shadow-sm">
-                  {review.noiDung}
-                </div>
-                {/* Ảnh đánh giá (nếu có) */}
-                {review.hinhAnh && (
-                  <div className="mt-4">
-                    <p className="text-xs text-gray-500 mb-2">
-                      Hình ảnh đính kèm:
-                    </p>
-                    <img
-                      src={review.hinhAnh}
-                      alt="Review attachment"
-                      className="h-32 w-auto rounded-lg border border-gray-200 object-cover hover:scale-105 transition-transform cursor-pointer"
-                    />
+                <label className={labelClass}>Nội dung đánh giá</label>
+                <div className="bg-white p-5 border border-slate-100 rounded-2xl shadow-sm space-y-3">
+                  <div className="flex items-center gap-2">
+                    {StarRating(review.soSao)}
+                    <span className="text-sm font-bold text-slate-700">
+                      ({review.soSao}/5)
+                    </span>
                   </div>
-                )}
+                  <p className="text-slate-700 leading-relaxed text-sm">
+                    {review.noiDung}
+                  </p>
+
+                  {/* Ảnh đánh giá */}
+                  {review.hinhAnh && (
+                    <div className="mt-3 pt-3 border-t border-slate-50">
+                      <p className={labelClass}>Hình ảnh đính kèm</p>
+                      <img
+                        src={review.hinhAnh}
+                        alt="Review attachment"
+                        className="h-32 w-auto rounded-xl border border-slate-200 object-cover hover:scale-105 transition-transform cursor-pointer shadow-sm"
+                      />
+                    </div>
+                  )}
+                </div>
               </div>
 
               {/* 3. Phản hồi của Admin */}
-              <div className="border-t border-gray-100 pt-6">
-                <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                  <span className="material-symbols-outlined text-blue-500">
-                    support_agent
-                  </span>
-                  Phản hồi của Shop
-                </h3>
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label className={labelClass}>Phản hồi của Shop</label>
+                  {review.phanHoi && (
+                    <span className="text-xs font-bold text-green-600 flex items-center gap-1">
+                      <span className="material-symbols-outlined text-sm">
+                        check_circle
+                      </span>
+                      Đã phản hồi
+                    </span>
+                  )}
+                </div>
                 <div className="relative">
                   <textarea
                     value={replyText}
                     onChange={(e) => setReplyText(e.target.value)}
-                    className="w-full p-4 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none min-h-[120px] text-sm"
+                    className={`${inputClass} min-h-[120px] resize-none`}
                     placeholder="Nhập nội dung phản hồi khách hàng tại đây..."
                   ></textarea>
-                  <div className="absolute bottom-3 right-3">
-                    {review.phanHoi ? (
-                      <span className="text-xs text-green-600 font-medium mr-2">
-                        Đã phản hồi trước đó
-                      </span>
-                    ) : null}
+                  <div className="absolute bottom-3 right-3 text-slate-300">
+                    <span className="material-symbols-outlined text-xl">
+                      support_agent
+                    </span>
                   </div>
                 </div>
               </div>
             </div>
 
-            {/* Footer */}
-            <div className="px-8 py-5 bg-gray-50 border-t border-gray-100 flex justify-end gap-3">
+            {/* --- FOOTER --- */}
+            <div className="p-8 border-t border-slate-100 flex justify-end items-center gap-6 bg-slate-50/30 shrink-0">
               <button
                 onClick={onClose}
-                className="px-5 py-2 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-100 border border-gray-200 transition-all"
+                className="text-slate-500 hover:text-slate-700 font-semibold transition-colors"
               >
                 Đóng
               </button>
@@ -177,12 +208,10 @@ const ReviewDetailModal = ({ isOpen, onClose, review, onReply }) => {
                   !replyText.trim() ||
                   replyText === review.phanHoi
                 }
-                className="px-6 py-2 rounded-lg text-sm font-medium text-white bg-primary hover:bg-green-600 disabled:opacity-50 disabled:cursor-not-allowed shadow-md transition-all flex items-center gap-2"
+                className="flex items-center gap-2 px-8 py-2.5 bg-primary hover:bg-primary-dark text-white font-bold rounded-xl shadow-lg shadow-teal-500/25 transition-all transform hover:-translate-y-0.5 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none disabled:transform-none"
               >
+                <span className="material-symbols-outlined text-lg">send</span>
                 {isSubmitting ? "Đang gửi..." : "Gửi phản hồi"}
-                <span className="material-symbols-outlined text-[18px]">
-                  send
-                </span>
               </button>
             </div>
           </motion.div>

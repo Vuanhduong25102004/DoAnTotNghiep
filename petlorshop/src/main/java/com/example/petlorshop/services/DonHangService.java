@@ -35,6 +35,8 @@ public class DonHangService {
     private GioHangService gioHangService;
     @Autowired
     private KhuyenMaiService khuyenMaiService;
+    @Autowired
+    private OrderCalculationService orderCalculationService;
 
     public Page<DonHangResponse> getAllDonHang(Pageable pageable) {
         return donHangRepository.findAll(pageable)
@@ -56,146 +58,137 @@ public class DonHangService {
                 .filter(donHang -> donHang.getNguoiDung().getEmail().equals(email))
                 .map(this::convertToResponse);
     }
+    
+    public BigDecimal calculateShippingFee(ShippingFeeRequest request) {
+        // Tái sử dụng logic tính toán của OrderCalculationService nhưng chỉ lấy phí ship
+        OrderCalculationResult result = orderCalculationService.calculateOrder(
+            request.getItems(),
+            null, // Không cần mã khuyến mãi khi chỉ tính ship
+            request.getTinhThanh(),
+            request.getQuanHuyen(),
+            request.getPhuongXa(),
+            request.getDiaChi()
+        );
+        return result.getPhiVanChuyen();
+    }
 
     @Transactional
     public DonHang createDonHang(DonHangRequest donHangRequest) {
         NguoiDung nguoiDung = nguoiDungRepository.findById(donHangRequest.getUserId())
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy người dùng với ID: " + donHangRequest.getUserId()));
 
+        // 1. Tính toán đơn hàng (tổng tiền, giảm giá, chi tiết)
+        OrderCalculationResult calculationResult = orderCalculationService.calculateOrder(
+                donHangRequest.getChiTietDonHangs(), 
+                donHangRequest.getMaKhuyenMai(),
+                donHangRequest.getTinhThanh(),
+                donHangRequest.getQuanHuyen(),
+                donHangRequest.getPhuongXa(),
+                donHangRequest.getDiaChiGiaoHang()
+        );
+
+        // 2. Tạo đơn hàng
         DonHang donHang = new DonHang();
         donHang.setNguoiDung(nguoiDung);
-        donHang.setDiaChiGiaoHang(donHangRequest.getDiaChiGiaoHang());
+        
+        // Lưu địa chỉ đầy đủ
+        String fullAddress = String.format("%s, %s, %s, %s", 
+            donHangRequest.getDiaChiGiaoHang(), 
+            donHangRequest.getPhuongXa(), 
+            donHangRequest.getQuanHuyen(), 
+            donHangRequest.getTinhThanh());
+        donHang.setDiaChiGiaoHang(fullAddress);
+        
         donHang.setSoDienThoaiNhan(donHangRequest.getSoDienThoaiNhan());
         donHang.setPhuongThucThanhToan(donHangRequest.getPhuongThucThanhToan());
         donHang.setTrangThai(DonHang.TrangThaiDonHang.CHO_XU_LY);
+        
+        donHang.setTongTienHang(calculationResult.getTongTienHang());
+        donHang.setSoTienGiam(calculationResult.getSoTienGiam());
+        donHang.setPhiVanChuyen(calculationResult.getPhiVanChuyen());
+        donHang.setTongThanhToan(calculationResult.getTongThanhToan());
+        donHang.setKhuyenMai(calculationResult.getKhuyenMai());
 
-        BigDecimal tongTienHang = BigDecimal.ZERO;
-        List<ChiTietDonHang> chiTietItems = new ArrayList<>();
-
-        for (ChiTietDonHangRequest itemRequest : donHangRequest.getChiTietDonHangs()) {
-            SanPham sanPham = sanPhamRepository.findById(itemRequest.getSanPhamId())
-                    .orElseThrow(() -> new RuntimeException("Không tìm thấy sản phẩm với ID: " + itemRequest.getSanPhamId()));
-
-            if (sanPham.getSoLuongTonKho() < itemRequest.getSoLuong()) {
-                throw new RuntimeException("Sản phẩm '" + sanPham.getTenSanPham() + "' không đủ số lượng tồn kho.");
-            }
-
-            BigDecimal giaBan = Optional.ofNullable(sanPham.getGiaGiam()).orElse(sanPham.getGia());
-
-            ChiTietDonHang chiTiet = new ChiTietDonHang();
+        // 3. Lưu chi tiết đơn hàng và trừ tồn kho
+        List<ChiTietDonHang> chiTietItems = calculationResult.getChiTietDonHangs();
+        for (ChiTietDonHang chiTiet : chiTietItems) {
             chiTiet.setDonHang(donHang);
-            chiTiet.setSanPham(sanPham);
-            chiTiet.setSoLuong(itemRequest.getSoLuong());
-            chiTiet.setDonGia(giaBan);
-            chiTietItems.add(chiTiet);
-
-            tongTienHang = tongTienHang.add(giaBan.multiply(BigDecimal.valueOf(itemRequest.getSoLuong())));
-
-            sanPham.setSoLuongTonKho(sanPham.getSoLuongTonKho() - itemRequest.getSoLuong());
+            
+            // Trừ tồn kho
+            SanPham sanPham = chiTiet.getSanPham();
+            sanPham.setSoLuongTonKho(sanPham.getSoLuongTonKho() - chiTiet.getSoLuong());
             sanPhamRepository.save(sanPham);
             
-            // Xóa sản phẩm khỏi giỏ hàng sau khi đặt hàng thành công
+            // Xóa khỏi giỏ hàng
             try {
-                gioHangService.xoaSanPhamKhoiGio(donHangRequest.getUserId(), itemRequest.getSanPhamId());
+                gioHangService.xoaSanPhamKhoiGio(donHangRequest.getUserId(), sanPham.getSanPhamId());
             } catch (Exception e) {
-                // Ignore error if product not in cart
+                // Ignore
             }
         }
-        
-        donHang.setTongTienHang(tongTienHang);
         donHang.setChiTietDonHangs(chiTietItems);
 
-        BigDecimal soTienGiam = BigDecimal.ZERO;
-        if (donHangRequest.getMaKhuyenMai() != null && !donHangRequest.getMaKhuyenMai().isEmpty()) {
-            KhuyenMai khuyenMai = khuyenMaiRepository.findByMaCode(donHangRequest.getMaKhuyenMai())
-                .orElseThrow(() -> new RuntimeException("Mã khuyến mãi không hợp lệ."));
-            
-            if (tongTienHang.compareTo(khuyenMai.getDonToiThieu()) >= 0) {
-                if (khuyenMai.getLoaiGiamGia() == KhuyenMai.LoaiGiamGia.PHAN_TRAM) {
-                    soTienGiam = tongTienHang.multiply(khuyenMai.getGiaTriGiam().divide(new BigDecimal(100)));
-                } else {
-                    soTienGiam = khuyenMai.getGiaTriGiam();
-                }
-            }
-            donHang.setKhuyenMai(khuyenMai);
-            
-            // Trừ số lượng mã khuyến mãi
-            khuyenMaiService.suDungMaKhuyenMai(donHangRequest.getMaKhuyenMai());
+        // 4. Trừ số lượng mã khuyến mãi
+        if (calculationResult.getKhuyenMai() != null) {
+            khuyenMaiService.suDungMaKhuyenMai(calculationResult.getKhuyenMai().getMaCode());
         }
-
-        donHang.setSoTienGiam(soTienGiam);
-        donHang.setTongThanhToan(tongTienHang.subtract(soTienGiam));
 
         return donHangRepository.save(donHang);
     }
     
     @Transactional
     public DonHang createGuestOrder(GuestOrderRequest request) {
-        // Kiểm tra phương thức thanh toán cho khách vãng lai
         if (request.getPhuongThucThanhToan() == DonHang.PhuongThucThanhToan.COD) {
             throw new RuntimeException("Khách vãng lai vui lòng thanh toán chuyển khoản (VNPAY/MOMO).");
         }
 
+        // 1. Tính toán đơn hàng
+        OrderCalculationResult calculationResult = orderCalculationService.calculateOrder(
+                request.getChiTietDonHangs(), 
+                request.getMaKhuyenMai(),
+                request.getTinhThanh(),
+                request.getQuanHuyen(),
+                request.getPhuongXa(),
+                request.getDiaChiGiaoHang()
+        );
+
+        // 2. Tạo đơn hàng
         DonHang donHang = new DonHang();
-        donHang.setNguoiDung(null); // Khách vãng lai
+        donHang.setNguoiDung(null);
         
-        // Lưu tên người nhận vào đầu địa chỉ giao hàng
-        String fullAddress = String.format("Người nhận: %s - %s", request.getHoTenNguoiNhan(), request.getDiaChiGiaoHang());
+        String fullAddress = String.format("Người nhận: %s - %s, %s, %s, %s", 
+            request.getHoTenNguoiNhan(), 
+            request.getDiaChiGiaoHang(),
+            request.getPhuongXa(),
+            request.getQuanHuyen(),
+            request.getTinhThanh());
         donHang.setDiaChiGiaoHang(fullAddress);
         
         donHang.setSoDienThoaiNhan(request.getSoDienThoaiNhan());
         donHang.setPhuongThucThanhToan(request.getPhuongThucThanhToan());
         donHang.setTrangThai(DonHang.TrangThaiDonHang.CHO_XU_LY);
 
-        BigDecimal tongTienHang = BigDecimal.ZERO;
-        List<ChiTietDonHang> chiTietItems = new ArrayList<>();
+        donHang.setTongTienHang(calculationResult.getTongTienHang());
+        donHang.setSoTienGiam(calculationResult.getSoTienGiam());
+        donHang.setPhiVanChuyen(calculationResult.getPhiVanChuyen());
+        donHang.setTongThanhToan(calculationResult.getTongThanhToan());
+        donHang.setKhuyenMai(calculationResult.getKhuyenMai());
 
-        for (ChiTietDonHangRequest itemRequest : request.getChiTietDonHangs()) {
-            SanPham sanPham = sanPhamRepository.findById(itemRequest.getSanPhamId())
-                    .orElseThrow(() -> new RuntimeException("Không tìm thấy sản phẩm với ID: " + itemRequest.getSanPhamId()));
-
-            if (sanPham.getSoLuongTonKho() < itemRequest.getSoLuong()) {
-                throw new RuntimeException("Sản phẩm '" + sanPham.getTenSanPham() + "' không đủ số lượng tồn kho.");
-            }
-
-            BigDecimal giaBan = Optional.ofNullable(sanPham.getGiaGiam()).orElse(sanPham.getGia());
-
-            ChiTietDonHang chiTiet = new ChiTietDonHang();
+        // 3. Lưu chi tiết và trừ tồn kho
+        List<ChiTietDonHang> chiTietItems = calculationResult.getChiTietDonHangs();
+        for (ChiTietDonHang chiTiet : chiTietItems) {
             chiTiet.setDonHang(donHang);
-            chiTiet.setSanPham(sanPham);
-            chiTiet.setSoLuong(itemRequest.getSoLuong());
-            chiTiet.setDonGia(giaBan);
-            chiTietItems.add(chiTiet);
-
-            tongTienHang = tongTienHang.add(giaBan.multiply(BigDecimal.valueOf(itemRequest.getSoLuong())));
-
-            sanPham.setSoLuongTonKho(sanPham.getSoLuongTonKho() - itemRequest.getSoLuong());
+            
+            SanPham sanPham = chiTiet.getSanPham();
+            sanPham.setSoLuongTonKho(sanPham.getSoLuongTonKho() - chiTiet.getSoLuong());
             sanPhamRepository.save(sanPham);
         }
-        
-        donHang.setTongTienHang(tongTienHang);
         donHang.setChiTietDonHangs(chiTietItems);
 
-        BigDecimal soTienGiam = BigDecimal.ZERO;
-        if (request.getMaKhuyenMai() != null && !request.getMaKhuyenMai().isEmpty()) {
-            KhuyenMai khuyenMai = khuyenMaiRepository.findByMaCode(request.getMaKhuyenMai())
-                .orElseThrow(() -> new RuntimeException("Mã khuyến mãi không hợp lệ."));
-            
-            if (tongTienHang.compareTo(khuyenMai.getDonToiThieu()) >= 0) {
-                if (khuyenMai.getLoaiGiamGia() == KhuyenMai.LoaiGiamGia.PHAN_TRAM) {
-                    soTienGiam = tongTienHang.multiply(khuyenMai.getGiaTriGiam().divide(new BigDecimal(100)));
-                } else {
-                    soTienGiam = khuyenMai.getGiaTriGiam();
-                }
-            }
-            donHang.setKhuyenMai(khuyenMai);
-            
-            // Trừ số lượng mã khuyến mãi
-            khuyenMaiService.suDungMaKhuyenMai(request.getMaKhuyenMai());
+        // 4. Trừ mã khuyến mãi
+        if (calculationResult.getKhuyenMai() != null) {
+            khuyenMaiService.suDungMaKhuyenMai(calculationResult.getKhuyenMai().getMaCode());
         }
-
-        donHang.setSoTienGiam(soTienGiam);
-        donHang.setTongThanhToan(tongTienHang.subtract(soTienGiam));
 
         return donHangRepository.save(donHang);
     }

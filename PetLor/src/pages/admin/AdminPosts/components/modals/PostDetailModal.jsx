@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   formatDate,
-  PostStatusBadge,
+  PostStatusBadge, // Đã fix theo yêu cầu: Dùng Component
   getImageUrl,
 } from "../../../components/utils";
 import useEscapeKey from "../../../../../hooks/useEscapeKey";
@@ -15,7 +15,7 @@ const PostDetailModal = ({ isOpen, onClose, post }) => {
 
   useEffect(() => {
     if (isOpen && post && post.anhBia) {
-      setImgSrc(getFullImageUrl(post.anhBia));
+      setImgSrc(getImageUrl(post.anhBia));
       setIsError(false);
     } else {
       setImgSrc("");
@@ -35,6 +35,12 @@ const PostDetailModal = ({ isOpen, onClose, post }) => {
       ? "https://via.placeholder.com/1200x800?text=No+Image"
       : imgSrc;
 
+  // Style constants
+  const labelClass =
+    "text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-1.5 block";
+  const valueBoxClass =
+    "w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-xl text-slate-700 font-medium";
+
   return (
     <AnimatePresence>
       {isOpen && post && (
@@ -42,107 +48,124 @@ const PostDetailModal = ({ isOpen, onClose, post }) => {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-md p-4 md:p-8"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm overflow-hidden p-4"
         >
           <motion.div
             initial={{ scale: 0.95, opacity: 0, y: 20 }}
             animate={{ scale: 1, opacity: 1, y: 0 }}
             exit={{ scale: 0.95, opacity: 0, y: 20 }}
-            className="w-full max-w-6xl h-[90vh] bg-white rounded-2xl shadow-2xl overflow-hidden flex flex-col font-body border border-white/10"
+            className="w-full max-w-5xl bg-white rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[95vh]"
           >
-            {/* --- PHẦN ẢNH BÌA (Đã sửa) --- */}
-            {/* Giữ chiều cao lớn để hiển thị rõ nội dung */}
-            <div className="relative h-96 lg:h-[500px] shrink-0 bg-gray-100">
-              <img
-                src={finalSrc}
-                onError={handleError}
-                // object-cover: Phủ kín khung, cắt phần thừa, KHÔNG méo, KHÔNG lặp
-                // Bỏ hoàn toàn các class hover/transition/scale
-                className="w-full h-full object-cover object-center"
-                alt={post.tieuDe}
-              />
-
-              {/* Gradient để làm nổi chữ */}
-              <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/40 to-transparent" />
-
-              {/* Nút đóng */}
-              <div className="absolute top-6 right-6 z-20">
-                <button
-                  onClick={onClose}
-                  className="bg-black/30 backdrop-blur-md border border-white/20 p-2.5 rounded-full text-white hover:bg-white hover:text-black transition-colors duration-200 shadow-lg"
-                >
-                  <span className="material-symbols-outlined text-xl">
-                    close
+            {/* --- HEADER --- */}
+            <div className="px-8 py-6 border-b border-slate-100 flex justify-between items-center bg-white sticky top-0 z-10 shrink-0">
+              <div className="flex items-center gap-4">
+                <div className="w-14 h-14 rounded-2xl bg-teal-50 flex items-center justify-center text-primary border border-teal-100/50">
+                  <span className="material-symbols-outlined text-3xl">
+                    article
                   </span>
-                </button>
+                </div>
+                <div>
+                  <h2 className="text-2xl font-extrabold text-slate-900 tracking-tight">
+                    Chi tiết Bài viết
+                  </h2>
+                  <p className="text-sm text-slate-500">
+                    Xem nội dung và thông tin bài đăng
+                  </p>
+                </div>
               </div>
+              <button
+                onClick={onClose}
+                className="text-slate-400 hover:text-slate-600 transition-colors p-2 hover:bg-slate-100 rounded-full"
+              >
+                <span className="material-symbols-outlined">close</span>
+              </button>
+            </div>
 
-              {/* Thông tin bài viết đè lên ảnh */}
-              <div className="absolute bottom-0 left-0 w-full p-8 md:p-12 z-10">
-                <div className="flex flex-wrap items-center gap-3 mb-4 text-white/80 text-sm font-medium tracking-wide uppercase">
-                  <span className="bg-primary/90 text-white px-3 py-1 rounded-md backdrop-blur-md shadow-sm">
+            {/* --- BODY --- */}
+            <div className="p-8 overflow-y-auto custom-scrollbar flex-1">
+              {/* Ảnh bìa */}
+              <div className="w-full h-64 md:h-80 rounded-2xl overflow-hidden mb-8 border border-slate-100 shadow-sm relative group">
+                <img
+                  src={finalSrc}
+                  onError={handleError}
+                  className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                  alt={post.tieuDe}
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
+                <div className="absolute bottom-6 left-6 right-6 text-white">
+                  <span className="bg-primary px-3 py-1 rounded-md text-xs font-bold uppercase tracking-wider mb-2 inline-block">
                     {post.tenDanhMuc || "General"}
                   </span>
-                  <span className="text-white/50">•</span>
-                  <span>{formatDate(post.ngayDang)}</span>
+                  <h1 className="text-2xl md:text-3xl font-bold leading-tight text-shadow-sm">
+                    {post.tieuDe}
+                  </h1>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                {/* Cột trái: Thông tin Meta */}
+                <div className="lg:col-span-1 space-y-6">
+                  <div className="p-5 bg-slate-50 rounded-2xl border border-slate-100 space-y-4">
+                    <div>
+                      <label className={labelClass}>Tác giả</label>
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full bg-white border border-slate-200 flex items-center justify-center text-slate-400">
+                          <span className="material-symbols-outlined">
+                            person
+                          </span>
+                        </div>
+                        <span className="font-bold text-slate-800">
+                          {post.tenTacGia || "Admin"}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="h-px bg-slate-200 w-full"></div>
+                    <div>
+                      <label className={labelClass}>Ngày đăng</label>
+                      <div className="text-slate-700 font-medium">
+                        {formatDate(post.ngayDang)}
+                      </div>
+                    </div>
+                    <div>
+                      <label className={labelClass}>Trạng thái</label>
+                      <div>
+                        <PostStatusBadge status={post.trangThai} />
+                      </div>
+                    </div>
+                    <div>
+                      <label className={labelClass}>Slug</label>
+                      <div className="text-xs text-slate-500 font-mono break-all">
+                        /{post.slug}
+                      </div>
+                    </div>
+                  </div>
                 </div>
 
-                <h2 className="text-3xl md:text-5xl lg:text-6xl font-bold text-white mb-4 leading-tight drop-shadow-lg font-display">
-                  {post.tieuDe}
-                </h2>
-
-                <div className="flex items-center gap-3 text-white/90 text-base">
-                  <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center backdrop-blur-md border border-white/30">
-                    <span className="material-symbols-outlined">person</span>
-                  </div>
-                  <div className="flex flex-col">
-                    <span className="text-xs text-white/70 font-light">
-                      Tác giả
+                {/* Cột phải: Nội dung bài viết */}
+                <div className="lg:col-span-2">
+                  <div className="flex items-center gap-2 mb-4">
+                    <span className="material-symbols-outlined text-primary">
+                      description
                     </span>
-                    <strong className="text-white">
-                      {post.tenTacGia || "Admin"}
-                    </strong>
+                    <h3 className="text-lg font-bold text-slate-900">
+                      Nội dung
+                    </h3>
+                  </div>
+                  <div className="prose prose-slate max-w-none p-6 bg-white border border-slate-100 rounded-2xl shadow-sm">
+                    <div dangerouslySetInnerHTML={{ __html: post.noiDung }} />
                   </div>
                 </div>
               </div>
             </div>
 
-            {/* --- PHẦN NỘI DUNG BÀI VIẾT --- */}
-            <div className="flex-1 overflow-y-auto bg-white p-8 md:p-12 custom-scrollbar">
-              <div className="max-w-4xl mx-auto">
-                {/* Meta bar */}
-                <div className="flex items-center justify-between border-b border-gray-100 pb-6 mb-8">
-                  <div className="flex items-center gap-4">
-                    {PostStatusBadge(post.trangThai)}
-                    <span className="text-gray-400 text-sm italic">
-                      /{post.slug}
-                    </span>
-                  </div>
-                  <div className="flex gap-3">
-                    <button
-                      className="w-10 h-10 rounded-full flex items-center justify-center bg-gray-50 text-gray-500 hover:bg-primary/10 hover:text-primary transition-all duration-200"
-                      title="Share"
-                    >
-                      <span className="material-symbols-outlined text-[20px]">
-                        share
-                      </span>
-                    </button>
-                    <button
-                      className="w-10 h-10 rounded-full flex items-center justify-center bg-gray-50 text-gray-500 hover:bg-primary/10 hover:text-primary transition-all duration-200"
-                      title="Bookmark"
-                    >
-                      <span className="material-symbols-outlined text-[20px]">
-                        bookmark_border
-                      </span>
-                    </button>
-                  </div>
-                </div>
-
-                {/* Nội dung HTML */}
-                <div className="prose prose-lg md:prose-xl prose-slate max-w-none text-gray-700 leading-relaxed first-letter:text-5xl first-letter:font-bold first-letter:text-primary first-letter:mr-3 first-letter:float-left">
-                  <div dangerouslySetInnerHTML={{ __html: post.noiDung }} />
-                </div>
-              </div>
+            {/* --- FOOTER --- */}
+            <div className="px-8 py-6 border-t border-slate-100 flex justify-end bg-slate-50/30 shrink-0">
+              <button
+                onClick={onClose}
+                className="px-8 py-2.5 rounded-xl text-sm font-bold text-slate-600 hover:bg-slate-200 transition-colors bg-white border border-slate-200 shadow-sm"
+              >
+                Đóng
+              </button>
             </div>
           </motion.div>
         </motion.div>

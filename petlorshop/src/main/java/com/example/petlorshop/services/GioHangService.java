@@ -13,6 +13,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -112,7 +113,9 @@ public class GioHangService {
     }
 
     private GioHangResponse mapToGioHangResponse(GioHang gioHang) {
+        // Sắp xếp danh sách chi tiết giỏ hàng theo ngày thêm mới nhất
         List<CartItemResponse> cartItems = gioHang.getChiTietGioHangList().stream()
+                .sorted(Comparator.comparing(ChiTietGioHang::getNgayThem, Comparator.nullsLast(Comparator.reverseOrder())))
                 .map(this::mapToCartItemResponse)
                 .collect(Collectors.toList());
 
@@ -143,7 +146,8 @@ public class GioHangService {
                 sanPham.getHinhAnh(),
                 giaBan, // Sử dụng giá bán thực tế
                 chiTiet.getSoLuong(),
-                thanhTien
+                thanhTien,
+                chiTiet.getNgayThem() // Thêm ngày thêm vào response
         );
     }
 }

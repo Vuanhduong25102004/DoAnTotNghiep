@@ -12,14 +12,14 @@ const VaccinationFormModal = ({
   const isEdit = !!initialData;
 
   const [formData, setFormData] = useState({
-    thuCungId: "", // Trong thực tế, đây nên là Dropdown chọn Pet hoặc nhập ID Pet
-    tenThuCung: "", // Dùng để hiển thị hoặc nhập nếu backend tự map
+    thuCungId: "",
+    tenThuCung: "",
     tenVacXin: "",
     ngayTiem: "",
     ngayTaiChung: "",
     nhanVienId: "",
     ghiChu: "",
-    lichHenId: "", // Optional
+    lichHenId: "",
   });
 
   useEffect(() => {
@@ -40,15 +40,14 @@ const VaccinationFormModal = ({
           lichHenId: initialData.lichHenId || "",
         });
       } else {
-        // Default Create
         const today = new Date().toISOString().split("T")[0];
         setFormData({
           thuCungId: "",
           tenThuCung: "",
           tenVacXin: "",
           ngayTiem: today,
-          ngayTaiChung: "", // Để trống để user tự tính hoặc nhập
-          nhanVienId: "", // Có thể set default user đang login
+          ngayTaiChung: "",
+          nhanVienId: "",
           ghiChu: "",
           lichHenId: "",
         });
@@ -68,9 +67,14 @@ const VaccinationFormModal = ({
       alert("Vui lòng điền các thông tin bắt buộc!");
       return;
     }
-    // Logic gửi đi
     onSubmit(formData);
   };
+
+  // Shared Styles (Design System)
+  const inputClass =
+    "w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-xl text-slate-700 font-medium focus:ring-0 transition-all focus:border-primary outline-none placeholder:text-slate-400";
+  const labelClass =
+    "text-[11px] font-bold text-slate-400 uppercase tracking-widest ml-1 mb-1.5 block";
 
   return (
     <AnimatePresence>
@@ -79,87 +83,84 @@ const VaccinationFormModal = ({
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm overflow-hidden"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm overflow-hidden p-4"
         >
           <motion.div
             initial={{ scale: 0.95, opacity: 0, y: 20 }}
             animate={{ scale: 1, opacity: 1, y: 0 }}
             exit={{ scale: 0.95, opacity: 0, y: 20 }}
-            className="w-full max-w-4xl bg-white rounded-2xl shadow-modal flex flex-col max-h-[95vh] font-body mx-auto my-8"
+            className="w-full max-w-4xl bg-white rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[95vh]"
           >
-            {/* Header */}
-            <div className="px-10 py-6 border-b border-gray-100 flex justify-between items-center bg-white rounded-t-2xl">
-              <div className="flex items-center gap-5">
-                <div className="w-12 h-12 rounded-full bg-blue-50 border border-blue-100 flex items-center justify-center text-primary">
-                  <span className="material-symbols-outlined text-[24px]">
+            {/* --- HEADER --- */}
+            <div className="px-8 py-6 border-b border-slate-100 flex justify-between items-center bg-white sticky top-0 z-10 shrink-0">
+              <div className="flex items-center gap-4">
+                <div className="w-14 h-14 rounded-2xl bg-teal-50 flex items-center justify-center text-primary border border-teal-100/50">
+                  <span className="material-symbols-outlined text-3xl">
                     {isEdit ? "edit_note" : "vaccines"}
                   </span>
                 </div>
                 <div>
-                  <h1 className="text-xl font-semibold text-gray-900">
+                  <h2 className="text-2xl font-extrabold text-slate-900 tracking-tight">
+                    {isEdit ? "Cập nhật Hồ sơ Tiêm" : "Ghi Hồ sơ Tiêm Chủng"}
+                  </h2>
+                  <p className="text-sm text-slate-500">
                     {isEdit
-                      ? `Cập nhật Hồ sơ Tiêm #${initialData.tiemChungId}`
-                      : "Ghi Hồ sơ Tiêm chủng mới"}
-                  </h1>
-                  <p className="text-sm text-gray-500 mt-1">
-                    Ghi lại thông tin tiêm phòng và lịch tái chủng
+                      ? `Chỉnh sửa thông tin tiêm chủng #${initialData.tiemChungId}`
+                      : "Ghi lại thông tin tiêm phòng và lịch tái chủng"}
                   </p>
                 </div>
               </div>
               <button
                 onClick={onClose}
-                className="w-10 h-10 rounded-full flex items-center justify-center hover:bg-gray-100 transition-all"
+                className="text-slate-400 hover:text-slate-600 transition-colors p-2 hover:bg-slate-100 rounded-full"
               >
-                <span className="material-symbols-outlined text-gray-500">
-                  close
-                </span>
+                <span className="material-symbols-outlined">close</span>
               </button>
             </div>
 
-            {/* Body */}
-            <div className="flex-1 p-8 overflow-y-auto bg-white">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
-                {/* Cột Trái: Thông tin Thú cưng & Vắc xin */}
-                <div className="space-y-6">
-                  <div className="bg-blue-50 p-4 rounded-lg border border-blue-100 mb-4">
-                    <h3 className="font-semibold text-blue-800 mb-3 flex items-center gap-2">
-                      <span className="material-symbols-outlined text-sm">
-                        pets
-                      </span>{" "}
-                      Thú cưng
+            {/* --- BODY --- */}
+            <div className="p-8 overflow-y-auto custom-scrollbar flex-1">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-10 gap-y-8">
+                {/* CỘT TRÁI: Thông tin cơ bản */}
+                <section className="space-y-6">
+                  <div className="flex items-center gap-3 mb-2">
+                    <span className="material-symbols-outlined text-primary bg-teal-50 p-1.5 rounded-lg text-xl">
+                      pets
+                    </span>
+                    <h3 className="text-lg font-bold text-slate-900">
+                      Thông tin Cơ bản
                     </h3>
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="input-group">
-                        <label className="text-xs font-medium text-gray-600 block mb-1">
-                          ID Thú cưng
-                        </label>
-                        <input
-                          type="number"
-                          name="thuCungId"
-                          value={formData.thuCungId}
-                          onChange={handleChange}
-                          className="form-control w-full border border-gray-300 rounded-md p-2 text-sm"
-                          placeholder="Nhập ID"
-                        />
-                      </div>
-                      <div className="input-group">
-                        <label className="text-xs font-medium text-gray-600 block mb-1">
-                          Tên Thú cưng <span className="text-red-500">*</span>
-                        </label>
-                        <input
-                          type="text"
-                          name="tenThuCung"
-                          value={formData.tenThuCung}
-                          onChange={handleChange}
-                          className="form-control w-full border border-gray-300 rounded-md p-2 text-sm"
-                          placeholder="Tên bé"
-                        />
-                      </div>
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-4">
+                    <div className="col-span-1">
+                      <label className={labelClass}>ID Thú cưng</label>
+                      <input
+                        type="number"
+                        name="thuCungId"
+                        value={formData.thuCungId}
+                        onChange={handleChange}
+                        className={inputClass}
+                        placeholder="ID"
+                      />
+                    </div>
+                    <div className="col-span-2">
+                      <label className={labelClass}>
+                        Tên Thú cưng <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        name="tenThuCung"
+                        value={formData.tenThuCung}
+                        onChange={handleChange}
+                        className={inputClass}
+                        placeholder="Tên bé"
+                      />
                     </div>
                   </div>
 
-                  <div className="input-group">
-                    <label className="form-label block text-sm font-medium mb-1">
+                  <div>
+                    <label className={labelClass}>
                       Tên Vắc xin <span className="text-red-500">*</span>
                     </label>
                     <input
@@ -167,39 +168,54 @@ const VaccinationFormModal = ({
                       name="tenVacXin"
                       value={formData.tenVacXin}
                       onChange={handleChange}
-                      className="form-control w-full border border-gray-300 rounded-lg p-2.5"
+                      className={inputClass}
                       placeholder="VD: Vắc xin 4 bệnh (Mèo)"
                     />
                   </div>
-                  <div className="input-group">
-                    <label className="form-label block text-sm font-medium mb-1">
-                      Bác sĩ thực hiện
-                    </label>
-                    <select
-                      name="nhanVienId"
-                      value={formData.nhanVienId}
-                      onChange={handleChange}
-                      className="form-control w-full border border-gray-300 rounded-lg p-2.5"
-                    >
-                      <option value="">-- Chọn bác sĩ --</option>
-                      {staffList &&
-                        staffList.map((staff) => (
-                          <option
-                            key={staff.nhanVienId}
-                            value={staff.nhanVienId}
-                          >
-                            {staff.hoTen}
-                          </option>
-                        ))}
-                    </select>
-                  </div>
-                </div>
 
-                {/* Cột Phải: Thời gian & Ghi chú */}
-                <div className="space-y-6">
+                  <div>
+                    <label className={labelClass}>Bác sĩ thực hiện</label>
+                    <div className="relative">
+                      <select
+                        name="nhanVienId"
+                        value={formData.nhanVienId}
+                        onChange={handleChange}
+                        className={`${inputClass} appearance-none`}
+                      >
+                        <option value="">-- Chọn bác sĩ --</option>
+                        {staffList &&
+                          staffList.map((staff) => (
+                            <option
+                              key={staff.nhanVienId}
+                              value={staff.nhanVienId}
+                            >
+                              {staff.hoTen}
+                            </option>
+                          ))}
+                      </select>
+                      <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
+                        <span className="material-symbols-outlined text-xl">
+                          expand_more
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </section>
+
+                {/* CỘT PHẢI: Lịch trình & Ghi chú */}
+                <section className="space-y-6">
+                  <div className="flex items-center gap-3 mb-2">
+                    <span className="material-symbols-outlined text-orange-500 bg-orange-50 p-1.5 rounded-lg text-xl">
+                      calendar_month
+                    </span>
+                    <h3 className="text-lg font-bold text-slate-900">
+                      Lịch trình & Ghi chú
+                    </h3>
+                  </div>
+
                   <div className="grid grid-cols-2 gap-4">
-                    <div className="input-group">
-                      <label className="form-label block text-sm font-medium mb-1">
+                    <div>
+                      <label className={labelClass}>
                         Ngày tiêm <span className="text-red-500">*</span>
                       </label>
                       <input
@@ -207,71 +223,61 @@ const VaccinationFormModal = ({
                         name="ngayTiem"
                         value={formData.ngayTiem}
                         onChange={handleChange}
-                        className="form-control w-full border border-gray-300 rounded-lg p-2.5"
+                        className={inputClass}
                       />
                     </div>
-                    <div className="input-group">
-                      <label className="form-label block text-sm font-medium mb-1">
-                        Ngày tái chủng
-                      </label>
+                    <div>
+                      <label className={labelClass}>Ngày tái chủng</label>
                       <input
                         type="date"
                         name="ngayTaiChung"
                         value={formData.ngayTaiChung}
                         onChange={handleChange}
-                        className="form-control w-full border border-gray-300 rounded-lg p-2.5 focus:ring-amber-500 focus:border-amber-500"
+                        className={inputClass}
                       />
-                      <p className="text-xs text-gray-400 mt-1">
-                        Để trống nếu không cần
-                      </p>
                     </div>
                   </div>
 
-                  <div className="input-group">
-                    <label className="form-label block text-sm font-medium mb-1">
-                      Mã Lịch hẹn (nếu có)
-                    </label>
+                  <div>
+                    <label className={labelClass}>Mã Lịch hẹn (Nếu có)</label>
                     <input
                       type="number"
                       name="lichHenId"
                       value={formData.lichHenId}
                       onChange={handleChange}
-                      className="form-control w-full border border-gray-300 rounded-lg p-2.5"
-                      placeholder="Nhập ID lịch hẹn"
+                      className={inputClass}
+                      placeholder="Nhập ID lịch hẹn gốc"
                     />
                   </div>
 
-                  <div className="input-group">
-                    <label className="form-label block text-sm font-medium mb-1">
-                      Ghi chú / Phản ứng
-                    </label>
+                  <div>
+                    <label className={labelClass}>Ghi chú / Phản ứng</label>
                     <textarea
                       name="ghiChu"
                       value={formData.ghiChu}
                       onChange={handleChange}
-                      className="form-control w-full border border-gray-300 rounded-lg p-2.5 h-24"
-                      placeholder="Ghi chú sức khỏe sau tiêm..."
+                      className={`${inputClass} resize-none`}
+                      rows="3"
+                      placeholder="Ghi chú về sức khỏe sau tiêm..."
                     />
                   </div>
-                </div>
+                </section>
               </div>
             </div>
 
-            {/* Footer */}
-            <div className="px-10 py-6 bg-gray-50 border-t border-gray-100 flex justify-end gap-4 rounded-b-2xl">
+            {/* --- FOOTER --- */}
+            <div className="p-8 border-t border-slate-100 flex justify-end items-center gap-6 bg-slate-50/30 shrink-0">
               <button
                 onClick={onClose}
-                className="px-6 py-2.5 rounded-lg text-sm font-medium text-gray-700 hover:bg-white border border-transparent hover:border-gray-200 transition-all"
+                className="text-slate-500 hover:text-slate-700 font-semibold transition-colors"
               >
                 Hủy bỏ
               </button>
               <button
                 onClick={handleSubmit}
-                className="px-8 py-2.5 rounded-lg text-sm font-medium text-white bg-primary hover:bg-green-600 shadow-lg flex items-center gap-2 transition-all"
+                className="flex items-center gap-2 px-10 py-3.5 bg-primary hover:bg-primary-dark text-white font-bold rounded-xl shadow-lg shadow-teal-500/25 transition-all transform hover:-translate-y-0.5 active:scale-95"
               >
-                <span className="material-symbols-outlined text-[18px]">
-                  save
-                </span>
+                <span className="material-symbols-outlined text-xl">save</span>
                 Lưu hồ sơ
               </button>
             </div>

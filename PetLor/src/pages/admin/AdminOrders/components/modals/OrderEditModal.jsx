@@ -11,6 +11,14 @@ const OrderEditModal = ({
   setFormData,
   onSave,
 }) => {
+  useEscapeKey(onClose, isOpen);
+
+  // Shared Styles
+  const inputClass =
+    "w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-xl text-slate-700 font-medium focus:ring-0 transition-all focus:border-primary outline-none";
+  const labelClass =
+    "text-[11px] font-bold text-slate-400 uppercase tracking-widest ml-1 mb-1.5 block";
+
   return (
     <AnimatePresence>
       {isOpen && editingOrder && (
@@ -18,94 +26,111 @@ const OrderEditModal = ({
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm overflow-hidden"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm overflow-hidden p-4"
         >
           <motion.div
             initial={{ scale: 0.95, opacity: 0, y: 20 }}
             animate={{ scale: 1, opacity: 1, y: 0 }}
             exit={{ scale: 0.95, opacity: 0, y: 20 }}
-            transition={{ duration: 0.3, ease: "easeOut" }}
-            className="w-full max-w-3xl bg-white rounded-2xl shadow-modal flex flex-col max-h-[95vh] relative overflow-hidden font-body mx-auto my-8"
+            className="w-full max-w-2xl bg-white rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
           >
-            {/* Header */}
-            <div className="px-10 py-6 border-b border-border-light/50 flex justify-between items-center bg-white sticky top-0 z-20 backdrop-blur-sm bg-white/95">
-              <div className="flex items-center gap-5">
-                <div className="w-12 h-12 rounded-full bg-surface border border-border-light flex items-center justify-center text-primary">
-                  <span className="material-symbols-outlined text-[24px]">
+            {/* --- HEADER --- */}
+            <div className="px-8 py-6 border-b border-slate-100 flex justify-between items-center bg-white sticky top-0 z-10">
+              <div className="flex items-center gap-4">
+                <div className="w-14 h-14 rounded-2xl bg-teal-50 flex items-center justify-center text-primary border border-teal-100/50">
+                  <span className="material-symbols-outlined text-3xl">
                     edit_note
                   </span>
                 </div>
                 <div>
-                  <h1 className="text-xl font-semibold text-text-heading tracking-tight font-display">
-                    Cập nhật Đơn hàng #{editingOrder.donHangId}
-                  </h1>
-                  <p className="text-sm text-text-body/70 mt-1 font-light">
-                    Chỉnh sửa trạng thái và địa chỉ giao hàng
+                  <h2 className="text-2xl font-extrabold text-slate-900 tracking-tight">
+                    Cập nhật Đơn hàng
+                  </h2>
+                  <p className="text-sm text-slate-500">
+                    Chỉnh sửa trạng thái và địa chỉ giao hàng cho{" "}
+                    <span className="font-semibold text-primary">
+                      #{editingOrder.donHangId}
+                    </span>
                   </p>
                 </div>
               </div>
               <button
                 onClick={onClose}
-                className="w-10 h-10 rounded-full flex items-center justify-center text-secondary hover:text-text-heading hover:bg-surface transition-all duration-300"
+                className="text-slate-400 hover:text-slate-600 transition-colors p-2 hover:bg-slate-100 rounded-full"
               >
-                <span className="material-symbols-outlined font-light">
-                  close
-                </span>
+                <span className="material-symbols-outlined">close</span>
               </button>
             </div>
 
-            {/* Body */}
-            <div className="flex-1 p-8 md:p-10 bg-white overflow-y-auto">
-              <div className="space-y-8">
-                <div className="input-group">
-                  <label className="form-label block text-sm font-medium text-text-heading mb-2">
-                    Trạng thái đơn hàng
-                  </label>
-                  <select
-                    className="form-control w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-primary focus:border-primary"
-                    value={formData.trangThai}
-                    onChange={(e) =>
-                      setFormData({ ...formData, trangThai: e.target.value })
-                    }
-                  >
-                    {ORDER_STATUSES.map((status) => (
-                      <option key={status} value={status}>
-                        {status}
-                      </option>
-                    ))}
-                  </select>
+            {/* --- BODY --- */}
+            <div className="p-8 space-y-8 overflow-y-auto custom-scrollbar flex-1">
+              <div className="space-y-6">
+                {/* Trạng thái */}
+                <div>
+                  <label className={labelClass}>Trạng thái đơn hàng</label>
+                  <div className="relative">
+                    <select
+                      className={`${inputClass} appearance-none`}
+                      value={formData.trangThai}
+                      onChange={(e) =>
+                        setFormData({ ...formData, trangThai: e.target.value })
+                      }
+                    >
+                      {ORDER_STATUSES.map((status) => (
+                        <option key={status} value={status}>
+                          {status}
+                        </option>
+                      ))}
+                    </select>
+                    {/* Mũi tên tùy chỉnh cho đẹp nếu muốn, hoặc dùng default */}
+                    <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
+                      <span className="material-symbols-outlined text-xl">
+                        expand_more
+                      </span>
+                    </div>
+                  </div>
                 </div>
-                <div className="input-group">
-                  <label className="form-label block text-sm font-medium text-text-heading mb-2">
-                    Địa chỉ giao hàng
-                  </label>
+
+                {/* Địa chỉ */}
+                <div>
+                  <label className={labelClass}>Địa chỉ giao hàng</label>
                   <textarea
-                    rows="3"
-                    className="form-control w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-primary focus:border-primary"
+                    rows="4"
+                    className={`${inputClass} resize-none`}
                     value={formData.diaChi}
                     onChange={(e) =>
                       setFormData({ ...formData, diaChi: e.target.value })
                     }
+                    placeholder="Nhập địa chỉ giao hàng mới..."
                   ></textarea>
                 </div>
               </div>
+
+              {/* Tips / Note nhỏ */}
+              <div className="flex items-start gap-3 p-4 bg-orange-50/50 rounded-xl border border-orange-100">
+                <span className="material-symbols-outlined text-orange-400 text-xl mt-0.5">
+                  warning
+                </span>
+                <p className="text-sm text-slate-600 leading-relaxed">
+                  Lưu ý: Việc thay đổi trạng thái đơn hàng có thể gửi thông báo
+                  tự động đến khách hàng. Hãy kiểm tra kỹ trước khi lưu.
+                </p>
+              </div>
             </div>
 
-            {/* Footer */}
-            <div className="px-10 py-6 bg-white border-t border-border-light/50 flex justify-end gap-4 sticky bottom-0 z-20">
+            {/* --- FOOTER --- */}
+            <div className="p-8 border-t border-slate-100 flex justify-end items-center gap-6 bg-slate-50/30 shrink-0">
               <button
                 onClick={onClose}
-                className="px-6 py-2.5 rounded-lg text-sm font-medium text-text-body hover:bg-surface hover:text-text-heading transition-colors border border-transparent hover:border-border-light"
+                className="text-slate-500 hover:text-slate-700 font-semibold transition-colors"
               >
                 Hủy bỏ
               </button>
               <button
                 onClick={onSave}
-                className="px-8 py-2.5 rounded-lg text-sm font-medium text-white bg-primary hover:bg-primary-hover shadow-lg shadow-primary/20 hover:shadow-primary/30 transition-all duration-200 transform hover:-translate-y-0.5 active:translate-y-0 flex items-center gap-2 tracking-wide"
+                className="flex items-center gap-2 px-10 py-3.5 bg-primary hover:bg-primary-dark text-white font-bold rounded-xl shadow-lg shadow-teal-500/25 transition-all transform hover:-translate-y-0.5 active:scale-95"
               >
-                <span className="material-symbols-outlined text-[18px]">
-                  save
-                </span>
+                <span className="material-symbols-outlined text-xl">save</span>
                 Lưu thay đổi
               </button>
             </div>

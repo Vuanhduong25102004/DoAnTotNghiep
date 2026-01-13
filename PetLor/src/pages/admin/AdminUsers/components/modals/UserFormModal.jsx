@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import useEscapeKey from "../../../../../hooks/useEscapeKey";
 import { motion, AnimatePresence } from "framer-motion";
+import { getImageUrl } from "../../../components/utils"; // Giả sử bạn có util này
 
 const UserFormModal = ({
   isOpen,
@@ -32,7 +33,7 @@ const UserFormModal = ({
   // Reset form khi mở modal
   useEffect(() => {
     if (isOpen) {
-      // Hợp nhất dữ liệu mặc định với dữ liệu ban đầu (nếu có)
+      // Hợp nhất dữ liệu
       const newFormData = { ...defaultFormState, ...(initialData || {}) };
       newFormData.password = ""; // Luôn xóa mật khẩu khi mở modal
       setFormData(newFormData);
@@ -40,14 +41,13 @@ const UserFormModal = ({
       // Cập nhật ảnh đại diện và loại tài khoản
       setPreviewAvatar(
         initialData?.anhDaiDien
-          ? `http://localhost:8080/uploads/${initialData.anhDaiDien}`
+          ? `http://localhost:8080/uploads/${initialData.anhDaiDien}` // Hoặc dùng getImageUrl
           : ""
       );
       setCreationType(
         initialData?.role && initialData.role !== "USER" ? "EMPLOYEE" : "USER"
       );
 
-      // Reset file đã chọn
       setAvatarFile(null);
     }
   }, [isOpen, initialData]);
@@ -57,7 +57,7 @@ const UserFormModal = ({
     setCreationType(type);
     setFormData((prev) => ({
       ...prev,
-      role: type === "USER" ? "USER" : "STAFF", // Reset role mặc định khi chuyển tab
+      role: type === "USER" ? "USER" : "STAFF",
     }));
   };
 
@@ -75,17 +75,14 @@ const UserFormModal = ({
   };
 
   const handleSubmit = () => {
-    // 1. Chuẩn bị dữ liệu thô
     let submitData = { ...formData };
 
-    // Logic xóa mật khẩu nếu để trống khi chỉnh sửa
     if (isEdit) {
       if (!submitData.password || submitData.password.trim() === "") {
         delete submitData.password;
       }
     }
 
-    // Logic xóa các trường chuyên môn nếu là USER (Create mode)
     if (!isEdit && creationType === "USER") {
       submitData.role = "USER";
       delete submitData.chucVu;
@@ -93,10 +90,14 @@ const UserFormModal = ({
       delete submitData.kinhNghiem;
     }
 
-    // 2. CHỈ GỬI DỮ LIỆU THÔ lên cho file cha xử lý
-    // Không tạo FormData ở đây nữa
     onSubmit(submitData, avatarFile);
   };
+
+  // Shared Styles (Design System)
+  const inputClass =
+    "w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-xl text-slate-700 font-medium focus:ring-0 transition-all focus:border-primary outline-none placeholder:text-slate-400";
+  const labelClass =
+    "text-[11px] font-bold text-slate-400 uppercase tracking-widest ml-1 mb-1.5 block";
 
   return (
     <AnimatePresence>
@@ -105,64 +106,62 @@ const UserFormModal = ({
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm overflow-hidden"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm overflow-hidden p-4"
         >
           <motion.div
             initial={{ scale: 0.95, opacity: 0, y: 20 }}
             animate={{ scale: 1, opacity: 1, y: 0 }}
             exit={{ scale: 0.95, opacity: 0, y: 20 }}
-            className="w-full max-w-4xl bg-white rounded-2xl shadow-modal flex flex-col max-h-[95vh] relative overflow-hidden mx-auto my-8"
+            className="w-full max-w-4xl bg-white rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[95vh]"
           >
-            {/* Header */}
-            <div className="px-10 py-6 border-b border-gray-100 flex justify-between items-center bg-white sticky top-0 z-20">
-              <div className="flex items-center gap-5">
-                <div className="w-12 h-12 rounded-full bg-green-50 border border-green-100 flex items-center justify-center text-primary">
-                  <span className="material-symbols-outlined text-[24px]">
+            {/* --- HEADER --- */}
+            <div className="px-8 py-6 border-b border-slate-100 flex justify-between items-center bg-white sticky top-0 z-10 shrink-0">
+              <div className="flex items-center gap-4">
+                <div className="w-14 h-14 rounded-2xl bg-teal-50 flex items-center justify-center text-primary border border-teal-100/50">
+                  <span className="material-symbols-outlined text-3xl">
                     {isEdit ? "manage_accounts" : "person_add"}
                   </span>
                 </div>
                 <div>
-                  <h1 className="text-xl font-semibold text-gray-900">
+                  <h2 className="text-2xl font-extrabold text-slate-900 tracking-tight">
+                    {isEdit ? "Cập nhật Người dùng" : "Thêm mới Tài khoản"}
+                  </h2>
+                  <p className="text-sm text-slate-500">
                     {isEdit
-                      ? `Cập nhật Người dùng #${initialData.userId}`
-                      : "Thêm mới Tài khoản"}
-                  </h1>
-                  <p className="text-sm text-gray-500 mt-1">
-                    {isEdit
-                      ? "Chỉnh sửa thông tin chi tiết"
-                      : "Tạo tài khoản khách hàng hoặc nhân viên"}
+                      ? `Chỉnh sửa thông tin cho ID #${initialData.userId}`
+                      : "Tạo tài khoản khách hàng hoặc nhân viên mới"}
                   </p>
                 </div>
               </div>
               <button
                 onClick={onClose}
-                className="w-10 h-10 rounded-full flex items-center justify-center text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+                className="text-slate-400 hover:text-slate-600 transition-colors p-2 hover:bg-slate-100 rounded-full"
               >
                 <span className="material-symbols-outlined">close</span>
               </button>
             </div>
 
-            {/* Body */}
-            <div className="flex-1 p-10 bg-white overflow-y-auto">
+            {/* --- BODY --- */}
+            <div className="flex-1 p-8 overflow-y-auto custom-scrollbar">
               <div className="max-w-3xl mx-auto space-y-8">
                 {/* Switcher (Chỉ hiện khi Create) */}
                 {!isEdit && (
-                  <div className="flex bg-gray-100 p-1 rounded-lg w-full max-w-md mx-auto">
+                  <div className="flex bg-slate-100 p-1.5 rounded-xl w-full max-w-md mx-auto">
                     <button
-                      className={`flex-1 py-2 text-sm font-medium rounded-md transition-all ${
+                      className={`flex-1 py-2.5 text-sm font-bold rounded-lg transition-all ${
                         creationType === "USER"
                           ? "bg-white text-primary shadow-sm"
-                          : "text-gray-500 hover:text-gray-700"
+                          : "text-slate-500 hover:text-slate-700"
                       }`}
                       onClick={() => handleTypeChange("USER")}
                     >
                       Khách hàng
                     </button>
                     <button
-                      className={`flex-1 py-2 text-sm font-medium rounded-md transition-all ${
+                      className={`flex-1 py-2.5 text-sm font-bold rounded-lg transition-all ${
                         creationType === "EMPLOYEE"
                           ? "bg-white text-primary shadow-sm"
-                          : "text-gray-500 hover:text-gray-700"
+                          : "text-slate-500 hover:text-slate-700"
                       }`}
                       onClick={() => handleTypeChange("EMPLOYEE")}
                     >
@@ -174,14 +173,21 @@ const UserFormModal = ({
                 {/* Avatar Upload */}
                 <div className="flex justify-center">
                   <div className="relative group">
-                    <img
-                      src={
-                        previewAvatar || "https://placehold.co/100x100?text=+"
-                      }
-                      alt="Avatar Preview"
-                      className="w-24 h-24 rounded-full object-cover border-4 border-gray-50 shadow-sm"
-                    />
-                    <label className="absolute bottom-0 right-0 w-8 h-8 bg-white rounded-full shadow-md border border-gray-200 flex items-center justify-center cursor-pointer hover:bg-gray-50 text-primary">
+                    <div className="w-28 h-28 rounded-full border-4 border-slate-50 shadow-md overflow-hidden bg-slate-100">
+                      <img
+                        src={
+                          previewAvatar ||
+                          "https://placehold.co/150x150?text=Avatar"
+                        }
+                        alt="Avatar Preview"
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          e.target.src =
+                            "https://placehold.co/150x150?text=Avatar";
+                        }}
+                      />
+                    </div>
+                    <label className="absolute bottom-1 right-1 w-9 h-9 bg-primary text-white rounded-full shadow-lg border-2 border-white flex items-center justify-center cursor-pointer hover:bg-primary-dark transition-colors">
                       <span className="material-symbols-outlined text-sm">
                         upload
                       </span>
@@ -196,24 +202,24 @@ const UserFormModal = ({
 
                 {/* Common Fields */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
-                  <div className="input-group">
-                    <label className="form-label">
+                  <div>
+                    <label className={labelClass}>
                       Họ và tên <span className="text-red-500">*</span>
                     </label>
                     <input
-                      className="form-control"
+                      className={inputClass}
                       name="hoTen"
                       value={formData.hoTen}
                       onChange={handleChange}
                       placeholder="Nguyễn Văn A"
                     />
                   </div>
-                  <div className="input-group">
-                    <label className="form-label">
+                  <div>
+                    <label className={labelClass}>
                       Email <span className="text-red-500">*</span>
                     </label>
                     <input
-                      className="form-control"
+                      className={inputClass}
                       type="email"
                       name="email"
                       value={formData.email}
@@ -221,17 +227,19 @@ const UserFormModal = ({
                       placeholder="example@email.com"
                     />
                   </div>
-                  <div className="input-group">
-                    <label className="form-label">
+                  <div>
+                    <label className={labelClass}>
                       Mật khẩu{" "}
                       {isEdit ? (
-                        "(Bỏ trống nếu không đổi)"
+                        <span className="text-slate-400 normal-case font-normal tracking-normal">
+                          (Bỏ trống nếu không đổi)
+                        </span>
                       ) : (
                         <span className="text-red-500">*</span>
                       )}
                     </label>
                     <input
-                      className="form-control"
+                      className={inputClass}
                       type="password"
                       name="password"
                       value={formData.password}
@@ -239,35 +247,43 @@ const UserFormModal = ({
                       placeholder="••••••"
                     />
                   </div>
-                  <div className="input-group">
-                    <label className="form-label">Số điện thoại</label>
+                  <div>
+                    <label className={labelClass}>Số điện thoại</label>
                     <input
-                      className="form-control"
+                      className={inputClass}
                       name="soDienThoai"
                       value={formData.soDienThoai}
                       onChange={handleChange}
+                      placeholder="09xx xxx xxx"
                     />
                   </div>
-                  <div className="input-group md:col-span-2">
-                    <label className="form-label">Địa chỉ</label>
+                  <div className="md:col-span-2">
+                    <label className={labelClass}>Địa chỉ</label>
                     <input
-                      className="form-control"
+                      className={inputClass}
                       name="diaChi"
                       value={formData.diaChi}
                       onChange={handleChange}
+                      placeholder="Nhập địa chỉ..."
                     />
                   </div>
 
-                  {/* Employee Specific Fields */}
+                  {/* Employee Specific Fields - Giữ nguyên logic hiển thị */}
                   {creationType === "EMPLOYEE" && (
-                    <div className="md:col-span-2 bg-gray-50 p-6 rounded-xl border border-gray-200 mt-2 grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div className="md:col-span-2 text-sm font-semibold text-gray-700 uppercase tracking-wide mb-2">
-                        Thông tin chuyên môn
+                    <div className="md:col-span-2 bg-slate-50/80 p-6 rounded-2xl border border-slate-100 mt-2 grid grid-cols-1 md:grid-cols-2 gap-6 relative">
+                      <div className="md:col-span-2 flex items-center gap-2 mb-1">
+                        <span className="material-symbols-outlined text-primary">
+                          badge
+                        </span>
+                        <span className="text-sm font-bold text-slate-800 uppercase tracking-wide">
+                          Thông tin chuyên môn
+                        </span>
                       </div>
-                      <div className="input-group">
-                        <label className="form-label">Vai trò hệ thống</label>
+
+                      <div>
+                        <label className={labelClass}>Vai trò hệ thống</label>
                         <select
-                          className="form-control"
+                          className={`${inputClass} bg-white`}
                           name="role"
                           value={formData.role}
                           onChange={handleChange}
@@ -278,30 +294,30 @@ const UserFormModal = ({
                           <option value="ADMIN">Quản trị</option>
                         </select>
                       </div>
-                      <div className="input-group">
-                        <label className="form-label">Chức vụ</label>
+                      <div>
+                        <label className={labelClass}>Chức vụ</label>
                         <input
-                          className="form-control"
+                          className={`${inputClass} bg-white`}
                           name="chucVu"
                           value={formData.chucVu}
                           onChange={handleChange}
                           placeholder="VD: Trưởng phòng"
                         />
                       </div>
-                      <div className="input-group">
-                        <label className="form-label">Chuyên khoa</label>
+                      <div>
+                        <label className={labelClass}>Chuyên khoa</label>
                         <input
-                          className="form-control"
+                          className={`${inputClass} bg-white`}
                           name="chuyenKhoa"
                           value={formData.chuyenKhoa}
                           onChange={handleChange}
                           placeholder="VD: Nội khoa"
                         />
                       </div>
-                      <div className="input-group">
-                        <label className="form-label">Kinh nghiệm</label>
+                      <div>
+                        <label className={labelClass}>Kinh nghiệm</label>
                         <input
-                          className="form-control"
+                          className={`${inputClass} bg-white`}
                           name="kinhNghiem"
                           value={formData.kinhNghiem}
                           onChange={handleChange}
@@ -314,19 +330,19 @@ const UserFormModal = ({
               </div>
             </div>
 
-            {/* Footer */}
-            <div className="px-10 py-6 border-t border-gray-100 flex justify-end gap-4">
+            {/* --- FOOTER --- */}
+            <div className="p-8 border-t border-slate-100 flex justify-end items-center gap-6 bg-slate-50/30 shrink-0">
               <button
                 onClick={onClose}
-                className="px-6 py-2.5 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-100 transition-colors"
+                className="text-slate-500 hover:text-slate-700 font-semibold transition-colors"
               >
                 Hủy bỏ
               </button>
               <button
                 onClick={handleSubmit}
-                className="px-8 py-2.5 rounded-lg text-sm font-medium text-white bg-primary hover:bg-green-600 shadow-lg shadow-primary/20 transition-all flex items-center gap-2"
+                className="flex items-center gap-2 px-10 py-3.5 bg-primary hover:bg-primary-dark text-white font-bold rounded-xl shadow-lg shadow-teal-500/25 transition-all transform hover:-translate-y-0.5 active:scale-95"
               >
-                <span className="material-symbols-outlined text-[18px]">
+                <span className="material-symbols-outlined text-xl">
                   {isEdit ? "save" : "check"}
                 </span>
                 {isEdit ? "Lưu thay đổi" : "Tạo tài khoản"}

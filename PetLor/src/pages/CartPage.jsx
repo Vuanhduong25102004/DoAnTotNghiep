@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react"; // 1. Thêm useMemo
 import { Link, useNavigate } from "react-router-dom";
 import AOS from "aos";
 import "aos/dist/aos.css";
@@ -6,6 +6,8 @@ import { useCart } from "../context/CartContext";
 import { formatCurrency } from "../utils/formatters";
 import { SERVER_URL } from "../services/apiClient";
 import ConfirmDeleteModal from "./admin/components/ConfirmDeleteModal";
+import VoucherModal from "../components/VoucherModal";
+import promotionService from "../services/promotionService";
 
 const CartPage = () => {
   const {
@@ -21,8 +23,13 @@ const CartPage = () => {
     selectedStat,
   } = useCart();
 
+  // State cho Modal Xóa (cũ)
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState(null);
+  const [isVoucherModalOpen, setIsVoucherModalOpen] = useState(false);
+
+  const [appliedVoucher, setAppliedVoucher] = useState(null);
+  const [discountAmount, setDiscountAmount] = useState(0);
 
   const navigate = useNavigate();
 
@@ -47,7 +54,7 @@ const CartPage = () => {
     fetchCart();
 
     return () => clearTimeout(aosInit);
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     setTimeout(() => {
@@ -55,53 +62,106 @@ const CartPage = () => {
     }, 100);
   }, [cartData]);
 
-  // --- LOG MỚI 1: THEO DÕI KHI NGƯỜI DÙNG TÍCH CHỌN ---
   useEffect(() => {
-    if (selectedItemIds.length > 0) {
-      console.log(
-        "✅ [Selection Changed] Các ID đang được chọn:",
-        selectedItemIds
-      );
-      console.log("💰 [Stat Update] Tạm tính:", selectedStat);
-    } else {
-      console.log("⬜ [Selection] Chưa chọn sản phẩm nào.");
+    if (appliedVoucher) {
+      setAppliedVoucher(null);
+      setDiscountAmount(0);
     }
-  }, [selectedItemIds, selectedStat]);
+  }, [selectedStat.totalPrice]);
 
-  // Hàm xử lý khi bấm nút "Mua hàng"
+  // --- 2. LOGIC SẮP XẾP: MỚI NHẤT LÊN ĐẦU ---
+  const sortedItems = useMemo(() => {
+    if (!cartData?.items) return [];
+
+    // Tạo bản sao để không ảnh hưởng dữ liệu gốc
+    return [...cartData.items].sort((a, b) => {
+      // So sánh ngày thêm (Giảm dần)
+      const dateA = new Date(a.ngayThem);
+      const dateB = new Date(b.ngayThem);
+      return dateB - dateA;
+    });
+  }, [cartData]);
+
+  const finalDisplayPrice = Math.max(
+    0,
+    selectedStat.totalPrice - discountAmount
+  );
+
+  // HÀM XỬ LÝ MÃ
+  const handleApplyVoucher = async (code) => {
+    if (selectedStat.totalPrice === 0) {
+      alert("Vui lòng chọn sản phẩm trước khi áp mã!");
+      return;
+    }
+
+    const payload = {
+      maCode: code,
+      giaTriDonHang: selectedStat.totalPrice,
+    };
+
+    console.log("🚀 DỮ LIỆU GỬI LÊN API:", payload);
+
+    try {
+      const response = await promotionService.validateCoupon(
+        payload.maCode,
+        payload.giaTriDonHang
+      );
+
+      console.log("✅ KẾT QUẢ API TRẢ VỀ:", response);
+
+      const discount = response?.soTienGiam || response?.data?.soTienGiam || 0;
+
+      if (discount > 0) {
+        setAppliedVoucher(code);
+        setDiscountAmount(discount);
+        setIsVoucherModalOpen(false);
+        alert(`Áp dụng thành công! Giảm ${formatCurrency(discount)}`);
+      } else {
+        alert("Mã hợp lệ nhưng không được giảm giá (0đ).");
+        setAppliedVoucher(null);
+        setDiscountAmount(0);
+      }
+    } catch (error) {
+      console.error("❌ LỖI API:", error);
+      const errorMsg =
+        error.response?.data?.message || "Lỗi khi áp dụng mã khuyến mãi!";
+      alert(errorMsg);
+      setAppliedVoucher(null);
+      setDiscountAmount(0);
+    }
+  };
+
   const handleCheckout = () => {
-    // 1. Kiểm tra xem có chọn sản phẩm nào chưa
     if (selectedStat.countItems === 0) {
       alert("Bạn chưa chọn sản phẩm nào để thanh toán!");
       return;
     }
-    // 2. Lọc ra danh sách chi tiết các sản phẩm được chọn
-    // (Dựa vào mảng selectedItemIds chứa các id của item trong giỏ)
+    // Lấy item từ danh sách đã lọc (sortedItems) hoặc gốc đều được vì ID không đổi
     const selectedItemsFullDetails = cartData.items.filter((item) =>
       selectedItemIds.includes(item.id)
     );
+
     navigate("/checkout", {
       state: {
         selectedItems: selectedItemsFullDetails,
-        totalAmount: selectedStat.totalPrice,
+        totalAmount: finalDisplayPrice,
+        discountAmount: discountAmount,
+        appliedVoucher: appliedVoucher,
       },
     });
   };
 
-  // Mở Modal xác nhận xóa
   const openDeleteModal = (cartDetailId, productId) => {
     setItemToDelete({ cartDetailId, productId });
     setIsModalOpen(true);
   };
 
-  // Nút xóa nhiều
   const handleDeleteSelected = () => {
     if (selectedItemIds.length === 0) return;
     setItemToDelete(null);
     setIsModalOpen(true);
   };
 
-  // Thực hiện xóa
   const handleConfirmDelete = async () => {
     setIsModalOpen(false);
 
@@ -214,7 +274,6 @@ const CartPage = () => {
                     className="w-4 h-4 text-primary focus:ring-primary rounded border-gray-300 cursor-pointer"
                     checked={isAllSelected}
                     onChange={(e) => {
-                      console.log("Click chọn tất cả:", e.target.checked);
                       selectAllItems(e.target.checked);
                     }}
                   />
@@ -250,7 +309,8 @@ const CartPage = () => {
                 </span>
               </div>
 
-              {cartData.items.map((item, index) => (
+              {/* 3. SỬ DỤNG sortedItems THAY VÌ cartData.items */}
+              {sortedItems.map((item, index) => (
                 <div
                   key={item.id}
                   className="px-6 py-6 border-b border-gray-50 last:border-0"
@@ -263,9 +323,6 @@ const CartPage = () => {
                         className="w-4 h-4 text-primary focus:ring-primary rounded border-gray-300 cursor-pointer"
                         checked={selectedItemIds.includes(item.id)}
                         onChange={() => {
-                          console.log(
-                            `Click checkbox sản phẩm ID: ${item.id} - ${item.tenSanPham}`
-                          );
                           toggleSelectItem(item.id);
                         }}
                       />
@@ -404,13 +461,22 @@ const CartPage = () => {
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
             <div className="flex justify-end items-center mb-3 pb-3 border-b border-gray-50 gap-4">
               <div className="flex items-center gap-2 text-primary">
+                {appliedVoucher && (
+                  <span className="ml-1 bg-primary text-white text-[11px] font-bold px-2 py-0.5 rounded border border-primary animate-pulse">
+                    {appliedVoucher}
+                  </span>
+                )}
                 <span className="material-symbols-outlined text-xl">
                   confirmation_number
                 </span>
                 <span className="text-sm font-medium">PetLor Voucher</span>
               </div>
-              <button className="text-sm text-blue-500 hover:underline">
-                Chọn hoặc nhập mã
+
+              <button
+                onClick={() => setIsVoucherModalOpen(true)}
+                className="text-sm text-blue-500 hover:underline"
+              >
+                {appliedVoucher ? "Thay đổi" : "Chọn hoặc nhập mã"}
               </button>
             </div>
             <div className="flex flex-col md:flex-row items-center justify-between gap-4">
@@ -443,12 +509,18 @@ const CartPage = () => {
                       Tổng thanh toán ({selectedStat.countItems} sản phẩm):
                     </span>
                     <span className="text-2xl font-bold text-primary leading-none">
-                      {formatCurrency(selectedStat.totalPrice)}
+                      {formatCurrency(finalDisplayPrice)}
                     </span>
                   </div>
-                  <div className="text-[11px] text-gray-400 mt-0.5">
-                    Tiết kiệm 0đ
-                  </div>
+                  {discountAmount > 0 ? (
+                    <div className="text-[12px] text-green-600 font-bold mt-0.5">
+                      Tiết kiệm {formatCurrency(discountAmount)}
+                    </div>
+                  ) : (
+                    <div className="text-[11px] text-gray-400 mt-0.5">
+                      Tiết kiệm 0đ
+                    </div>
+                  )}
                 </div>
                 <button
                   onClick={handleCheckout}
@@ -467,7 +539,13 @@ const CartPage = () => {
         </div>
       )}
 
-      {/* MODAL */}
+      {/* 4. RENDER MODAL VOUCHER */}
+      <VoucherModal
+        isOpen={isVoucherModalOpen}
+        onClose={() => setIsVoucherModalOpen(false)}
+        onApply={handleApplyVoucher}
+      />
+
       <ConfirmDeleteModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}

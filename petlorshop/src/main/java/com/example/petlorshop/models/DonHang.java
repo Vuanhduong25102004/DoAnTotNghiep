@@ -34,6 +34,9 @@ public class DonHang {
 
     @Column(name = "so_tien_giam", precision = 10, scale = 2)
     private BigDecimal soTienGiam = BigDecimal.ZERO;
+    
+    @Column(name = "phi_van_chuyen", precision = 10, scale = 2)
+    private BigDecimal phiVanChuyen = BigDecimal.ZERO;
 
     @Column(name = "tong_thanh_toan", nullable = false, precision = 10, scale = 2)
     private BigDecimal tongThanhToan;
@@ -51,6 +54,12 @@ public class DonHang {
 
     @Column(name = "so_dien_thoai_nhan", nullable = false, length = 20)
     private String soDienThoaiNhan;
+    
+    @Column(name = "ho_ten_nguoi_nhan", length = 100)
+    private String hoTenNguoiNhan;
+
+    @Column(name = "email_nguoi_nhan", length = 100)
+    private String emailNguoiNhan;
 
     @Column(name = "ly_do_huy", columnDefinition = "TEXT")
     private String lyDoHuy;

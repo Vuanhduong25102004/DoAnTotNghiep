@@ -129,7 +129,7 @@ const PostTable = ({
                     {formatDate(post.ngayDang).split(",")[0]}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm">
-                    {PostStatusBadge(post.trangThai)}
+                    <PostStatusBadge status={post.trangThai} />
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                     <div className="flex items-center justify-end space-x-2">

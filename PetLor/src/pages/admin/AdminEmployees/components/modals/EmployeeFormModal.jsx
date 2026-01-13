@@ -6,12 +6,10 @@ const EmployeeFormModal = ({
   isOpen,
   onClose,
   initialData, // Dữ liệu để sửa (nếu có)
-  onSubmit, // Hàm xử lý khi bấm Lưu (Parent sẽ truyền vào)
+  onSubmit, // Hàm xử lý khi bấm Lưu
 }) => {
-  // Xác định chế độ đang là Edit hay Create
   const isEdit = !!initialData;
 
-  // State form
   const [formData, setFormData] = useState({
     hoTen: "",
     email: "",
@@ -26,22 +24,19 @@ const EmployeeFormModal = ({
   const [avatarFile, setAvatarFile] = useState(null);
   const [previewAvatar, setPreviewAvatar] = useState("");
 
-  // Effect: Reset hoặc điền dữ liệu khi modal mở/đóng hoặc initialData thay đổi
   useEffect(() => {
     if (isOpen) {
       if (initialData) {
-        // Chế độ Edit: Điền dữ liệu cũ
         setFormData({
           hoTen: initialData.hoTen || "",
           email: initialData.email || "",
-          password: "", // Không điền password cũ vì lý do bảo mật
+          password: "",
           soDienThoai: initialData.soDienThoai || "",
           chucVu: initialData.chucVu || "",
           chuyenKhoa: initialData.chuyenKhoa || "",
           kinhNghiem: initialData.kinhNghiem || "",
           role: initialData.role || "STAFF",
         });
-        // Xử lý ảnh preview từ URL server nếu có
         setPreviewAvatar(
           initialData.img || initialData.anhDaiDien
             ? initialData.img ||
@@ -49,7 +44,6 @@ const EmployeeFormModal = ({
             : ""
         );
       } else {
-        // Chế độ Create: Reset form trắng
         setFormData({
           hoTen: "",
           email: "",
@@ -66,13 +60,11 @@ const EmployeeFormModal = ({
     }
   }, [isOpen, initialData]);
 
-  // Xử lý thay đổi input
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  // Xử lý chọn ảnh
   const handleFileChange = (e) => {
     const file = e.target.files[0];
     if (file) {
@@ -81,11 +73,15 @@ const EmployeeFormModal = ({
     }
   };
 
-  // Xử lý submit
   const handleSubmit = () => {
-    // Gọi hàm onSubmit từ Parent, truyền data và file
     onSubmit(formData, avatarFile);
   };
+
+  // Shared Styles (Design System)
+  const inputClass =
+    "w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-xl text-slate-700 font-medium focus:ring-0 transition-all focus:border-primary outline-none placeholder:text-slate-400";
+  const labelClass =
+    "text-[11px] font-bold text-slate-400 uppercase tracking-widest ml-1 mb-1.5 block";
 
   return (
     <AnimatePresence>
@@ -94,81 +90,120 @@ const EmployeeFormModal = ({
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm overflow-hidden"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm overflow-hidden p-4"
         >
           <motion.div
             initial={{ scale: 0.95, opacity: 0, y: 20 }}
             animate={{ scale: 1, opacity: 1, y: 0 }}
             exit={{ scale: 0.95, opacity: 0, y: 20 }}
-            className="w-full max-w-3xl bg-white rounded-2xl shadow-modal flex flex-col max-h-[95vh] relative overflow-hidden font-body mx-auto my-8"
+            className="w-full max-w-3xl bg-white rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[95vh]"
           >
-            {/* Header: Thay đổi tiêu đề dựa trên isEdit */}
-            <div className="px-10 py-6 border-b border-border-light/50 flex justify-between items-center bg-white sticky top-0 z-20">
-              <div className="flex items-center gap-5">
-                <div className="w-12 h-12 rounded-full bg-surface border border-border-light flex items-center justify-center text-primary">
-                  <span className="material-symbols-outlined text-[24px]">
+            {/* --- HEADER --- */}
+            <div className="px-8 py-6 border-b border-slate-100 flex justify-between items-center bg-white sticky top-0 z-10 shrink-0">
+              <div className="flex items-center gap-4">
+                <div className="w-14 h-14 rounded-2xl bg-teal-50 flex items-center justify-center text-primary border border-teal-100/50">
+                  <span className="material-symbols-outlined text-3xl">
                     {isEdit ? "edit_note" : "person_add"}
                   </span>
                 </div>
                 <div>
-                  <h1 className="text-xl font-semibold text-text-heading">
+                  <h2 className="text-2xl font-extrabold text-slate-900 tracking-tight">
+                    {isEdit ? "Cập nhật Nhân viên" : "Thêm mới Nhân viên"}
+                  </h2>
+                  <p className="text-sm text-slate-500">
                     {isEdit
-                      ? `Cập nhật Nhân viên #${initialData.nhanVienId}`
-                      : "Thêm mới Nhân viên"}
-                  </h1>
-                  <p className="text-sm text-text-body/70 mt-1 font-light">
-                    {isEdit
-                      ? "Cập nhật thông tin hồ sơ"
-                      : "Tạo tài khoản và hồ sơ mới"}
+                      ? `Cập nhật thông tin hồ sơ #${initialData.nhanVienId}`
+                      : "Tạo tài khoản và hồ sơ nhân sự mới"}
                   </p>
                 </div>
               </div>
               <button
                 onClick={onClose}
-                className="w-10 h-10 rounded-full flex items-center justify-center text-secondary hover:bg-surface transition-all"
+                className="text-slate-400 hover:text-slate-600 transition-colors p-2 hover:bg-slate-100 rounded-full"
               >
-                <span className="material-symbols-outlined font-light">
-                  close
-                </span>
+                <span className="material-symbols-outlined">close</span>
               </button>
             </div>
 
-            {/* Body */}
-            <div className="flex-1 p-8 md:p-10 bg-white overflow-y-auto">
+            {/* --- BODY --- */}
+            <div className="p-8 overflow-y-auto custom-scrollbar flex-1">
               <div className="space-y-8">
                 {/* Form Inputs - Dùng chung */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                  <div className="input-group">
-                    <label className="form-label">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
+                  {/* Avatar Upload - Đưa lên đầu hoặc để bên cạnh */}
+                  <div className="md:col-span-2 flex items-center gap-6 mb-2">
+                    <div className="relative group w-24 h-24 rounded-full border-4 border-slate-50 shadow-md overflow-hidden bg-slate-100 flex-shrink-0">
+                      <img
+                        src={
+                          previewAvatar ||
+                          "https://placehold.co/150x150?text=Avatar"
+                        }
+                        alt="Avatar"
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          e.target.src =
+                            "https://placehold.co/150x150?text=Avatar";
+                        }}
+                      />
+                    </div>
+                    <div className="flex-1">
+                      <label className={labelClass}>Ảnh đại diện</label>
+                      <div className="flex items-center gap-3">
+                        <span
+                          onClick={() =>
+                            document.getElementById("emp-avatar-upload").click()
+                          }
+                          className="px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 cursor-pointer shadow-sm transition-colors"
+                        >
+                          Chọn ảnh...
+                        </span>
+                        <span className="text-xs text-slate-400 italic truncate max-w-[200px]">
+                          {avatarFile ? avatarFile.name : "Chưa chọn tệp"}
+                        </span>
+                      </div>
+                      <input
+                        id="emp-avatar-upload"
+                        type="file"
+                        className="hidden"
+                        onChange={handleFileChange}
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className={labelClass}>
                       Họ và tên <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="text"
                       name="hoTen"
-                      className="form-control"
+                      className={inputClass}
                       value={formData.hoTen}
                       onChange={handleChange}
+                      placeholder="Nguyễn Văn A"
                     />
                   </div>
-                  <div className="input-group">
-                    <label className="form-label">
+                  <div>
+                    <label className={labelClass}>
                       Email <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="email"
                       name="email"
-                      className="form-control"
+                      className={inputClass}
                       value={formData.email}
                       onChange={handleChange}
+                      placeholder="email@example.com"
                     />
                   </div>
 
-                  {/* Password: Chỉ hiển thị hoặc bắt buộc khi tạo mới. Khi Edit có thể để trống nếu không đổi pass */}
-                  <div className="input-group">
-                    <label className="form-label">
+                  <div>
+                    <label className={labelClass}>
                       Mật khẩu{" "}
                       {isEdit ? (
-                        "(Để trống nếu không đổi)"
+                        <span className="text-slate-400 normal-case font-normal tracking-normal">
+                          (Bỏ trống nếu không đổi)
+                        </span>
                       ) : (
                         <span className="text-red-500">*</span>
                       )}
@@ -176,113 +211,103 @@ const EmployeeFormModal = ({
                     <input
                       type="password"
                       name="password"
-                      className="form-control"
+                      className={inputClass}
                       value={formData.password}
                       onChange={handleChange}
+                      placeholder="••••••"
                     />
                   </div>
 
-                  <div className="input-group">
-                    <label className="form-label">Số điện thoại</label>
+                  <div>
+                    <label className={labelClass}>Số điện thoại</label>
                     <input
                       type="text"
                       name="soDienThoai"
-                      className="form-control"
+                      className={inputClass}
                       value={formData.soDienThoai}
                       onChange={handleChange}
+                      placeholder="09xx xxx xxx"
                     />
                   </div>
 
-                  <div className="input-group">
-                    <label className="form-label">Chức vụ</label>
+                  <div>
+                    <label className={labelClass}>Chức vụ</label>
                     <input
                       type="text"
                       name="chucVu"
-                      className="form-control"
+                      className={inputClass}
                       value={formData.chucVu}
                       onChange={handleChange}
                       placeholder="VD: Bác sĩ thú y"
                     />
                   </div>
 
-                  {/* Chỉ hiển thị Role khi tạo mới hoặc nếu logic cho phép sửa Role */}
-                  <div className="input-group">
-                    <label className="form-label">Vai trò</label>
-                    <select
-                      name="role"
-                      className="form-control"
-                      value={formData.role}
-                      onChange={handleChange}
-                    >
-                      <option value="STAFF">Nhân viên (STAFF)</option>
-                      <option value="DOCTOR">Bác sĩ (DOCTOR)</option>
-                      <option value="SPA">Spa (SPA)</option>
-                      <option value="ADMIN">Quản trị (ADMIN)</option>
-                    </select>
-                  </div>
-
-                  <div className="input-group md:col-span-2">
-                    <label className="form-label">Ảnh đại diện</label>
-                    <div className="mt-2 flex items-center space-x-4">
-                      <img
-                        src={
-                          previewAvatar ||
-                          "https://placehold.co/128x128?text=Avatar"
-                        }
-                        alt="Avatar"
-                        className="h-16 w-16 rounded-full object-cover"
-                      />
-                      <input
-                        type="file"
-                        className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20"
-                        onChange={handleFileChange}
-                      />
+                  <div>
+                    <label className={labelClass}>Vai trò hệ thống</label>
+                    <div className="relative">
+                      <select
+                        name="role"
+                        className={`${inputClass} appearance-none`}
+                        value={formData.role}
+                        onChange={handleChange}
+                      >
+                        <option value="STAFF">Nhân viên (STAFF)</option>
+                        <option value="DOCTOR">Bác sĩ (DOCTOR)</option>
+                        <option value="SPA">Spa (SPA)</option>
+                        <option value="ADMIN">Quản trị (ADMIN)</option>
+                      </select>
+                      <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
+                        <span className="material-symbols-outlined text-xl">
+                          expand_more
+                        </span>
+                      </div>
                     </div>
                   </div>
 
-                  <div className="input-group md:col-span-2">
-                    <label className="form-label">
-                      Chuyên khoa / Kinh nghiệm
-                    </label>
-                    <div className="grid grid-cols-2 gap-4">
-                      <input
-                        type="text"
-                        name="chuyenKhoa"
-                        placeholder="Chuyên khoa"
-                        className="form-control"
-                        value={formData.chuyenKhoa}
-                        onChange={handleChange}
-                      />
-                      <input
-                        type="text"
-                        name="kinhNghiem"
-                        placeholder="Kinh nghiệm"
-                        className="form-control"
-                        value={formData.kinhNghiem}
-                        onChange={handleChange}
-                      />
+                  <div className="md:col-span-2 bg-slate-50/50 p-5 rounded-2xl border border-slate-100">
+                    <div className="grid grid-cols-2 gap-6">
+                      <div>
+                        <label className={labelClass}>Chuyên khoa</label>
+                        <input
+                          type="text"
+                          name="chuyenKhoa"
+                          placeholder="VD: Nội khoa, Ngoại khoa..."
+                          className={`${inputClass} bg-white`}
+                          value={formData.chuyenKhoa}
+                          onChange={handleChange}
+                        />
+                      </div>
+                      <div>
+                        <label className={labelClass}>Kinh nghiệm</label>
+                        <input
+                          type="text"
+                          name="kinhNghiem"
+                          placeholder="VD: 5 năm"
+                          className={`${inputClass} bg-white`}
+                          value={formData.kinhNghiem}
+                          onChange={handleChange}
+                        />
+                      </div>
                     </div>
                   </div>
                 </div>
               </div>
             </div>
 
-            {/* Footer */}
-            <div className="px-10 py-6 bg-white border-t border-border-light/50 flex justify-end gap-4 sticky bottom-0 z-20">
+            {/* --- FOOTER --- */}
+            <div className="p-8 border-t border-slate-100 flex justify-end items-center gap-6 bg-slate-50/30 shrink-0">
               <button
                 onClick={onClose}
-                className="px-6 py-2.5 rounded-lg text-sm font-medium text-text-body hover:bg-surface border border-transparent hover:border-border-light"
+                className="text-slate-500 hover:text-slate-700 font-semibold transition-colors"
               >
                 Hủy bỏ
               </button>
               <button
                 onClick={handleSubmit}
-                className="px-8 py-2.5 rounded-lg text-sm font-medium text-white bg-primary hover:bg-primary-hover shadow-lg flex items-center gap-2"
+                className="flex items-center gap-2 px-10 py-3.5 bg-primary hover:bg-primary-dark text-white font-bold rounded-xl shadow-lg shadow-teal-500/25 transition-all transform hover:-translate-y-0.5 active:scale-95"
               >
-                <span className="material-symbols-outlined text-[18px]">
-                  {isEdit ? "save" : "check"}
-                </span>
-                {isEdit ? "Lưu thay đổi" : "Tạo Nhân viên"}
+                <span className="material-symbols-outlined text-xl">save</span>
+                {isEdit ? "Lưu thay đổi" : "Tạo nhân viên"}
               </button>
             </div>
           </motion.div>

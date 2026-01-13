@@ -11,6 +11,9 @@ import java.util.List;
 public class DonHangRequest {
     private Integer userId;
     private String diaChiGiaoHang;
+    private String tinhThanh;
+    private String quanHuyen;
+    private String phuongXa;
     private String soDienThoaiNhan;
     private String maKhuyenMai;
     private DonHang.PhuongThucThanhToan phuongThucThanhToan;

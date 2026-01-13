@@ -35,6 +35,8 @@ const ImportFormModal = ({
     }
   }, [isOpen]);
 
+  useEscapeKey(onClose, isOpen);
+
   const resetCurrentLine = () => {
     setCurrentLine({
       sanPhamId: "",
@@ -139,6 +141,12 @@ const ImportFormModal = ({
     0
   );
 
+  // Shared Styles (Design System)
+  const inputClass =
+    "w-full px-4 py-2.5 bg-slate-50 border border-slate-100 rounded-xl text-slate-700 font-medium focus:ring-0 transition-all focus:border-primary outline-none placeholder:text-slate-400 text-sm";
+  const labelClass =
+    "text-[11px] font-bold text-slate-400 uppercase tracking-widest ml-1 mb-1.5 block";
+
   return (
     <AnimatePresence>
       {isOpen && (
@@ -146,65 +154,63 @@ const ImportFormModal = ({
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm overflow-hidden"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm overflow-hidden p-4"
         >
           <motion.div
             initial={{ scale: 0.95, opacity: 0, y: 20 }}
             animate={{ scale: 1, opacity: 1, y: 0 }}
             exit={{ scale: 0.95, opacity: 0, y: 20 }}
-            className="w-full max-w-6xl bg-white rounded-2xl shadow-modal flex flex-col max-h-[95vh] relative overflow-hidden font-body mx-auto my-8"
+            className="w-full max-w-6xl bg-white rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[95vh]"
           >
-            {/* Header (Giống AdminAppointments) */}
-            <div className="px-10 py-6 border-b border-border-light/50 flex justify-between items-center bg-white sticky top-0 z-20">
-              <div className="flex items-center gap-5">
-                <div className="w-12 h-12 rounded-full bg-surface border border-border-light flex items-center justify-center text-primary">
-                  <span className="material-symbols-outlined text-[24px]">
+            {/* --- HEADER --- */}
+            <div className="px-8 py-6 border-b border-slate-100 flex justify-between items-center bg-white sticky top-0 z-10 shrink-0">
+              <div className="flex items-center gap-4">
+                <div className="w-14 h-14 rounded-2xl bg-teal-50 flex items-center justify-center text-primary border border-teal-100/50">
+                  <span className="material-symbols-outlined text-3xl">
                     move_to_inbox
                   </span>
                 </div>
                 <div>
-                  <h1 className="text-xl font-semibold text-text-heading">
+                  <h2 className="text-2xl font-extrabold text-slate-900 tracking-tight">
                     Tạo Phiếu Nhập Hàng
-                  </h1>
-                  <p className="text-sm text-text-body/70 mt-1 font-light">
+                  </h2>
+                  <p className="text-sm text-slate-500">
                     Nhập hàng vào kho từ nhà cung cấp
                   </p>
                 </div>
               </div>
               <button
                 onClick={onClose}
-                className="w-10 h-10 rounded-full flex items-center justify-center text-secondary hover:bg-surface transition-all"
+                className="text-slate-400 hover:text-slate-600 transition-colors p-2 hover:bg-slate-100 rounded-full"
               >
-                <span className="material-symbols-outlined font-light">
-                  close
-                </span>
+                <span className="material-symbols-outlined">close</span>
               </button>
             </div>
 
-            {/* Body */}
-            <div className="flex-1 p-8 md:p-10 bg-white overflow-y-auto">
-              <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-                {/* Cột Trái: Form Nhập */}
-                <div className="lg:col-span-4 space-y-8">
+            {/* --- BODY --- */}
+            <div className="flex-1 p-8 overflow-y-auto custom-scrollbar bg-white">
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 h-full">
+                {/* CỘT TRÁI: FORM NHẬP (chiếm 4 phần) */}
+                <div className="lg:col-span-4 flex flex-col gap-6 h-full overflow-y-auto pr-2">
                   {/* Panel NCC */}
-                  <div className="space-y-4">
+                  <section className="space-y-4">
                     <div className="flex items-center gap-2 mb-2">
-                      <span className="material-symbols-outlined text-primary text-xl">
+                      <span className="material-symbols-outlined text-primary bg-teal-50 p-1 rounded text-lg">
                         store
                       </span>
-                      <h3 className="text-md font-semibold text-text-heading">
+                      <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wide">
                         Thông tin chung
                       </h3>
                     </div>
-                    <div className="input-group">
-                      <label className="form-label block text-sm font-medium text-text-heading mb-2">
+                    <div>
+                      <label className={labelClass}>
                         Nhà cung cấp <span className="text-red-500">*</span>
                       </label>
                       <select
                         name="nccId"
                         value={formData.nccId}
                         onChange={handleMasterChange}
-                        className="form-control w-full p-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+                        className={inputClass}
                       >
                         <option value="">-- Chọn NCC --</option>
                         {suppliersList.map((ncc) => (
@@ -214,31 +220,29 @@ const ImportFormModal = ({
                         ))}
                       </select>
                     </div>
-                    <div className="input-group">
-                      <label className="form-label block text-sm font-medium text-text-heading mb-2">
-                        Ghi chú
-                      </label>
+                    <div>
+                      <label className={labelClass}>Ghi chú</label>
                       <textarea
                         name="ghiChu"
                         value={formData.ghiChu}
                         onChange={handleMasterChange}
-                        className="form-control w-full p-2.5 bg-gray-50 border border-gray-200 rounded-lg h-20"
+                        className={`${inputClass} resize-none h-20`}
                         placeholder="Ghi chú phiếu nhập..."
                       ></textarea>
                     </div>
-                  </div>
+                  </section>
 
-                  <div className="border-t border-gray-100 my-4"></div>
+                  <div className="border-t border-slate-100"></div>
 
                   {/* Panel Sản phẩm */}
-                  <div className="space-y-4">
+                  <section className="space-y-4">
                     <div className="flex justify-between items-center mb-2">
                       <div className="flex items-center gap-2">
-                        <span className="material-symbols-outlined text-orange-500 text-xl">
+                        <span className="material-symbols-outlined text-orange-500 bg-orange-50 p-1 rounded text-lg">
                           inventory_2
                         </span>
-                        <h3 className="text-md font-semibold text-text-heading">
-                          Sản phẩm
+                        <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wide">
+                          Thêm sản phẩm
                         </h3>
                       </div>
                       <button
@@ -246,28 +250,25 @@ const ImportFormModal = ({
                           setIsNewProduct(!isNewProduct);
                           resetCurrentLine();
                         }}
-                        className={`text-xs px-3 py-1 rounded-full font-medium transition-colors border ${
+                        className={`text-xs px-3 py-1.5 rounded-lg font-bold transition-all border ${
                           isNewProduct
                             ? "bg-blue-50 text-blue-600 border-blue-200"
-                            : "bg-gray-50 text-gray-600 border-gray-200"
+                            : "bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100"
                         }`}
                       >
                         {isNewProduct ? "Quay lại" : "+ SP Mới"}
                       </button>
                     </div>
 
-                    {/* Form SP */}
-                    <div className="p-4 rounded-xl bg-surface border border-border-light space-y-3">
+                    <div className="p-5 rounded-2xl bg-slate-50 border border-slate-100 space-y-4 shadow-sm">
                       {!isNewProduct ? (
                         <div>
-                          <label className="text-xs font-medium text-text-heading mb-1 block">
-                            Chọn SP có sẵn
-                          </label>
+                          <label className={labelClass}>Chọn SP có sẵn</label>
                           <select
                             name="sanPhamId"
                             value={currentLine.sanPhamId}
                             onChange={handleLineChange}
-                            className="w-full p-2 text-sm border rounded-lg"
+                            className={`${inputClass} bg-white`}
                           >
                             <option value="">-- Tìm kiếm --</option>
                             {productsList.map((p) => (
@@ -278,129 +279,149 @@ const ImportFormModal = ({
                           </select>
                         </div>
                       ) : (
-                        <div className="space-y-2 animate-fadeIn">
-                          <input
-                            type="text"
-                            name="tenSanPham"
-                            value={currentLine.tenSanPham}
-                            onChange={handleLineChange}
-                            placeholder="Tên sản phẩm mới *"
-                            className="w-full p-2 text-sm border rounded-lg"
-                          />
-                          <div className="grid grid-cols-2 gap-2">
-                            <select
-                              name="danhMucId"
-                              value={currentLine.danhMucId}
-                              onChange={handleLineChange}
-                              className="w-full p-2 text-sm border rounded-lg"
-                            >
-                              <option value="">Danh mục *</option>
-                              {categoriesList.map((c) => (
-                                <option
-                                  key={c.danhMucId || c.id}
-                                  value={c.danhMucId || c.id}
-                                >
-                                  {c.tenDanhMuc}
-                                </option>
-                              ))}
-                            </select>
+                        <div className="space-y-3 animate-in fade-in zoom-in duration-200">
+                          <div>
+                            <label className={labelClass}>
+                              Tên sản phẩm mới
+                            </label>
                             <input
-                              type="number"
-                              name="giaBan"
-                              value={currentLine.giaBan}
+                              type="text"
+                              name="tenSanPham"
+                              value={currentLine.tenSanPham}
                               onChange={handleLineChange}
-                              placeholder="Giá bán *"
-                              className="w-full p-2 text-sm border rounded-lg"
+                              placeholder="Nhập tên sản phẩm..."
+                              className={`${inputClass} bg-white`}
                             />
+                          </div>
+                          <div className="grid grid-cols-2 gap-3">
+                            <div>
+                              <label className={labelClass}>Danh mục</label>
+                              <select
+                                name="danhMucId"
+                                value={currentLine.danhMucId}
+                                onChange={handleLineChange}
+                                className={`${inputClass} bg-white`}
+                              >
+                                <option value="">Danh mục *</option>
+                                {categoriesList.map((c) => (
+                                  <option
+                                    key={c.danhMucId || c.id}
+                                    value={c.danhMucId || c.id}
+                                  >
+                                    {c.tenDanhMuc}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+                            <div>
+                              <label className={labelClass}>
+                                Giá bán dự kiến
+                              </label>
+                              <input
+                                type="number"
+                                name="giaBan"
+                                value={currentLine.giaBan}
+                                onChange={handleLineChange}
+                                placeholder="0"
+                                className={`${inputClass} bg-white`}
+                              />
+                            </div>
                           </div>
                         </div>
                       )}
+
                       <div className="grid grid-cols-2 gap-3">
                         <div>
-                          <label className="text-xs font-medium text-text-heading mb-1 block">
-                            Số lượng
-                          </label>
+                          <label className={labelClass}>Số lượng</label>
                           <input
                             type="number"
                             name="soLuong"
                             min="1"
                             value={currentLine.soLuong}
                             onChange={handleLineChange}
-                            className="w-full p-2 text-sm border rounded-lg"
+                            className={`${inputClass} bg-white font-bold text-center`}
                           />
                         </div>
                         <div>
-                          <label className="text-xs font-medium text-text-heading mb-1 block">
-                            Giá nhập
-                          </label>
+                          <label className={labelClass}>Giá nhập</label>
                           <input
                             type="number"
                             name="giaNhap"
                             min="0"
                             value={currentLine.giaNhap}
                             onChange={handleLineChange}
-                            className="w-full p-2 text-sm border rounded-lg"
+                            className={`${inputClass} bg-white font-bold text-right`}
                           />
                         </div>
                       </div>
+
                       <button
                         onClick={handleAddLine}
-                        className="w-full py-2 bg-white border border-primary text-primary rounded-lg text-sm font-medium hover:bg-primary hover:text-white transition-all shadow-sm"
+                        className="w-full py-2.5 bg-white border-2 border-primary text-primary rounded-xl text-sm font-bold hover:bg-primary hover:text-white transition-all shadow-sm flex items-center justify-center gap-2 mt-2"
                       >
+                        <span className="material-symbols-outlined text-lg">
+                          add
+                        </span>
                         Thêm vào danh sách
                       </button>
                     </div>
-                  </div>
+                  </section>
                 </div>
 
-                {/* Cột Phải: Bảng Preview */}
-                <div className="lg:col-span-8 flex flex-col h-full bg-surface/30 rounded-xl border border-border-light overflow-hidden">
-                  <div className="p-4 border-b border-border-light bg-white flex justify-between items-center">
-                    <span className="font-semibold text-text-heading text-sm">
-                      Danh sách ({importDetails.length})
+                {/* CỘT PHẢI: BẢNG PREVIEW (chiếm 8 phần) */}
+                <div className="lg:col-span-8 flex flex-col h-full bg-slate-50/50 rounded-3xl border border-slate-100 overflow-hidden shadow-inner">
+                  <div className="px-6 py-4 border-b border-slate-100 bg-white flex justify-between items-center shrink-0">
+                    <span className="font-bold text-slate-700 text-sm uppercase tracking-wide">
+                      Danh sách sản phẩm ({importDetails.length})
                     </span>
-                    <span className="text-primary font-bold text-lg">
-                      {formatCurrency(totalAmount)}
-                    </span>
+                    <div className="flex items-baseline gap-2">
+                      <span className="text-xs font-bold text-slate-400 uppercase">
+                        Tổng tiền:
+                      </span>
+                      <span className="text-primary font-extrabold text-xl">
+                        {formatCurrency(totalAmount)}
+                      </span>
+                    </div>
                   </div>
-                  <div className="flex-1 overflow-auto bg-white">
+
+                  <div className="flex-1 overflow-auto bg-white custom-scrollbar">
                     <table className="w-full text-left">
-                      <thead className="bg-surface sticky top-0 z-10 text-xs text-text-body uppercase font-medium">
+                      <thead className="bg-slate-50 sticky top-0 z-10 text-[11px] text-slate-400 uppercase font-bold tracking-wider">
                         <tr>
-                          <th className="p-3">Sản phẩm</th>
-                          <th className="p-3 text-center">SL</th>
-                          <th className="p-3 text-right">Giá nhập</th>
-                          <th className="p-3 text-right">Thành tiền</th>
-                          <th className="p-3 w-10"></th>
+                          <th className="px-6 py-3">Sản phẩm</th>
+                          <th className="px-6 py-3 text-center">SL</th>
+                          <th className="px-6 py-3 text-right">Giá nhập</th>
+                          <th className="px-6 py-3 text-right">Thành tiền</th>
+                          <th className="px-4 py-3 w-10"></th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-gray-100">
+                      <tbody className="divide-y divide-slate-100">
                         {importDetails.map((item, index) => (
                           <tr
                             key={index}
-                            className="hover:bg-surface transition-colors"
+                            className="hover:bg-slate-50/80 transition-colors group"
                           >
-                            <td className="p-3 text-sm font-medium text-text-heading">
+                            <td className="px-6 py-4 text-sm font-semibold text-slate-700">
                               {item.tenSanPham}
                               {item.isNew && (
-                                <span className="ml-2 text-[10px] bg-blue-100 text-blue-600 px-1.5 py-0.5 rounded border border-blue-200">
+                                <span className="ml-2 text-[10px] bg-blue-100 text-blue-600 px-1.5 py-0.5 rounded border border-blue-200 font-bold uppercase tracking-wider">
                                   Mới
                                 </span>
                               )}
                             </td>
-                            <td className="p-3 text-sm text-center">
+                            <td className="px-6 py-4 text-sm text-center font-medium text-slate-600">
                               {item.soLuong}
                             </td>
-                            <td className="p-3 text-sm text-right text-text-body">
+                            <td className="px-6 py-4 text-sm text-right text-slate-600">
                               {formatCurrency(item.giaNhap)}
                             </td>
-                            <td className="p-3 text-sm text-right font-medium text-primary">
+                            <td className="px-6 py-4 text-sm text-right font-bold text-primary">
                               {formatCurrency(item.thanhTien)}
                             </td>
-                            <td className="p-3 text-center">
+                            <td className="px-4 py-4 text-center">
                               <button
                                 onClick={() => handleRemoveLine(index)}
-                                className="text-gray-400 hover:text-red-500 transition-colors"
+                                className="text-slate-300 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100"
                               >
                                 <span className="material-symbols-outlined text-lg">
                                   delete
@@ -413,9 +434,12 @@ const ImportFormModal = ({
                           <tr>
                             <td
                               colSpan="5"
-                              className="p-8 text-center text-gray-400 text-sm"
+                              className="px-6 py-12 text-center text-slate-400 text-sm italic flex flex-col items-center gap-2"
                             >
-                              Chưa có sản phẩm nào.
+                              <span className="material-symbols-outlined text-4xl opacity-20">
+                                shopping_cart_off
+                              </span>
+                              Chưa có sản phẩm nào trong phiếu nhập.
                             </td>
                           </tr>
                         )}
@@ -426,21 +450,19 @@ const ImportFormModal = ({
               </div>
             </div>
 
-            {/* Footer */}
-            <div className="px-10 py-6 bg-white border-t border-border-light/50 flex justify-end gap-4 sticky bottom-0 z-20">
+            {/* --- FOOTER --- */}
+            <div className="p-8 border-t border-slate-100 flex justify-end items-center gap-6 bg-slate-50/30 shrink-0">
               <button
                 onClick={onClose}
-                className="px-6 py-2.5 rounded-lg text-sm font-medium text-text-body hover:bg-surface border border-transparent hover:border-border-light transition-colors"
+                className="text-slate-500 hover:text-slate-700 font-semibold transition-colors"
               >
                 Hủy bỏ
               </button>
               <button
                 onClick={handleSubmit}
-                className="px-8 py-2.5 rounded-lg text-sm font-medium text-white bg-primary hover:bg-primary-hover shadow-lg flex items-center gap-2 transition-all hover:-translate-y-0.5"
+                className="flex items-center gap-2 px-10 py-3.5 bg-primary hover:bg-primary-dark text-white font-bold rounded-xl shadow-lg shadow-teal-500/25 transition-all transform hover:-translate-y-0.5 active:scale-95"
               >
-                <span className="material-symbols-outlined text-[18px]">
-                  check
-                </span>{" "}
+                <span className="material-symbols-outlined text-xl">check</span>{" "}
                 Hoàn tất nhập hàng
               </button>
             </div>

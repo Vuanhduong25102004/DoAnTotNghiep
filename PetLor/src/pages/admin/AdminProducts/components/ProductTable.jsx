@@ -6,6 +6,7 @@ import {
   getImageUrl,
 } from "../../components/utils";
 
+// Cập nhật SkeletonRow để thêm cột Trọng lượng
 const SkeletonRow = () => (
   <tr className="animate-pulse border-b border-gray-100 last:border-0">
     <td className="px-6 py-4">
@@ -20,6 +21,10 @@ const SkeletonRow = () => (
     </td>
     <td className="px-6 py-4">
       <div className="h-4 bg-gray-200 rounded w-20"></div>
+    </td>
+    {/* Thêm Skeleton cho cột Trọng lượng */}
+    <td className="px-6 py-4">
+      <div className="h-4 bg-gray-200 rounded w-16"></div>
     </td>
     <td className="px-6 py-4">
       <div className="h-4 bg-gray-200 rounded w-16"></div>
@@ -60,6 +65,10 @@ const ProductTable = ({
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Giá bán
+              </th>
+              {/* Thêm cột Trọng lượng */}
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Trọng lượng
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Tồn kho
@@ -121,6 +130,10 @@ const ProductTable = ({
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-gray-900">
                         {formatCurrency(product.gia)}
                       </td>
+                      {/* Hiển thị dữ liệu Trọng lượng */}
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {product.trongLuong ? `${product.trongLuong} g` : "N/A"}
+                      </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center gap-2">
                           <span className="text-sm text-gray-900 font-medium">
@@ -173,7 +186,7 @@ const ProductTable = ({
               : !loading && (
                   <tr>
                     <td
-                      colSpan="6"
+                      colSpan="7" // Cập nhật colSpan thành 7 vì thêm 1 cột
                       className="px-6 py-4 text-center text-gray-500"
                     >
                       Không tìm thấy sản phẩm nào phù hợp.

@@ -17,7 +17,7 @@ const PetFormModal = ({
     giongLoai: "",
     ngaySinh: "",
     gioiTinh: "",
-    canNang: "", // 1. Thêm trường cân nặng vào state
+    canNang: "",
     ghiChuSucKhoe: "",
     tenChuSoHuu: "",
     soDienThoaiChuSoHuu: "",
@@ -47,7 +47,7 @@ const PetFormModal = ({
           giongLoai: initialData.giongLoai || "",
           ngaySinh: formattedDate,
           gioiTinh: initialData.gioiTinh || "",
-          canNang: initialData.canNang || "", // 2. Map dữ liệu khi Edit
+          canNang: initialData.canNang || "",
           ghiChuSucKhoe: initialData.ghiChuSucKhoe || "",
           tenChuSoHuu: initialData.tenChu || "",
           soDienThoaiChuSoHuu: initialData.soDienThoaiChuSoHuu || "",
@@ -61,7 +61,7 @@ const PetFormModal = ({
           giongLoai: "",
           ngaySinh: "",
           gioiTinh: "",
-          canNang: "", // Reset cân nặng
+          canNang: "",
           ghiChuSucKhoe: "",
           tenChuSoHuu: "",
           soDienThoaiChuSoHuu: "",
@@ -71,6 +71,8 @@ const PetFormModal = ({
       setImageFile(null);
     }
   }, [isOpen, initialData]);
+
+  useEscapeKey(onClose, isOpen);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -115,6 +117,12 @@ const PetFormModal = ({
     onSubmit(submissionData);
   };
 
+  // Shared Styles (Design System)
+  const inputClass =
+    "w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-xl text-slate-700 font-medium focus:ring-0 transition-all focus:border-primary outline-none placeholder:text-slate-400";
+  const labelClass =
+    "text-[11px] font-bold text-slate-400 uppercase tracking-widest ml-1 mb-1.5 block";
+
   return (
     <AnimatePresence>
       {isOpen && (
@@ -122,221 +130,255 @@ const PetFormModal = ({
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm overflow-hidden"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm overflow-hidden p-4"
         >
           <motion.div
             initial={{ scale: 0.95, opacity: 0, y: 20 }}
             animate={{ scale: 1, opacity: 1, y: 0 }}
             exit={{ scale: 0.95, opacity: 0, y: 20 }}
-            transition={{ duration: 0.3, ease: "easeOut" }}
-            className="w-full max-w-3xl bg-white rounded-2xl shadow-modal flex flex-col max-h-[95vh] relative overflow-hidden font-body mx-auto my-8"
+            className="w-full max-w-4xl bg-white rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[95vh]"
           >
-            {/* Header */}
-            <div className="px-10 py-6 border-b border-border-light/50 flex justify-between items-center bg-white sticky top-0 z-20 backdrop-blur-sm bg-white/95">
-              <div className="flex items-center gap-5">
-                <div className="w-12 h-12 rounded-full bg-surface border border-border-light flex items-center justify-center text-primary">
-                  <span className="material-symbols-outlined text-[24px]">
+            {/* --- HEADER --- */}
+            <div className="px-8 py-6 border-b border-slate-100 flex justify-between items-center bg-white sticky top-0 z-10 shrink-0">
+              <div className="flex items-center gap-4">
+                <div className="w-14 h-14 rounded-2xl bg-teal-50 flex items-center justify-center text-primary border border-teal-100/50">
+                  <span className="material-symbols-outlined text-3xl">
                     {isEdit ? "edit_note" : "add_circle"}
                   </span>
                 </div>
                 <div>
-                  <h1 className="text-xl font-semibold text-text-heading tracking-tight font-display">
+                  <h2 className="text-2xl font-extrabold text-slate-900 tracking-tight">
+                    {isEdit ? "Cập nhật Thú cưng" : "Thêm Thú cưng mới"}
+                  </h2>
+                  <p className="text-sm text-slate-500">
                     {isEdit
-                      ? `Chỉnh sửa Thú cưng #${initialData.thuCungId}`
-                      : "Thêm Thú cưng mới"}
-                  </h1>
-                  <p className="text-sm text-text-body/70 mt-1 font-light">
-                    {isEdit
-                      ? "Cập nhật thông tin hồ sơ thú cưng"
-                      : "Tạo hồ sơ thú cưng mới"}
+                      ? `Chỉnh sửa hồ sơ cho thú cưng #${initialData.thuCungId}`
+                      : "Tạo hồ sơ thú cưng và thông tin chủ sở hữu"}
                   </p>
                 </div>
               </div>
               <button
                 onClick={onClose}
-                className="w-10 h-10 rounded-full flex items-center justify-center text-secondary hover:text-text-heading hover:bg-surface transition-all duration-300"
+                className="text-slate-400 hover:text-slate-600 transition-colors p-2 hover:bg-slate-100 rounded-full"
               >
-                <span className="material-symbols-outlined font-light">
-                  close
-                </span>
+                <span className="material-symbols-outlined">close</span>
               </button>
             </div>
 
-            {/* Body */}
-            <div className="flex-1 p-8 md:p-10 bg-white overflow-y-auto">
-              <div className="space-y-8">
-                {/* Tên thú cưng */}
-                <div className="input-group">
-                  <label className="form-label">
-                    Tên thú cưng <span className="text-primary">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    name="tenThuCung"
-                    className="form-control"
-                    value={formData.tenThuCung}
-                    onChange={handleChange}
-                    placeholder="VD: Miu, Lu..."
-                  />
-                </div>
-
-                {/* Hình ảnh */}
-                <div className="input-group">
-                  <label className="form-label">Hình ảnh</label>
-                  <div className="mt-2 flex items-center space-x-4">
-                    <img
-                      src={
-                        previewImage || "https://placehold.co/100x100?text=Pet"
-                      }
-                      alt="Pet Preview"
-                      className="h-16 w-16 rounded-full object-cover border border-gray-200"
-                    />
-                    <input
-                      type="file"
-                      className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20 cursor-pointer"
-                      onChange={handleFileChange}
-                      accept="image/*"
-                    />
-                  </div>
-                </div>
-
-                {/* Grid: Chủng loại & Giới tính */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                  <div className="input-group">
-                    <label className="form-label">Chủng loại</label>
-                    <select
-                      name="chungLoai"
-                      className="form-control"
-                      value={formData.chungLoai}
-                      onChange={handleChange}
-                    >
-                      <option value="" disabled>
-                        -- Chọn chủng loại --
-                      </option>
-                      <option value="Chó">Chó</option>
-                      <option value="Mèo">Mèo</option>
-                      <option value="Khác">Khác</option>
-                    </select>
-                  </div>
-                  <div className="input-group">
-                    <label className="form-label">Giới tính</label>
-                    <select
-                      name="gioiTinh"
-                      className="form-control"
-                      value={formData.gioiTinh}
-                      onChange={handleChange}
-                    >
-                      <option value="" disabled>
-                        -- Chọn giới tính --
-                      </option>
-                      <option value="Đực">Đực</option>
-                      <option value="Cái">Cái</option>
-                      <option value="Chưa rõ">Chưa rõ</option>
-                    </select>
-                  </div>
-                </div>
-
-                {/* Giống loài */}
-                <div className="input-group">
-                  <label className="form-label">Giống loài</label>
-                  <input
-                    type="text"
-                    name="giongLoai"
-                    className="form-control"
-                    value={formData.giongLoai}
-                    onChange={handleChange}
-                    placeholder="VD: Corgi, Anh lông ngắn..."
-                  />
-                </div>
-
-                {/* 3. UI: Gộp Ngày sinh và Cân nặng vào Grid 2 cột */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                  <div className="input-group">
-                    <label className="form-label">Ngày sinh</label>
-                    <input
-                      type="date"
-                      name="ngaySinh"
-                      className="form-control"
-                      value={formData.ngaySinh}
-                      onChange={handleChange}
-                    />
+            {/* --- BODY --- */}
+            <div className="p-8 overflow-y-auto custom-scrollbar flex-1">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-10 gap-y-8">
+                {/* CỘT TRÁI: Thông tin Thú cưng */}
+                <section className="space-y-6">
+                  <div className="flex items-center gap-3 mb-2">
+                    <span className="material-symbols-outlined text-primary bg-teal-50 p-1.5 rounded-lg text-xl">
+                      pets
+                    </span>
+                    <h3 className="text-lg font-bold text-slate-900">
+                      Thông tin Thú cưng
+                    </h3>
                   </div>
 
-                  {/* INPUT CÂN NẶNG MỚI */}
-                  <div className="input-group">
-                    <label className="form-label">Cân nặng (kg)</label>
-                    <input
-                      type="number"
-                      name="canNang"
-                      className="form-control"
-                      value={formData.canNang}
-                      onChange={handleChange}
-                      placeholder="VD: 5.5"
-                      step="0.1" // Cho phép nhập số thập phân
-                      min="0"
-                    />
-                  </div>
-                </div>
-
-                {/* Thông tin chủ sở hữu */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                  <div className="input-group">
-                    <label className="form-label">
-                      Tên chủ sở hữu <span className="text-primary">*</span>
+                  <div>
+                    <label className={labelClass}>
+                      Tên thú cưng <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="text"
-                      name="tenChuSoHuu"
-                      className="form-control"
-                      value={formData.tenChuSoHuu}
+                      name="tenThuCung"
+                      value={formData.tenThuCung}
                       onChange={handleChange}
+                      className={inputClass}
+                      placeholder="VD: Miu, Lu, Boss..."
                     />
                   </div>
-                  <div className="input-group">
-                    <label className="form-label">
-                      SĐT chủ sở hữu <span className="text-primary">*</span>
-                    </label>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className={labelClass}>Chủng loại</label>
+                      <select
+                        name="chungLoai"
+                        value={formData.chungLoai}
+                        onChange={handleChange}
+                        className={`${inputClass} appearance-none`}
+                      >
+                        <option value="">-- Chọn --</option>
+                        <option value="Chó">Chó</option>
+                        <option value="Mèo">Mèo</option>
+                        <option value="Khác">Khác</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className={labelClass}>Giới tính</label>
+                      <select
+                        name="gioiTinh"
+                        value={formData.gioiTinh}
+                        onChange={handleChange}
+                        className={`${inputClass} appearance-none`}
+                      >
+                        <option value="">-- Chọn --</option>
+                        <option value="Đực">Đực</option>
+                        <option value="Cái">Cái</option>
+                        <option value="Chưa rõ">Chưa rõ</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className={labelClass}>Giống loài</label>
                     <input
                       type="text"
-                      name="soDienThoaiChuSoHuu"
-                      className="form-control"
-                      value={formData.soDienThoaiChuSoHuu}
+                      name="giongLoai"
+                      value={formData.giongLoai}
                       onChange={handleChange}
+                      className={inputClass}
+                      placeholder="VD: Corgi, Anh lông ngắn..."
                     />
                   </div>
-                </div>
 
-                {/* Ghi chú */}
-                <div className="input-group">
-                  <label className="form-label">Ghi chú sức khỏe</label>
-                  <textarea
-                    name="ghiChuSucKhoe"
-                    rows={3}
-                    className="form-control"
-                    value={formData.ghiChuSucKhoe}
-                    onChange={handleChange}
-                    placeholder="Ghi chú về tiền sử bệnh, dị ứng..."
-                  />
-                </div>
+                  {/* Image Upload */}
+                  <div>
+                    <label className={labelClass}>Hình ảnh</label>
+                    <div className="mt-2 p-4 bg-slate-50 border border-slate-100 rounded-2xl flex items-center gap-5">
+                      <div className="w-20 h-20 bg-white rounded-full border border-slate-200 flex items-center justify-center overflow-hidden shrink-0 shadow-sm">
+                        <img
+                          src={
+                            previewImage ||
+                            "https://placehold.co/150x150?text=Pet"
+                          }
+                          alt="Preview"
+                          className="w-full h-full object-cover"
+                          onError={(e) => {
+                            e.target.src =
+                              "https://placehold.co/150x150?text=Pet";
+                          }}
+                        />
+                      </div>
+                      <div className="flex-1">
+                        <label className="block w-full cursor-pointer">
+                          <div className="flex items-center gap-3">
+                            <span
+                              onClick={() =>
+                                document
+                                  .getElementById("pet-img-upload")
+                                  .click()
+                              }
+                              className="px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 cursor-pointer shadow-sm transition-colors"
+                            >
+                              Chọn ảnh...
+                            </span>
+                            <span className="text-xs text-slate-400 italic truncate max-w-[150px]">
+                              {imageFile ? imageFile.name : "Chưa chọn tệp"}
+                            </span>
+                          </div>
+                          <input
+                            id="pet-img-upload"
+                            type="file"
+                            className="hidden"
+                            onChange={handleFileChange}
+                            accept="image/*"
+                          />
+                        </label>
+                      </div>
+                    </div>
+                  </div>
+                </section>
+
+                {/* CỘT PHẢI: Sức khỏe & Chủ sở hữu */}
+                <section className="space-y-6">
+                  <div className="flex items-center gap-3 mb-2">
+                    <span className="material-symbols-outlined text-orange-500 bg-orange-50 p-1.5 rounded-lg text-xl">
+                      medical_services
+                    </span>
+                    <h3 className="text-lg font-bold text-slate-900">
+                      Sức khỏe & Chủ sở hữu
+                    </h3>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className={labelClass}>Ngày sinh</label>
+                      <input
+                        type="date"
+                        name="ngaySinh"
+                        value={formData.ngaySinh}
+                        onChange={handleChange}
+                        className={inputClass}
+                      />
+                    </div>
+                    <div>
+                      <label className={labelClass}>Cân nặng (kg)</label>
+                      <input
+                        type="number"
+                        name="canNang"
+                        value={formData.canNang}
+                        onChange={handleChange}
+                        className={inputClass}
+                        placeholder="VD: 5.5"
+                        step="0.1"
+                        min="0"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 gap-4 bg-slate-50/80 p-4 rounded-2xl border border-slate-100">
+                    <div>
+                      <label className={labelClass}>
+                        Tên chủ sở hữu <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        name="tenChuSoHuu"
+                        value={formData.tenChuSoHuu}
+                        onChange={handleChange}
+                        className={`${inputClass} bg-white`}
+                        placeholder="Họ và tên chủ"
+                      />
+                    </div>
+                    <div>
+                      <label className={labelClass}>
+                        SĐT liên hệ <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        name="soDienThoaiChuSoHuu"
+                        value={formData.soDienThoaiChuSoHuu}
+                        onChange={handleChange}
+                        className={`${inputClass} bg-white`}
+                        placeholder="09xx xxx xxx"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className={labelClass}>Ghi chú sức khỏe</label>
+                    <textarea
+                      name="ghiChuSucKhoe"
+                      rows={3}
+                      value={formData.ghiChuSucKhoe}
+                      onChange={handleChange}
+                      className={`${inputClass} resize-none`}
+                      placeholder="Tiền sử bệnh, dị ứng, tính cách..."
+                    />
+                  </div>
+                </section>
               </div>
             </div>
 
-            {/* Footer */}
-            <div className="px-10 py-6 bg-white border-t border-border-light/50 flex justify-end gap-4 sticky bottom-0 z-20">
+            {/* --- FOOTER --- */}
+            <div className="p-8 border-t border-slate-100 flex justify-end items-center gap-6 bg-slate-50/30 shrink-0">
               <button
                 onClick={onClose}
-                className="px-6 py-2.5 rounded-lg text-sm font-medium text-text-body hover:bg-surface hover:text-text-heading transition-colors border border-transparent hover:border-border-light"
+                className="text-slate-500 hover:text-slate-700 font-semibold transition-colors"
               >
                 Hủy bỏ
               </button>
               <button
                 onClick={handleSubmit}
-                className="px-8 py-2.5 rounded-lg text-sm font-medium text-white bg-primary hover:bg-primary-hover shadow-lg shadow-primary/20 hover:shadow-primary/30 transition-all duration-200 transform hover:-translate-y-0.5 active:translate-y-0 flex items-center gap-2 tracking-wide"
+                className="flex items-center gap-2 px-10 py-3.5 bg-primary hover:bg-primary-dark text-white font-bold rounded-xl shadow-lg shadow-teal-500/25 transition-all transform hover:-translate-y-0.5 active:scale-95"
               >
-                <span className="material-symbols-outlined text-[18px]">
-                  {isEdit ? "save" : "check"}
-                </span>
-                {isEdit ? "Lưu thay đổi" : "Tạo Thú Cưng"}
+                <span className="material-symbols-outlined text-xl">save</span>
+                {isEdit ? "Lưu thay đổi" : "Tạo thú cưng"}
               </button>
             </div>
           </motion.div>

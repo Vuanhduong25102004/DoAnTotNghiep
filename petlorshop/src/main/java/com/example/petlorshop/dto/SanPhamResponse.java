@@ -19,6 +19,7 @@ public class SanPhamResponse {
     private BigDecimal giaGiam;
     private Integer soLuongTonKho;
     private String hinhAnh;
+    private Integer trongLuong;
     private Integer danhMucId;
     private String tenDanhMuc;
 }

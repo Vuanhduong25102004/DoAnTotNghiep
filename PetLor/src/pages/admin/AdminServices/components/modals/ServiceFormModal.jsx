@@ -6,7 +6,7 @@ import { getImageUrl } from "../../../components/utils";
 const ServiceFormModal = ({
   isOpen,
   onClose,
-  initialData, // Nếu null => Create, nếu có object => Edit
+  initialData,
   serviceCategories,
   onSubmit,
 }) => {
@@ -26,7 +26,7 @@ const ServiceFormModal = ({
   useEffect(() => {
     if (isOpen) {
       if (initialData) {
-        // Chế độ Edit
+        // Edit
         setFormData({
           tenDichVu: initialData.tenDichVu || "",
           moTa: initialData.moTa || "",
@@ -36,7 +36,7 @@ const ServiceFormModal = ({
         });
         setPreviewImage(getImageUrl(initialData.hinhAnh));
       } else {
-        // Chế độ Create
+        // Create
         setFormData({
           tenDichVu: "",
           moTa: "",
@@ -49,6 +49,8 @@ const ServiceFormModal = ({
       setImageFile(null);
     }
   }, [isOpen, initialData]);
+
+  useEscapeKey(onClose, isOpen);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -67,6 +69,12 @@ const ServiceFormModal = ({
     onSubmit(formData, imageFile);
   };
 
+  // Shared Styles (Design System)
+  const inputClass =
+    "w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-xl text-slate-700 font-medium focus:ring-0 transition-all focus:border-primary outline-none placeholder:text-slate-400";
+  const labelClass =
+    "text-[11px] font-bold text-slate-400 uppercase tracking-widest ml-1 mb-1.5 block";
+
   return (
     <AnimatePresence>
       {isOpen && (
@@ -74,151 +82,214 @@ const ServiceFormModal = ({
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm overflow-hidden"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm overflow-hidden p-4"
         >
           <motion.div
             initial={{ scale: 0.95, opacity: 0, y: 20 }}
             animate={{ scale: 1, opacity: 1, y: 0 }}
             exit={{ scale: 0.95, opacity: 0, y: 20 }}
-            className="w-full max-w-3xl bg-white rounded-2xl shadow-modal flex flex-col max-h-[95vh] relative overflow-hidden font-body mx-auto my-8"
+            className="w-full max-w-4xl bg-white rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[95vh]"
           >
-            {/* Header */}
-            <div className="px-10 py-6 border-b border-border-light/50 flex justify-between items-center bg-white sticky top-0 z-20">
-              <div className="flex items-center gap-5">
-                <div className="w-12 h-12 rounded-full bg-surface border border-border-light flex items-center justify-center text-primary">
-                  <span className="material-symbols-outlined text-[24px]">
+            {/* --- HEADER --- */}
+            <div className="px-8 py-6 border-b border-slate-100 flex justify-between items-center bg-white sticky top-0 z-10 shrink-0">
+              <div className="flex items-center gap-4">
+                <div className="w-14 h-14 rounded-2xl bg-teal-50 flex items-center justify-center text-primary border border-teal-100/50">
+                  <span className="material-symbols-outlined text-3xl">
                     {isEdit ? "edit_note" : "add_circle"}
                   </span>
                 </div>
                 <div>
-                  <h1 className="text-xl font-semibold text-text-heading">
+                  <h2 className="text-2xl font-extrabold text-slate-900 tracking-tight">
+                    {isEdit ? "Cập nhật Dịch vụ" : "Thêm Dịch vụ mới"}
+                  </h2>
+                  <p className="text-sm text-slate-500">
                     {isEdit
-                      ? `Chỉnh sửa Dịch vụ #${initialData.dichVuId}`
-                      : "Thêm Dịch vụ mới"}
-                  </h1>
-                  <p className="text-sm text-text-body/70 mt-1 font-light">
-                    {isEdit
-                      ? "Cập nhật thông tin dịch vụ"
-                      : "Tạo dịch vụ mới cho hệ thống"}
+                      ? `Chỉnh sửa thông tin cho dịch vụ #${initialData.dichVuId}`
+                      : "Thiết lập thông tin dịch vụ spa/chăm sóc mới"}
                   </p>
                 </div>
               </div>
               <button
                 onClick={onClose}
-                className="w-10 h-10 rounded-full flex items-center justify-center text-secondary hover:text-text-heading hover:bg-surface transition-all duration-300"
+                className="text-slate-400 hover:text-slate-600 transition-colors p-2 hover:bg-slate-100 rounded-full"
               >
-                <span className="material-symbols-outlined font-light">
-                  close
-                </span>
+                <span className="material-symbols-outlined">close</span>
               </button>
             </div>
 
-            {/* Body */}
-            <div className="flex-1 p-8 md:p-10 bg-white overflow-y-auto">
-              <div className="space-y-8">
-                <div className="input-group">
-                  <label className="form-label">
-                    Tên dịch vụ <span className="text-primary">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    name="tenDichVu"
-                    className="form-control"
-                    value={formData.tenDichVu}
-                    onChange={handleChange}
-                  />
-                </div>
-                <div className="input-group">
-                  <label className="form-label">Mô tả</label>
-                  <textarea
-                    name="moTa"
-                    rows={3}
-                    className="form-control"
-                    value={formData.moTa}
-                    onChange={handleChange}
-                  />
-                </div>
-                <div className="input-group">
-                  <label className="form-label">Hình ảnh</label>
-                  <div className="mt-2 flex items-center space-x-4">
-                    <img
-                      src={
-                        previewImage ||
-                        "https://placehold.co/100x100?text=Service"
-                      }
-                      alt="Preview"
-                      className="h-16 w-16 rounded-md object-cover"
-                    />
-                    <input
-                      type="file"
-                      className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20"
-                      onChange={handleFileChange}
-                    />
+            {/* --- BODY --- */}
+            <div className="p-8 overflow-y-auto custom-scrollbar flex-1">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-10 gap-y-8">
+                {/* CỘT TRÁI: Thông tin cơ bản */}
+                <section className="space-y-6">
+                  <div className="flex items-center gap-3 mb-2">
+                    <span className="material-symbols-outlined text-primary bg-teal-50 p-1.5 rounded-lg text-xl">
+                      info
+                    </span>
+                    <h3 className="text-lg font-bold text-slate-900">
+                      Thông tin cơ bản
+                    </h3>
                   </div>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                  <div className="input-group">
-                    <label className="form-label">
-                      Giá dịch vụ (VNĐ) <span className="text-primary">*</span>
+
+                  <div>
+                    <label className={labelClass}>
+                      Tên dịch vụ <span className="text-red-500">*</span>
                     </label>
                     <input
-                      type="number"
-                      name="giaDichVu"
-                      min="0"
-                      className="form-control"
-                      value={formData.giaDichVu}
+                      type="text"
+                      name="tenDichVu"
+                      value={formData.tenDichVu}
                       onChange={handleChange}
+                      className={inputClass}
+                      placeholder="VD: Tắm spa trọn gói..."
                     />
                   </div>
-                  <div className="input-group">
-                    <label className="form-label">Thời lượng (Phút)</label>
-                    <input
-                      type="number"
-                      name="thoiLuongUocTinhPhut"
-                      min="0"
-                      className="form-control"
-                      value={formData.thoiLuongUocTinhPhut}
-                      onChange={handleChange}
-                    />
-                  </div>
-                </div>
-                <div className="input-group">
-                  <label className="form-label">
-                    Danh mục <span className="text-primary">*</span>
-                  </label>
-                  <select
-                    name="danhMucDvId"
-                    className="form-control"
-                    value={formData.danhMucDvId}
-                    onChange={handleChange}
-                  >
-                    <option value="">-- Chọn danh mục --</option>
-                    {serviceCategories.map((cat) => (
-                      <option
-                        key={cat.id || cat.danhMucDvId}
-                        value={cat.id || cat.danhMucDvId}
+
+                  <div>
+                    <label className={labelClass}>
+                      Danh mục <span className="text-red-500">*</span>
+                    </label>
+                    <div className="relative">
+                      <select
+                        name="danhMucDvId"
+                        value={formData.danhMucDvId}
+                        onChange={handleChange}
+                        className={`${inputClass} appearance-none`}
                       >
-                        {cat.tenDanhMucDv}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                        <option value="">-- Chọn danh mục --</option>
+                        {serviceCategories.map((cat) => (
+                          <option
+                            key={cat.id || cat.danhMucDvId}
+                            value={cat.id || cat.danhMucDvId}
+                          >
+                            {cat.tenDanhMucDv}
+                          </option>
+                        ))}
+                      </select>
+                      <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
+                        <span className="material-symbols-outlined text-xl">
+                          expand_more
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className={labelClass}>Mô tả</label>
+                    <textarea
+                      name="moTa"
+                      rows={5}
+                      value={formData.moTa}
+                      onChange={handleChange}
+                      className={`${inputClass} resize-none`}
+                      placeholder="Mô tả chi tiết về quy trình..."
+                    />
+                  </div>
+                </section>
+
+                {/* CỘT PHẢI: Giá & Hình ảnh */}
+                <section className="space-y-6">
+                  <div className="flex items-center gap-3 mb-2">
+                    <span className="material-symbols-outlined text-orange-500 bg-orange-50 p-1.5 rounded-lg text-xl">
+                      sell
+                    </span>
+                    <h3 className="text-lg font-bold text-slate-900">
+                      Chi phí & Hình ảnh
+                    </h3>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-5">
+                    <div>
+                      <label className={labelClass}>
+                        Giá dịch vụ <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="number"
+                        name="giaDichVu"
+                        min="0"
+                        value={formData.giaDichVu}
+                        onChange={handleChange}
+                        className={inputClass}
+                      />
+                    </div>
+                    <div>
+                      <label className={labelClass}>Thời lượng (Phút)</label>
+                      <input
+                        type="number"
+                        name="thoiLuongUocTinhPhut"
+                        min="0"
+                        value={formData.thoiLuongUocTinhPhut}
+                        onChange={handleChange}
+                        className={inputClass}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Image Upload Style Mới */}
+                  <div>
+                    <label className={labelClass}>Hình ảnh minh họa</label>
+                    <div className="mt-2 p-4 bg-slate-50 border border-slate-100 rounded-2xl flex items-center gap-5">
+                      <div className="w-20 h-20 bg-white rounded-xl border border-slate-200 flex items-center justify-center overflow-hidden shrink-0 shadow-sm">
+                        <img
+                          src={
+                            previewImage ||
+                            "https://via.placeholder.com/150?text=IMG"
+                          }
+                          alt="Preview"
+                          className="w-full h-full object-cover"
+                          onError={(e) => {
+                            e.target.src =
+                              "https://via.placeholder.com/150?text=IMG";
+                          }}
+                        />
+                      </div>
+                      <div className="flex-1">
+                        <label className="block w-full cursor-pointer">
+                          <div className="flex items-center gap-3">
+                            <span
+                              onClick={() =>
+                                document
+                                  .getElementById("service-img-upload")
+                                  .click()
+                              }
+                              className="px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 cursor-pointer shadow-sm transition-colors"
+                            >
+                              Chọn tệp...
+                            </span>
+                            <span className="text-xs text-slate-400 italic truncate max-w-[150px]">
+                              {imageFile ? imageFile.name : "Chưa chọn tệp"}
+                            </span>
+                          </div>
+                          <input
+                            id="service-img-upload"
+                            type="file"
+                            className="hidden"
+                            onChange={handleFileChange}
+                          />
+                        </label>
+                        <p className="text-[10px] text-slate-400 mt-2">
+                          Định dạng: JPG, PNG. Dung lượng tối đa 5MB.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </section>
               </div>
             </div>
 
-            {/* Footer */}
-            <div className="px-10 py-6 bg-white border-t border-border-light/50 flex justify-end gap-4 sticky bottom-0 z-20">
+            {/* --- FOOTER --- */}
+            <div className="p-8 border-t border-slate-100 flex justify-end items-center gap-6 bg-slate-50/30 shrink-0">
               <button
                 onClick={onClose}
-                className="px-6 py-2.5 rounded-lg text-sm font-medium text-text-body hover:bg-surface hover:text-text-heading transition-colors border border-transparent hover:border-border-light"
+                className="text-slate-500 hover:text-slate-700 font-semibold transition-colors"
               >
                 Hủy bỏ
               </button>
               <button
                 onClick={handleSubmit}
-                className="px-8 py-2.5 rounded-lg text-sm font-medium text-white bg-primary hover:bg-primary-hover shadow-lg shadow-primary/20 hover:shadow-primary/30 transition-all duration-200 transform hover:-translate-y-0.5 active:translate-y-0 flex items-center gap-2 tracking-wide"
+                className="flex items-center gap-2 px-10 py-3.5 bg-primary hover:bg-primary-dark text-white font-bold rounded-xl shadow-lg shadow-teal-500/25 transition-all transform hover:-translate-y-0.5 active:scale-95"
               >
-                <span className="material-symbols-outlined text-[18px]">
+                <span className="material-symbols-outlined text-xl">
                   {isEdit ? "save" : "check"}
                 </span>
                 {isEdit ? "Lưu thay đổi" : "Tạo Dịch Vụ"}

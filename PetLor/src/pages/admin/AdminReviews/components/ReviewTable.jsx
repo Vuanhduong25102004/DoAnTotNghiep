@@ -84,7 +84,7 @@ const ReviewTable = ({
             ) : reviews.length > 0 ? (
               reviews.map((review) => {
                 const target = getReviewTargetInfo(review);
-                const avatarUrl = getImageUrl(review.nguoiDung?.anhDaiDien); // Lấy URL Avatar
+                const avatarUrl = getImageUrl(review.nguoiDung?.anhDaiDien);
 
                 return (
                   <tr

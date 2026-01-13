@@ -4,6 +4,7 @@ import com.example.petlorshop.dto.DonHangRequest;
 import com.example.petlorshop.dto.DonHangResponse;
 import com.example.petlorshop.dto.DonHangUpdateRequest;
 import com.example.petlorshop.dto.GuestOrderRequest;
+import com.example.petlorshop.dto.ShippingFeeRequest;
 import com.example.petlorshop.models.DonHang;
 import com.example.petlorshop.services.DonHangService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -14,6 +15,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
 
@@ -73,6 +75,16 @@ public class DonHangController {
             return donHangService.getDonHangById(createdDonHang.getDonHangId())
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.internalServerError().build());
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
+    
+    @PostMapping("/tinh-phi-ship")
+    public ResponseEntity<?> calculateShippingFee(@RequestBody ShippingFeeRequest request) {
+        try {
+            BigDecimal fee = donHangService.calculateShippingFee(request);
+            return ResponseEntity.ok(Map.of("phiShip", fee));
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         }

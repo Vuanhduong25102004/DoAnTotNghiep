@@ -3,11 +3,21 @@ import useEscapeKey from "../../../../../hooks/useEscapeKey";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   formatCurrency,
-  AppointmentStatusBadge,
+  OrderStatusBadge,
   formatDate,
+  getImageUrl,
 } from "../../../components/utils";
 
 const OrderDetailModal = ({ isOpen, onClose, order, orderItems }) => {
+  useEscapeKey(onClose, isOpen);
+
+  // Style constants
+  const labelClass =
+    "text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-1 block";
+  const valueClass = "text-slate-700 font-medium text-base";
+  const sectionHeaderClass = "flex items-center gap-3 mb-6";
+  const iconBoxClass = "p-1.5 rounded-lg text-xl";
+
   return (
     <AnimatePresence>
       {isOpen && order && (
@@ -15,189 +25,179 @@ const OrderDetailModal = ({ isOpen, onClose, order, orderItems }) => {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm overflow-hidden"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm overflow-hidden p-4"
         >
           <motion.div
             initial={{ scale: 0.95, opacity: 0, y: 20 }}
             animate={{ scale: 1, opacity: 1, y: 0 }}
             exit={{ scale: 0.95, opacity: 0, y: 20 }}
-            transition={{ duration: 0.3, ease: "easeOut" }}
-            className="w-full max-w-5xl bg-white rounded-2xl shadow-modal flex flex-col max-h-[95vh] relative overflow-hidden font-body mx-auto my-8"
+            className="w-full max-w-5xl bg-white rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[95vh]"
           >
-            {/* Header */}
-            <div className="px-10 py-6 border-b border-border-light/50 flex justify-between items-center bg-white sticky top-0 z-20 backdrop-blur-sm bg-white/95">
-              <div className="flex items-center gap-5">
-                <div className="w-12 h-12 rounded-full bg-surface border border-border-light flex items-center justify-center text-primary">
-                  <span className="material-symbols-outlined text-[24px]">
+            {/* --- HEADER --- */}
+            <div className="px-8 py-6 border-b border-slate-100 flex justify-between items-center bg-white sticky top-0 z-10 shrink-0">
+              <div className="flex items-center gap-4">
+                <div className="w-14 h-14 rounded-2xl bg-teal-50 flex items-center justify-center text-primary border border-teal-100/50">
+                  <span className="material-symbols-outlined text-3xl">
                     receipt_long
                   </span>
                 </div>
                 <div>
-                  <h1 className="text-xl font-semibold text-text-heading tracking-tight font-display">
-                    Chi tiết Đơn hàng #{order.donHangId}
-                  </h1>
-                  <p className="text-sm text-text-body/70 mt-1 font-light">
-                    Xem thông tin chi tiết của đơn hàng
+                  <h2 className="text-2xl font-extrabold text-slate-900 tracking-tight">
+                    Chi tiết Đơn hàng{" "}
+                    <span className="text-primary">#{order.donHangId}</span>
+                  </h2>
+                  <p className="text-sm text-slate-500">
+                    Xem thông tin chi tiết và danh sách sản phẩm
                   </p>
                 </div>
               </div>
               <button
                 onClick={onClose}
-                className="w-10 h-10 rounded-full flex items-center justify-center text-secondary hover:text-text-heading hover:bg-surface transition-all duration-300"
+                className="text-slate-400 hover:text-slate-600 transition-colors p-2 hover:bg-slate-100 rounded-full"
               >
-                <span className="material-symbols-outlined font-light">
-                  close
-                </span>
+                <span className="material-symbols-outlined">close</span>
               </button>
             </div>
 
-            {/* Body */}
-            <div className="flex-1 p-8 md:p-10 bg-white overflow-y-auto">
-              <div className="space-y-8">
-                {/* Thông tin chung */}
-                <div className="pb-8 border-b border-border-light">
-                  <div className="flex items-center gap-3 mb-6">
-                    <span className="material-symbols-outlined text-primary font-light text-2xl">
-                      info
-                    </span>
-                    <h2 className="text-lg font-semibold text-text-heading">
-                      Thông tin chung
-                    </h2>
+            {/* --- BODY --- */}
+            <div className="p-8 space-y-10 overflow-y-auto custom-scrollbar flex-1">
+              {/* Thông tin chung */}
+              <section>
+                <div className={sectionHeaderClass}>
+                  <span
+                    className={`material-symbols-outlined text-blue-500 bg-blue-50 ${iconBoxClass}`}
+                  >
+                    info
+                  </span>
+                  <h3 className="text-lg font-bold text-slate-900">
+                    Thông tin chung
+                  </h3>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 bg-slate-50/50 p-6 rounded-2xl border border-slate-100">
+                  <div>
+                    <span className={labelClass}>Khách hàng</span>
+                    <div className={valueClass}>
+                      {order.tenNguoiDung || order.userName}
+                    </div>
                   </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium text-text-muted">
-                        Khách hàng
-                      </label>
-                      <div className="font-medium text-text-heading">
-                        {order.userName}
-                      </div>
+
+                  <div>
+                    <span className={labelClass}>Ngày đặt</span>
+                    <div className={valueClass}>
+                      {formatDate(order.ngayDatHang)}
                     </div>
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium text-text-muted">
-                        Ngày đặt
-                      </label>
-                      <div className="font-medium text-text-heading">
-                        {formatDate(order.ngayDatHang)}
-                      </div>
+                  </div>
+
+                  <div>
+                    <span className={labelClass}>Trạng thái</span>
+                    <div className="mt-1">
+                      <OrderStatusBadge status={order.trangThai} />
                     </div>
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium text-text-muted">
-                        Trạng thái
-                      </label>
-                      <div>
-                        <span
-                          className={`inline-block px-2 py-1 text-xs font-medium rounded-full border ${AppointmentStatusBadge(
-                            order.trangThai
-                          )}`}
-                        >
-                          {order.trangThai}
-                        </span>
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium text-text-muted">
-                        Địa chỉ
-                      </label>
-                      <div className="font-medium text-text-heading">
-                        {order.diaChi}
-                      </div>
+                  </div>
+
+                  <div>
+                    <span className={labelClass}>Địa chỉ</span>
+                    <div className={valueClass}>
+                      {order.diaChiGiaoHang || order.diaChi}
                     </div>
                   </div>
                 </div>
+              </section>
 
-                {/* Danh sách sản phẩm */}
-                <div>
-                  <div className="flex items-center gap-3 mb-6">
-                    <span className="material-symbols-outlined text-blue-500 font-light text-2xl">
-                      shopping_cart
-                    </span>
-                    <h2 className="text-lg font-semibold text-text-heading">
-                      Danh sách sản phẩm
-                    </h2>
-                  </div>
-                  <div className="overflow-x-auto border rounded-lg">
-                    <table className="w-full text-sm text-left text-gray-500">
-                      <thead className="text-xs text-gray-700 uppercase bg-gray-50">
-                        <tr>
-                          <th className="px-4 py-3">Sản phẩm</th>
-                          <th className="px-4 py-3 text-right">Đơn giá</th>
-                          <th className="px-4 py-3 text-center">Số lượng</th>
-                          <th className="px-4 py-3 text-right">Thành tiền</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {orderItems.length > 0 ? (
-                          orderItems.map((item, index) => (
-                            <tr
-                              key={index}
-                              className="border-b last:border-b-0 hover:bg-gray-50"
-                            >
-                              <td className="px-4 py-3 font-medium text-gray-900">
-                                <div className="flex items-center">
-                                  {/* Cập nhật logic hiển thị ảnh theo JSON mới */}
-                                  <img
-                                    src={
-                                      item.hinhAnhUrl
-                                        ? `/api/products/images/${item.hinhAnhUrl}` // Giả sử path ảnh cần prefix, hoặc nếu full url thì để nguyên
-                                        : "https://via.placeholder.com/40?text=SP"
-                                    }
-                                    alt="Product"
-                                    className="w-10 h-10 object-cover rounded mr-3 border border-gray-200"
-                                    onError={(e) => {
-                                      e.target.src =
-                                        "https://via.placeholder.com/40?text=SP";
-                                    }}
-                                  />
-                                  {/* Cập nhật logic hiển thị tên theo JSON mới */}
-                                  <span>
-                                    {item.tenSanPham ||
-                                      "Sản phẩm không xác định"}
-                                  </span>
-                                </div>
-                              </td>
-                              {/* Cập nhật đơn giá (JSON mới là donGia) */}
-                              <td className="px-4 py-3 text-right">
-                                {formatCurrency(item.donGia || 0)}
-                              </td>
-                              <td className="px-4 py-3 text-center">
-                                {item.soLuong}
-                              </td>
-                              <td className="px-4 py-3 text-right font-medium">
-                                {formatCurrency(
-                                  (item.donGia || 0) * item.soLuong
-                                )}
-                              </td>
-                            </tr>
-                          ))
-                        ) : (
-                          <tr>
-                            <td
-                              colSpan="4"
-                              className="px-4 py-3 text-center text-gray-500"
-                            >
-                              Không có dữ liệu sản phẩm
+              <div className="h-px bg-slate-100 w-full"></div>
+
+              {/* Danh sách sản phẩm */}
+              <section>
+                <div className={sectionHeaderClass}>
+                  <span
+                    className={`material-symbols-outlined text-orange-500 bg-orange-50 ${iconBoxClass}`}
+                  >
+                    shopping_cart
+                  </span>
+                  <h3 className="text-lg font-bold text-slate-900">
+                    Danh sách sản phẩm
+                  </h3>
+                </div>
+
+                <div className="overflow-hidden border border-slate-100 rounded-2xl">
+                  <table className="w-full text-sm text-left text-slate-600">
+                    <thead className="text-xs text-slate-400 uppercase bg-slate-50 font-bold tracking-wider">
+                      <tr>
+                        <th className="px-6 py-4">Sản phẩm</th>
+                        <th className="px-6 py-4 text-right">Đơn giá</th>
+                        <th className="px-6 py-4 text-center">Số lượng</th>
+                        <th className="px-6 py-4 text-right">Thành tiền</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {orderItems && orderItems.length > 0 ? (
+                        orderItems.map((item, index) => (
+                          <tr
+                            key={index}
+                            className="hover:bg-slate-50/50 transition-colors"
+                          >
+                            <td className="px-6 py-4 font-medium text-slate-900">
+                              <div className="flex items-center">
+                                {/* 2. SỬA PHẦN HIỂN THỊ ẢNH TẠI ĐÂY */}
+                                <img
+                                  src={getImageUrl(item.hinhAnhUrl)}
+                                  // item.hinhAnhUrl khớp với JSON backend trả về
+                                  alt="Product"
+                                  className="w-12 h-12 object-cover rounded-lg mr-4 border border-slate-100 shadow-sm bg-white"
+                                  onError={(e) => {
+                                    e.target.onerror = null; // Tránh loop vô tận
+                                    e.target.src =
+                                      "https://via.placeholder.com/40?text=N/A";
+                                  }}
+                                />
+                                <span>
+                                  {item.tenSanPham || "Sản phẩm không xác định"}
+                                </span>
+                              </div>
+                            </td>
+                            <td className="px-6 py-4 text-right">
+                              {formatCurrency(item.donGia || 0)}
+                            </td>
+                            <td className="px-6 py-4 text-center font-semibold text-slate-700">
+                              {item.soLuong}
+                            </td>
+                            <td className="px-6 py-4 text-right font-bold text-primary">
+                              {formatCurrency(
+                                (item.donGia || 0) * item.soLuong
+                              )}
                             </td>
                           </tr>
-                        )}
-                      </tbody>
-                    </table>
-                  </div>
+                        ))
+                      ) : (
+                        <tr>
+                          <td
+                            colSpan="4"
+                            className="px-6 py-8 text-center text-slate-400 italic"
+                          >
+                            Không có dữ liệu sản phẩm
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
                 </div>
-              </div>
+              </section>
             </div>
 
-            {/* Footer */}
-            <div className="px-10 py-6 bg-white border-t border-border-light/50 flex justify-between items-center sticky bottom-0 z-20">
-              <div className="text-lg font-bold text-gray-900">
-                Tổng cộng: {/* Sử dụng tongTien đã được map ở index.jsx */}
-                <span className="text-primary text-xl">
-                  {formatCurrency(order.tongTien)}
+            {/* --- FOOTER --- */}
+            <div className="px-8 py-6 border-t border-slate-100 flex justify-between items-center bg-slate-50/30 shrink-0">
+              <div className="flex items-baseline gap-2">
+                <span className="text-sm font-bold text-slate-500 uppercase tracking-widest">
+                  Tổng cộng:
+                </span>
+                <span className="text-2xl font-extrabold text-primary">
+                  {formatCurrency(order.tongThanhToan || order.tongTien)}
                 </span>
               </div>
               <button
                 onClick={onClose}
-                className="px-6 py-2.5 rounded-lg text-sm font-medium text-text-body hover:bg-surface hover:text-text-heading transition-colors border border-transparent hover:border-border-light"
+                className="px-8 py-2.5 rounded-xl text-sm font-bold text-slate-600 hover:bg-slate-200 transition-colors bg-slate-100 border border-transparent"
               >
                 Đóng
               </button>

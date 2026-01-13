@@ -110,7 +110,7 @@ const SupplierTable = ({
                         title="Chỉnh sửa"
                       >
                         <span className="material-symbols-outlined text-base">
-                          edit_square
+                          visibility
                         </span>
                       </button>
                       <button

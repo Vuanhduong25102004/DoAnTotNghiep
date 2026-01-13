@@ -56,6 +56,10 @@ const orderService = {
     return apiClient.delete('/gio-hang/me/clear');
   },
   
+  // Tính phí ship
+  calculateShippingFee: (data) => {
+    return apiClient.post('/don-hang/tinh-phi-ship', data);
+  },
 };
 
 export default orderService;

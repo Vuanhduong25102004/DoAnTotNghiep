@@ -4,7 +4,6 @@ import { formatDate, AppointmentStatusBadge } from "../../../components/utils";
 import useEscapeKey from "../../../../../hooks/useEscapeKey";
 
 const AppointmentDetailModal = ({ isOpen, onClose, appointment }) => {
-  // Sử dụng custom hook để đóng modal khi nhấn phím Escape
   useEscapeKey(onClose, isOpen);
 
   return (
@@ -14,163 +13,175 @@ const AppointmentDetailModal = ({ isOpen, onClose, appointment }) => {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm overflow-hidden"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm overflow-hidden p-4"
         >
           <motion.div
             initial={{ scale: 0.95, opacity: 0, y: 20 }}
             animate={{ scale: 1, opacity: 1, y: 0 }}
             exit={{ scale: 0.95, opacity: 0, y: 20 }}
             transition={{ duration: 0.3, ease: "easeOut" }}
-            className="w-full max-w-5xl bg-white rounded-2xl shadow-modal flex flex-col max-h-[95vh] relative overflow-hidden font-body mx-auto my-8"
+            className="bg-white w-full max-w-3xl rounded-[2rem] shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
           >
             {/* Header */}
-            <div className="px-10 py-6 border-b border-border-light/50 flex justify-between items-center bg-white sticky top-0 z-20 backdrop-blur-sm bg-white/95">
-              <div className="flex items-center gap-5">
-                <div className="w-12 h-12 rounded-full bg-surface border border-border-light flex items-center justify-center text-primary">
-                  <span className="material-symbols-outlined text-[24px]">
+            <div className="px-8 py-6 border-b border-gray-100 flex justify-between items-center bg-white sticky top-0 z-10">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-2xl bg-teal-50 flex items-center justify-center text-primary">
+                  <span className="material-symbols-outlined text-3xl">
                     visibility
                   </span>
                 </div>
                 <div>
-                  <h1 className="text-xl font-semibold text-text-heading tracking-tight font-display">
+                  <h2 className="text-2xl font-bold text-gray-900 tracking-tight">
                     Chi tiết Lịch hẹn #{appointment.lichHenId}
-                  </h1>
-                  <p className="text-sm text-text-body/70 mt-1 font-light">
+                  </h2>
+                  <p className="text-sm text-gray-500">
                     Xem thông tin chi tiết của lịch hẹn
                   </p>
                 </div>
               </div>
               <button
                 onClick={onClose}
-                className="w-10 h-10 rounded-full flex items-center justify-center text-secondary hover:text-text-heading hover:bg-surface transition-all duration-300"
+                className="text-gray-400 hover:text-gray-600 transition-colors p-2 hover:bg-gray-100 rounded-full"
               >
-                <span className="material-symbols-outlined font-light">
-                  close
-                </span>
+                <span className="material-symbols-outlined">close</span>
               </button>
             </div>
 
             {/* Body */}
-            <div className="flex-1 p-8 md:p-10 bg-white overflow-y-auto">
-              <div className="space-y-12 max-w-4xl mx-auto">
-                {/* Thông tin chung */}
-                <div className="pb-8 border-b border-border-light">
-                  <div className="section-header flex items-center gap-3 mb-6">
-                    <span className="material-symbols-outlined text-primary font-light text-2xl">
-                      event_note
-                    </span>
-                    <h2 className="text-lg font-semibold text-text-heading">
-                      Thông tin Lịch hẹn
-                    </h2>
+            <div className="p-8 space-y-8 overflow-y-auto bg-white">
+              {/* Section 1: Thông tin chung */}
+              <section>
+                <div className="flex items-center gap-2 mb-6">
+                  <span className="material-symbols-outlined text-primary">
+                    calendar_today
+                  </span>
+                  <h3 className="text-lg font-bold text-gray-900">
+                    Thông tin Lịch hẹn
+                  </h3>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* Dịch vụ */}
+                  <div className="space-y-1.5">
+                    <label className="text-[11px] font-bold text-gray-400 uppercase tracking-widest ml-1">
+                      Dịch vụ
+                    </label>
+                    <div className="w-full px-4 py-3 bg-gray-50 border border-gray-100 rounded-2xl text-gray-700 font-medium">
+                      {appointment.tenDichVu}
+                    </div>
                   </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-8">
-                    <div className="input-group">
-                      <label className="form-label block text-sm font-medium text-text-heading mb-2">
-                        Dịch vụ
+
+                  {/* Thời gian */}
+                  <div className="space-y-1.5">
+                    <label className="text-[11px] font-bold text-gray-400 uppercase tracking-widest ml-1">
+                      Thời gian
+                    </label>
+                    <div className="w-full px-4 py-3 bg-gray-50 border border-gray-100 rounded-2xl text-gray-700 font-medium">
+                      {formatDate(appointment.thoiGianBatDau)}
+                    </div>
+                  </div>
+
+                  {/* Nhân viên */}
+                  <div className="space-y-1.5">
+                    <label className="text-[11px] font-bold text-gray-400 uppercase tracking-widest ml-1">
+                      Nhân viên phụ trách
+                    </label>
+                    <div className="w-full px-4 py-3 bg-gray-50 border border-gray-100 rounded-2xl text-gray-700 font-medium">
+                      {appointment.tenNhanVien || "Chưa gán"}
+                    </div>
+                  </div>
+
+                  {/* Trạng thái */}
+                  <div className="space-y-1.5">
+                    <label className="text-[11px] font-bold text-gray-400 uppercase tracking-widest ml-1">
+                      Trạng thái
+                    </label>
+                    <div className="flex items-center h-[46px]">
+                      <AppointmentStatusBadge
+                        status={appointment.trangThaiLichHen}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Ghi chú */}
+                  {appointment.ghiChuKhachHang && (
+                    <div className="md:col-span-2 space-y-1.5">
+                      <label className="text-[11px] font-bold text-gray-400 uppercase tracking-widest ml-1">
+                        Ghi chú của khách hàng
                       </label>
-                      <div className="p-3 bg-gray-50 rounded-lg border border-border-light text-text-body">
-                        {appointment.tenDichVu}
+                      <div className="w-full px-4 py-3 bg-gray-50 border border-gray-100 rounded-2xl text-gray-700 font-medium min-h-[80px]">
+                        {appointment.ghiChuKhachHang}
                       </div>
                     </div>
-                    <div className="input-group">
-                      <label className="form-label block text-sm font-medium text-text-heading mb-2">
-                        Thời gian
+                  )}
+                </div>
+              </section>
+
+              {/* Divider */}
+              <div className="h-px bg-gray-100 w-full"></div>
+
+              {/* Section 2: Khách hàng & Thú cưng */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
+                {/* Khách hàng */}
+                <section className="space-y-6">
+                  <div className="flex items-center gap-2">
+                    <span className="material-symbols-outlined text-primary">
+                      person
+                    </span>
+                    <h3 className="text-lg font-bold text-gray-900">
+                      Khách hàng
+                    </h3>
+                  </div>
+                  <div className="space-y-4">
+                    <div className="space-y-1.5">
+                      <label className="text-[11px] font-bold text-gray-400 uppercase tracking-widest ml-1">
+                        Họ và tên
                       </label>
-                      <div className="p-3 bg-gray-50 rounded-lg border border-border-light text-text-body">
-                        {formatDate(appointment.thoiGianBatDau)}
+                      <div className="w-full px-4 py-3 bg-gray-50 border border-gray-100 rounded-2xl text-gray-700 font-medium">
+                        {appointment.tenKhachHang}
                       </div>
                     </div>
-                    <div className="input-group">
-                      <label className="form-label block text-sm font-medium text-text-heading mb-2">
-                        Nhân viên phụ trách
-                      </label>
-                      <div className="p-3 bg-gray-50 rounded-lg border border-border-light text-text-body">
-                        {appointment.tenNhanVien || "Chưa gán"}
-                      </div>
-                    </div>
-                    <div className="input-group">
-                      <label className="form-label block text-sm font-medium text-text-heading mb-2">
-                        Trạng thái
-                      </label>
-                      <div className="mt-1">
-                        {AppointmentStatusBadge(appointment.trangThai)}
-                      </div>
-                    </div>
-                    {appointment.ghiChuKhachHang && (
-                      <div className="input-group md:col-span-2">
-                        <label className="form-label block text-sm font-medium text-text-heading mb-2">
-                          Ghi chú của khách hàng
+                    {appointment.soDienThoaiKhachHang && (
+                      <div className="space-y-1.5">
+                        <label className="text-[11px] font-bold text-gray-400 uppercase tracking-widest ml-1">
+                          Số điện thoại
                         </label>
-                        <div className="p-3 bg-gray-50 rounded-lg border border-border-light text-text-body">
-                          {appointment.ghiChuKhachHang}
+                        <div className="w-full px-4 py-3 bg-gray-50 border border-gray-100 rounded-2xl text-gray-700 font-medium">
+                          {appointment.soDienThoaiKhachHang}
                         </div>
                       </div>
                     )}
                   </div>
-                </div>
+                </section>
 
-                {/* Khách hàng & Thú cưng */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-16">
-                  <div className="flex flex-col h-full">
-                    <div className="section-header flex items-center gap-3 mb-6">
-                      <span className="material-symbols-outlined text-blue-400 font-light text-2xl">
-                        person_outline
-                      </span>
-                      <h2 className="text-lg font-semibold text-text-heading">
-                        Khách hàng
-                      </h2>
-                    </div>
-                    <div className="space-y-6">
-                      <div className="input-group">
-                        <label className="form-label block text-sm font-medium text-text-heading mb-2">
-                          Họ và tên
-                        </label>
-                        <div className="p-3 bg-gray-50 rounded-lg border border-border-light text-text-body">
-                          {appointment.tenKhachHang}
-                        </div>
-                      </div>
-                      {appointment.soDienThoaiKhachHang && (
-                        <div className="input-group">
-                          <label className="form-label block text-sm font-medium text-text-heading mb-2">
-                            Số điện thoại
-                          </label>
-                          <div className="p-3 bg-gray-50 rounded-lg border border-border-light text-text-body">
-                            {appointment.soDienThoaiKhachHang}
-                          </div>
-                        </div>
-                      )}
-                    </div>
+                {/* Thú cưng */}
+                <section className="space-y-6">
+                  <div className="flex items-center gap-2">
+                    <span className="material-symbols-outlined text-primary">
+                      pets
+                    </span>
+                    <h3 className="text-lg font-bold text-gray-900">
+                      Thú cưng
+                    </h3>
                   </div>
-
-                  <div className="flex flex-col h-full">
-                    <div className="section-header flex items-center gap-3 mb-6">
-                      <span className="material-symbols-outlined text-orange-400 font-light text-2xl">
-                        pets
-                      </span>
-                      <h2 className="text-lg font-semibold text-text-heading">
-                        Thú cưng
-                      </h2>
-                    </div>
-                    <div className="space-y-6">
-                      <div className="input-group">
-                        <label className="form-label block text-sm font-medium text-text-heading mb-2">
-                          Tên thú cưng
-                        </label>
-                        <div className="p-3 bg-gray-50 rounded-lg border border-border-light text-text-body">
-                          {appointment.tenThuCung || "Không có thông tin"}
-                        </div>
+                  <div className="space-y-4">
+                    <div className="space-y-1.5">
+                      <label className="text-[11px] font-bold text-gray-400 uppercase tracking-widest ml-1">
+                        Tên thú cưng
+                      </label>
+                      <div className="w-full px-4 py-3 bg-gray-50 border border-gray-100 rounded-2xl text-gray-700 font-medium">
+                        {appointment.tenThuCung || "Không có thông tin"}
                       </div>
                     </div>
                   </div>
-                </div>
+                </section>
               </div>
             </div>
 
             {/* Footer */}
-            <div className="px-10 py-6 bg-white border-t border-border-light/50 flex justify-end gap-4 sticky bottom-0 z-20">
+            <div className="p-8 border-t border-gray-100 flex justify-end bg-white sticky bottom-0 z-10">
               <button
                 onClick={onClose}
-                className="px-6 py-2.5 rounded-lg text-sm font-medium text-text-body hover:bg-surface hover:text-text-heading transition-colors border border-transparent hover:border-border-light"
+                className="px-10 py-3 bg-primary hover:bg-primary-dark text-white font-bold rounded-2xl shadow-lg shadow-teal-500/20 transition-all transform hover:-translate-y-0.5"
               >
                 Đóng
               </button>

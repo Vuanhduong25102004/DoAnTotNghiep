@@ -36,8 +36,7 @@ const AppointmentFormModal = ({
   useEffect(() => {
     if (isOpen) {
       if (initialData) {
-        // --- CHẾ ĐỘ EDIT: Điền dữ liệu cũ ---
-        // Tách chuỗi ISO "2023-10-25T09:00:00" thành ngày và giờ riêng
+        // --- CHẾ ĐỘ EDIT ---
         const dateTime = initialData.thoiGianBatDau || "";
         const [datePart, timePart] = dateTime.split("T");
 
@@ -55,14 +54,14 @@ const AppointmentFormModal = ({
           gioiTinh: initialData.gioiTinh || "",
           ngaySinh: initialData.ngaySinh
             ? initialData.ngaySinh.split("T")[0]
-            : "", // Lấy YYYY-MM-DD
+            : "",
           ghiChu: initialData.ghiChuKhachHang || initialData.ghiChu || "",
           date: datePart || "",
-          time: timePart ? timePart.slice(0, 5) : "", // HH:mm
+          time: timePart ? timePart.slice(0, 5) : "",
           trangThai: initialData.trangThai || "CHỜ XÁC NHẬN",
         });
       } else {
-        // --- CHẾ ĐỘ CREATE: Reset form ---
+        // --- CHẾ ĐỘ CREATE ---
         const today = new Date().toISOString().split("T")[0];
         setFormData({
           dichVuId: "",
@@ -83,7 +82,6 @@ const AppointmentFormModal = ({
     }
   }, [isOpen, initialData]);
 
-  // Sử dụng custom hook để đóng modal khi nhấn phím Escape
   useEscapeKey(onClose, isOpen);
 
   const handleChange = (e) => {
@@ -92,17 +90,19 @@ const AppointmentFormModal = ({
   };
 
   const handleSubmit = () => {
-    // Kết hợp ngày và giờ thành chuỗi ISO/datetime
     const combinedDateTime = `${formData.date}T${formData.time}:00`;
-
-    // Gửi data đã xử lý ra ngoài
     const submitData = {
       ...formData,
       thoiGianBatDau: combinedDateTime,
     };
-
     onSubmit(submitData);
   };
+
+  // Class style chung cho input để code gọn hơn
+  const inputClass =
+    "w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-xl text-slate-700 font-medium focus:ring-0 transition-all focus:border-primary outline-none";
+  const labelClass =
+    "text-[11px] font-bold text-slate-400 uppercase tracking-widest ml-1 mb-1.5 block";
 
   return (
     <AnimatePresence>
@@ -111,29 +111,36 @@ const AppointmentFormModal = ({
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm overflow-hidden"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm overflow-hidden p-4"
         >
           <motion.div
             initial={{ scale: 0.95, opacity: 0, y: 20 }}
             animate={{ scale: 1, opacity: 1, y: 0 }}
             exit={{ scale: 0.95, opacity: 0, y: 20 }}
-            className="w-full max-w-5xl bg-white rounded-2xl shadow-modal flex flex-col max-h-[95vh] relative overflow-hidden font-body mx-auto my-8"
+            className="w-full max-w-4xl bg-white rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[95vh]"
           >
-            {/* Header */}
-            <div className="px-10 py-6 border-b border-border-light/50 flex justify-between items-center bg-white sticky top-0 z-20">
-              <div className="flex items-center gap-5">
-                <div className="w-12 h-12 rounded-full bg-surface border border-border-light flex items-center justify-center text-primary">
-                  <span className="material-symbols-outlined text-[24px]">
-                    {isEdit ? "edit_calendar" : "add_circle"}
+            {/* --- HEADER --- */}
+            <div className="px-8 py-6 border-b border-slate-100 flex justify-between items-center bg-white sticky top-0 z-10 shrink-0">
+              <div className="flex items-center gap-4">
+                <div className="w-14 h-14 rounded-2xl bg-teal-50 flex items-center justify-center text-primary border border-teal-100/50">
+                  <span className="material-symbols-outlined text-3xl">
+                    {isEdit ? "edit_calendar" : "calendar_add_on"}
                   </span>
                 </div>
                 <div>
-                  <h1 className="text-xl font-semibold text-text-heading">
-                    {isEdit
-                      ? `Cập nhật Lịch hẹn #${initialData.lichHenId}`
-                      : "Tạo Lịch Hẹn Mới"}
-                  </h1>
-                  <p className="text-sm text-text-body/70 mt-1 font-light">
+                  <h2 className="text-2xl font-extrabold text-slate-900 tracking-tight">
+                    {isEdit ? (
+                      <>
+                        Cập nhật Lịch hẹn{" "}
+                        <span className="text-primary">
+                          #{initialData?.lichHenId}
+                        </span>
+                      </>
+                    ) : (
+                      "Tạo Lịch Hẹn Mới"
+                    )}
+                  </h2>
+                  <p className="text-sm text-slate-500">
                     {isEdit
                       ? "Thay đổi thông tin hoặc trạng thái lịch hẹn"
                       : "Điền thông tin chi tiết cho cuộc hẹn"}
@@ -142,263 +149,258 @@ const AppointmentFormModal = ({
               </div>
               <button
                 onClick={onClose}
-                className="w-10 h-10 rounded-full flex items-center justify-center text-secondary hover:bg-surface transition-all"
+                className="text-slate-400 hover:text-slate-600 transition-colors p-2 hover:bg-slate-100 rounded-full"
               >
-                <span className="material-symbols-outlined font-light">
-                  close
-                </span>
+                <span className="material-symbols-outlined">close</span>
               </button>
             </div>
 
-            {/* Body */}
-            <div className="flex-1 p-8 md:p-10 bg-white overflow-y-auto">
-              <div className="space-y-12 max-w-4xl mx-auto">
-                {/* Phần 1: Thông tin lịch hẹn & Dịch vụ */}
-                <div className="pb-8 border-b border-border-light">
-                  <div className="flex items-center gap-3 mb-6">
-                    <span className="material-symbols-outlined text-primary font-light text-2xl">
-                      event_note
-                    </span>
-                    <h2 className="text-lg font-semibold text-text-heading">
-                      Thông tin Lịch hẹn
-                    </h2>
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-8">
-                    <div className="input-group">
-                      <label className="form-label">
-                        Dịch vụ <span className="text-red-500">*</span>
-                      </label>
-                      <select
-                        name="dichVuId"
-                        className="form-control"
-                        value={formData.dichVuId}
-                        onChange={handleChange}
-                      >
-                        <option value="" disabled>
-                          Chọn loại dịch vụ...
-                        </option>
-                        {servicesList.map((s) => (
-                          <option
-                            key={s.dichVuId || s.id}
-                            value={s.dichVuId || s.id}
-                          >
-                            {s.tenDichVu}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-
-                    <div className="input-group">
-                      <label className="form-label">Nhân viên phụ trách</label>
-                      <select
-                        name="nhanVienId"
-                        className="form-control"
-                        value={formData.nhanVienId}
-                        onChange={handleChange}
-                      >
-                        <option value="">-- Tự động chỉ định --</option>
-                        {staffList.map((s) => (
-                          <option key={s.nhanVienId} value={s.nhanVienId}>
-                            {s.hoTen} ({s.chucVu})
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-
-                    <div className="input-group">
-                      <label className="form-label">
-                        Ngày hẹn <span className="text-red-500">*</span>
-                      </label>
-                      <input
-                        type="date"
-                        name="date"
-                        className="form-control"
-                        value={formData.date}
-                        onChange={handleChange}
-                      />
-                    </div>
-
-                    <div className="input-group">
-                      <label className="form-label">
-                        Giờ hẹn <span className="text-red-500">*</span>
-                      </label>
-                      <input
-                        type="time"
-                        name="time"
-                        className="form-control"
-                        value={formData.time}
-                        onChange={handleChange}
-                      />
-                    </div>
-
-                    {/* Chỉ hiển thị Status khi Edit */}
-                    {isEdit && (
-                      <div className="input-group md:col-span-2">
-                        <label className="form-label">Trạng thái</label>
-                        <select
-                          name="trangThai"
-                          className="form-control"
-                          value={formData.trangThai}
-                          onChange={handleChange}
+            {/* --- BODY (Scrollable) --- */}
+            <div className="p-8 space-y-10 overflow-y-auto custom-scrollbar flex-1">
+              {/* SECTION 1: THÔNG TIN LỊCH HẸN */}
+              <section>
+                <div className="flex items-center gap-3 mb-6">
+                  <span className="material-symbols-outlined text-primary bg-teal-50 p-1.5 rounded-lg text-xl">
+                    calendar_month
+                  </span>
+                  <h3 className="text-lg font-bold text-slate-900">
+                    Thông tin Lịch hẹn
+                  </h3>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <label className={labelClass}>
+                      Dịch vụ <span className="text-red-500">*</span>
+                    </label>
+                    <select
+                      name="dichVuId"
+                      value={formData.dichVuId}
+                      onChange={handleChange}
+                      className={`${inputClass} appearance-none`}
+                    >
+                      <option value="" disabled>
+                        Chọn dịch vụ...
+                      </option>
+                      {servicesList.map((s) => (
+                        <option
+                          key={s.dichVuId || s.id}
+                          value={s.dichVuId || s.id}
                         >
-                          {APPOINTMENT_STATUSES.map((statusKey) => (
-                            <option key={statusKey} value={statusKey}>
-                              {APPOINTMENT_STATUS_MAP[statusKey]}
-                            </option>
-                          ))}
+                          {s.tenDichVu}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className={labelClass}>Nhân viên phụ trách</label>
+                    <select
+                      name="nhanVienId"
+                      value={formData.nhanVienId}
+                      onChange={handleChange}
+                      className={inputClass}
+                    >
+                      <option value="">-- Tự động / Chưa chọn --</option>
+                      {staffList.map((s) => (
+                        <option key={s.nhanVienId} value={s.nhanVienId}>
+                          {s.hoTen} ({s.chucVu})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className={labelClass}>
+                      Ngày hẹn <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="date"
+                      name="date"
+                      value={formData.date}
+                      onChange={handleChange}
+                      className={inputClass}
+                    />
+                  </div>
+
+                  <div>
+                    <label className={labelClass}>
+                      Giờ hẹn <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="time"
+                      name="time"
+                      value={formData.time}
+                      onChange={handleChange}
+                      className={inputClass}
+                    />
+                  </div>
+
+                  {isEdit && (
+                    <div className="md:col-span-2">
+                      <label className={labelClass}>Trạng thái</label>
+                      <select
+                        name="trangThai"
+                        value={formData.trangThai}
+                        onChange={handleChange}
+                        className={inputClass}
+                      >
+                        {APPOINTMENT_STATUSES.map((statusKey) => (
+                          <option key={statusKey} value={statusKey}>
+                            {APPOINTMENT_STATUS_MAP[statusKey]}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+                </div>
+              </section>
+
+              <div className="h-px bg-slate-100 w-full"></div>
+
+              {/* GRID: KHÁCH HÀNG & THÚ CƯNG */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+                {/* SECTION 2: KHÁCH HÀNG */}
+                <section className="space-y-6">
+                  <div className="flex items-center gap-3">
+                    <span className="material-symbols-outlined text-primary bg-teal-50 p-1.5 rounded-lg text-xl">
+                      person
+                    </span>
+                    <h3 className="text-lg font-bold text-slate-900">
+                      Thông tin Khách hàng
+                    </h3>
+                  </div>
+                  <div className="space-y-4 p-5 bg-slate-50/50 rounded-2xl border border-slate-100">
+                    <div>
+                      <label className={labelClass}>
+                        Họ và tên <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        name="tenKhachHang"
+                        value={formData.tenKhachHang}
+                        onChange={handleChange}
+                        className={`${inputClass} bg-white border-slate-200 py-2.5`}
+                        placeholder="Nguyễn Văn A"
+                      />
+                    </div>
+                    <div>
+                      <label className={labelClass}>
+                        Số điện thoại <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="tel"
+                        name="soDienThoaiKhachHang"
+                        value={formData.soDienThoaiKhachHang}
+                        onChange={handleChange}
+                        className={`${inputClass} bg-white border-slate-200 py-2.5`}
+                        placeholder="09xx xxx xxx"
+                      />
+                    </div>
+                    <div>
+                      <label className={labelClass}>Ghi chú</label>
+                      <textarea
+                        name="ghiChu"
+                        value={formData.ghiChu}
+                        onChange={handleChange}
+                        className={`${inputClass} bg-white border-slate-200 py-2.5 resize-none`}
+                        rows="3"
+                        placeholder="Ghi chú thêm..."
+                      ></textarea>
+                    </div>
+                  </div>
+                </section>
+
+                {/* SECTION 3: THÚ CƯNG */}
+                <section className="space-y-6">
+                  <div className="flex items-center gap-3">
+                    <span className="material-symbols-outlined text-orange-500 bg-orange-50 p-1.5 rounded-lg text-xl">
+                      pets
+                    </span>
+                    <h3 className="text-lg font-bold text-slate-900">
+                      Thông tin Thú cưng
+                    </h3>
+                  </div>
+                  <div className="space-y-4 p-5 bg-slate-50/50 rounded-2xl border border-slate-100">
+                    <div>
+                      <label className={labelClass}>Tên thú cưng</label>
+                      <input
+                        type="text"
+                        name="tenThuCung"
+                        value={formData.tenThuCung}
+                        onChange={handleChange}
+                        className={`${inputClass} bg-white border-slate-200 py-2.5`}
+                        placeholder="Tên bé"
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className={labelClass}>Chủng loại</label>
+                        <select
+                          name="chungLoai"
+                          value={formData.chungLoai}
+                          onChange={handleChange}
+                          className={`${inputClass} bg-white border-slate-200 py-2.5`}
+                        >
+                          <option value="">-- Chọn --</option>
+                          <option value="Chó">Chó</option>
+                          <option value="Mèo">Mèo</option>
+                          <option value="Khác">Khác</option>
                         </select>
                       </div>
-                    )}
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-16">
-                  {/* Phần 2: Khách hàng */}
-                  <div className="flex flex-col h-full">
-                    <div className="flex items-center gap-3 mb-6">
-                      <span className="material-symbols-outlined text-blue-400 font-light text-2xl">
-                        person_outline
-                      </span>
-                      <h2 className="text-lg font-semibold text-text-heading">
-                        Thông tin Khách hàng
-                      </h2>
+                      <div>
+                        <label className={labelClass}>Giới tính</label>
+                        <select
+                          name="gioiTinh"
+                          value={formData.gioiTinh}
+                          onChange={handleChange}
+                          className={`${inputClass} bg-white border-slate-200 py-2.5`}
+                        >
+                          <option value="">-- Chọn --</option>
+                          <option value="Đực">Đực</option>
+                          <option value="Cái">Cái</option>
+                        </select>
+                      </div>
                     </div>
-                    <div className="space-y-6">
-                      <div className="input-group">
-                        <label className="form-label">
-                          Họ và tên <span className="text-red-500">*</span>
-                        </label>
-                        <input
-                          type="text"
-                          name="tenKhachHang"
-                          className="form-control"
-                          value={formData.tenKhachHang}
-                          onChange={handleChange}
-                          placeholder="Nhập tên khách hàng"
-                        />
-                      </div>
-                      <div className="input-group">
-                        <label className="form-label">
-                          Số điện thoại <span className="text-red-500">*</span>
-                        </label>
-                        <input
-                          type="tel"
-                          name="soDienThoaiKhachHang"
-                          className="form-control"
-                          value={formData.soDienThoaiKhachHang}
-                          onChange={handleChange}
-                          placeholder="09xx xxx xxx"
-                        />
-                      </div>
-                      <div className="input-group">
-                        <label className="form-label">Ghi chú</label>
-                        <textarea
-                          name="ghiChu"
-                          className="form-control h-20"
-                          value={formData.ghiChu}
-                          onChange={handleChange}
-                          placeholder="Ghi chú thêm..."
-                        ></textarea>
-                      </div>
+                    <div>
+                      <label className={labelClass}>Giống loài</label>
+                      <input
+                        type="text"
+                        name="giongLoai"
+                        value={formData.giongLoai}
+                        onChange={handleChange}
+                        className={`${inputClass} bg-white border-slate-200 py-2.5`}
+                        placeholder="VD: Poodle"
+                      />
+                    </div>
+                    <div>
+                      <label className={labelClass}>Ngày sinh</label>
+                      <input
+                        type="date"
+                        name="ngaySinh"
+                        value={formData.ngaySinh}
+                        onChange={handleChange}
+                        className={`${inputClass} bg-white border-slate-200 py-2.5`}
+                      />
                     </div>
                   </div>
-
-                  {/* Phần 3: Thú cưng */}
-                  <div className="flex flex-col h-full">
-                    <div className="flex items-center gap-3 mb-6">
-                      <span className="material-symbols-outlined text-orange-400 font-light text-2xl">
-                        pets
-                      </span>
-                      <h2 className="text-lg font-semibold text-text-heading">
-                        Thông tin Thú cưng
-                      </h2>
-                    </div>
-                    <div className="space-y-6">
-                      <div className="input-group">
-                        <label className="form-label">Tên thú cưng</label>
-                        <input
-                          type="text"
-                          name="tenThuCung"
-                          className="form-control"
-                          value={formData.tenThuCung}
-                          onChange={handleChange}
-                          placeholder="Tên bé"
-                        />
-                      </div>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="input-group">
-                          <label className="form-label">Chủng loại</label>
-                          <select
-                            name="chungLoai"
-                            className="form-control"
-                            value={formData.chungLoai}
-                            onChange={handleChange}
-                          >
-                            <option value="">-- Chọn --</option>
-                            <option value="Chó">Chó</option>
-                            <option value="Mèo">Mèo</option>
-                            <option value="Khác">Khác</option>
-                          </select>
-                        </div>
-                        <div className="input-group">
-                          <label className="form-label">Giới tính</label>
-                          <select
-                            name="gioiTinh"
-                            className="form-control"
-                            value={formData.gioiTinh}
-                            onChange={handleChange}
-                          >
-                            <option value="">-- Chọn --</option>
-                            <option value="Đực">Đực</option>
-                            <option value="Cái">Cái</option>
-                          </select>
-                        </div>
-                      </div>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="input-group">
-                          <label className="form-label">Giống loài</label>
-                          <input
-                            type="text"
-                            name="giongLoai"
-                            className="form-control"
-                            value={formData.giongLoai}
-                            onChange={handleChange}
-                            placeholder="VD: Poodle"
-                          />
-                        </div>
-                        <div className="input-group">
-                          <label className="form-label">Ngày sinh</label>
-                          <input
-                            type="date"
-                            name="ngaySinh"
-                            className="form-control"
-                            value={formData.ngaySinh}
-                            onChange={handleChange}
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
+                </section>
               </div>
             </div>
 
-            {/* Footer */}
-            <div className="px-10 py-6 bg-white border-t border-border-light/50 flex justify-end gap-4 sticky bottom-0 z-20">
+            {/* --- FOOTER --- */}
+            <div className="p-8 border-t border-slate-100 flex justify-end items-center gap-6 bg-slate-50/30 shrink-0">
               <button
                 onClick={onClose}
-                className="px-6 py-2.5 rounded-lg text-sm font-medium text-text-body hover:bg-surface border border-transparent hover:border-border-light transition-colors"
+                className="text-slate-500 hover:text-slate-700 font-semibold transition-colors"
               >
                 Hủy bỏ
               </button>
               <button
                 onClick={handleSubmit}
-                className="px-8 py-2.5 rounded-lg text-sm font-medium text-white bg-primary hover:bg-primary-hover shadow-lg flex items-center gap-2 transition-all hover:-translate-y-0.5"
+                className="flex items-center gap-2 px-10 py-3.5 bg-primary hover:bg-primary-dark text-white font-bold rounded-xl shadow-lg shadow-teal-500/25 transition-all transform hover:-translate-y-0.5 active:scale-95"
               >
-                <span className="material-symbols-outlined text-[18px]">
-                  {isEdit ? "save" : "check"}
-                </span>
-                {isEdit ? "Lưu thay đổi" : "Tạo Lịch Hẹn"}
+                <span className="material-symbols-outlined text-xl">save</span>
+                {isEdit ? "Lưu thay đổi" : "Tạo lịch hẹn"}
               </button>
             </div>
           </motion.div>

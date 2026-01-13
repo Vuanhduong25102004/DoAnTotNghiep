@@ -5,6 +5,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 
 @Data
 @NoArgsConstructor
@@ -17,4 +18,5 @@ public class CartItemResponse {
     private BigDecimal donGia;
     private int soLuong;
     private BigDecimal thanhTien;
+    private LocalDateTime ngayThem;
 }

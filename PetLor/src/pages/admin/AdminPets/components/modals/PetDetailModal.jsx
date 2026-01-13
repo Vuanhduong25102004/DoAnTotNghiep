@@ -1,5 +1,5 @@
 import React from "react";
-import useEscapeKey from "../../../../../hooks/useEscapeKey"; // Giả sử hook này vẫn ở đây
+import useEscapeKey from "../../../../../hooks/useEscapeKey";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   calculateAge,
@@ -8,8 +8,13 @@ import {
 } from "../../../components/utils";
 
 const PetDetailModal = ({ isOpen, onClose, pet }) => {
-  // Đóng modal khi nhấn ESC
-  useEscapeKey(onClose);
+  useEscapeKey(onClose, isOpen);
+
+  // Style constants
+  const labelClass =
+    "text-[11px] font-bold text-slate-400 uppercase tracking-widest ml-1 mb-1.5 block";
+  const valueBoxClass =
+    "w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-xl text-slate-700 font-medium";
 
   return (
     <AnimatePresence>
@@ -18,59 +23,57 @@ const PetDetailModal = ({ isOpen, onClose, pet }) => {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm overflow-hidden"
-          onClick={onClose} // Click ra ngoài để đóng
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm overflow-hidden p-4"
         >
           <motion.div
             initial={{ scale: 0.95, opacity: 0, y: 20 }}
             animate={{ scale: 1, opacity: 1, y: 0 }}
             exit={{ scale: 0.95, opacity: 0, y: 20 }}
-            transition={{ duration: 0.3, ease: "easeOut" }}
-            className="w-full max-w-3xl bg-white rounded-2xl shadow-modal flex flex-col max-h-[95vh] relative overflow-hidden font-body mx-auto my-8"
-            onClick={(e) => e.stopPropagation()} // Ngăn click xuyên qua modal
+            className="w-full max-w-3xl bg-white rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[95vh]"
           >
-            {/* --- Header (Giống PetFormModal) --- */}
-            <div className="px-10 py-6 border-b border-border-light/50 flex justify-between items-center bg-white sticky top-0 z-20 backdrop-blur-sm bg-white/95">
-              <div className="flex items-center gap-5">
-                <div className="w-12 h-12 rounded-full bg-surface border border-border-light flex items-center justify-center text-primary">
-                  <span className="material-symbols-outlined text-[24px]">
+            {/* --- HEADER --- */}
+            <div className="px-8 py-6 border-b border-slate-100 flex justify-between items-center bg-white sticky top-0 z-10 shrink-0">
+              <div className="flex items-center gap-4">
+                <div className="w-14 h-14 rounded-2xl bg-teal-50 flex items-center justify-center text-primary border border-teal-100/50">
+                  <span className="material-symbols-outlined text-3xl">
                     visibility
                   </span>
                 </div>
                 <div>
-                  <h1 className="text-xl font-semibold text-text-heading tracking-tight font-display">
-                    Chi tiết Thú cưng #{pet.thuCungId}
-                  </h1>
-                  <p className="text-sm text-text-body/70 mt-1 font-light">
-                    Xem thông tin chi tiết hồ sơ
+                  <h2 className="text-2xl font-extrabold text-slate-900 tracking-tight">
+                    Chi tiết Thú cưng{" "}
+                    <span className="text-primary">#{pet.thuCungId}</span>
+                  </h2>
+                  <p className="text-sm text-slate-500">
+                    Xem thông tin hồ sơ và sức khỏe
                   </p>
                 </div>
               </div>
               <button
                 onClick={onClose}
-                className="w-10 h-10 rounded-full flex items-center justify-center text-secondary hover:text-text-heading hover:bg-surface transition-all duration-300"
+                className="text-slate-400 hover:text-slate-600 transition-colors p-2 hover:bg-slate-100 rounded-full"
               >
-                <span className="material-symbols-outlined font-light">
-                  close
-                </span>
+                <span className="material-symbols-outlined">close</span>
               </button>
             </div>
 
-            {/* --- Body (Padding & Layout giống PetFormModal) --- */}
-            <div className="flex-1 p-8 md:p-10 bg-white overflow-y-auto">
-              <div className="space-y-8">
-                {/* Ảnh đại diện & Tên (Căn giữa) */}
-                <div className="flex flex-col items-center justify-center mb-6">
-                  <div className="relative">
-                    <img
-                      src={getImageUrl(pet.img)} // Dùng hàm getImageUrl từ utils
-                      alt={pet.tenThuCung}
-                      className="h-32 w-32 rounded-full object-cover border-4 border-gray-100 shadow-sm"
-                      onError={(e) => {
-                        e.target.src = "https://placehold.co/150?text=Pet";
-                      }}
-                    />
-                    <span className="absolute bottom-1 right-1 bg-white p-1.5 rounded-full shadow-md border border-gray-100">
+            {/* --- BODY --- */}
+            <div className="p-8 overflow-y-auto custom-scrollbar flex-1">
+              <div className="flex flex-col md:flex-row gap-8">
+                {/* Cột Trái: Avatar & Tên */}
+                <div className="w-full md:w-1/3 flex flex-col items-center">
+                  <div className="relative group w-full aspect-square max-w-[200px] mb-4">
+                    <div className="w-full h-full rounded-3xl border-4 border-slate-50 shadow-md overflow-hidden bg-slate-100">
+                      <img
+                        src={getImageUrl(pet.img)}
+                        alt={pet.tenThuCung}
+                        className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                        onError={(e) => {
+                          e.target.src = "https://placehold.co/200?text=Pet";
+                        }}
+                      />
+                    </div>
+                    <span className="absolute bottom-3 right-3 bg-white p-2 rounded-xl shadow-lg border border-slate-100 text-xl">
                       {pet.chungLoai === "Mèo"
                         ? "🐱"
                         : pet.chungLoai === "Chó"
@@ -78,65 +81,52 @@ const PetDetailModal = ({ isOpen, onClose, pet }) => {
                         : "🐾"}
                     </span>
                   </div>
-                  <h2 className="mt-4 text-2xl font-bold text-text-heading">
+                  <h2 className="text-2xl font-extrabold text-slate-900 text-center mb-1">
                     {pet.tenThuCung}
                   </h2>
+                  <p className="text-sm font-medium text-slate-500 bg-slate-100 px-3 py-1 rounded-full">
+                    {pet.giongLoai || "Chưa rõ giống"}
+                  </p>
                 </div>
 
-                {/* Grid Thông tin chi tiết */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                  {/* Cột 1: Thông tin cơ bản */}
-                  <div className="space-y-8">
-                    <div>
-                      <label className="block text-sm font-medium text-text-heading mb-2">
+                {/* Cột Phải: Thông tin chi tiết */}
+                <div className="w-full md:w-2/3 space-y-6">
+                  {/* Chủ sở hữu */}
+                  <div className="bg-slate-50/50 p-4 rounded-2xl border border-slate-100">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="material-symbols-outlined text-primary text-lg">
+                        person
+                      </span>
+                      <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">
                         Chủ sở hữu
-                      </label>
-                      <div className="p-3 bg-gray-50 rounded-lg border border-border-light text-text-body">
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="font-bold text-slate-800 text-lg">
                         {pet.tenChu || pet.ownerName || "---"}
-                        <span className="text-xs text-gray-400 ml-1 block mt-0.5">
-                          SĐT: {pet.soDienThoaiChuSoHuu || "---"}
-                        </span>
-                      </div>
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-text-heading mb-2">
-                        Chủng loại
-                      </label>
-                      <div className="p-3 bg-gray-50 rounded-lg border border-border-light text-text-body">
-                        {pet.chungLoai}
-                      </div>
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-text-heading mb-2">
-                        Ngày sinh / Tuổi
-                      </label>
-                      <div className="p-3 bg-gray-50 rounded-lg border border-border-light text-text-body">
-                        {formatDate(pet.ngaySinh)}
-                        <span className="ml-2 text-primary font-medium bg-primary/10 px-2 py-0.5 rounded text-xs">
-                          {calculateAge(pet.ngaySinh)}
-                        </span>
-                      </div>
+                      </span>
+                      <span className="text-sm font-medium text-slate-500">
+                        {pet.soDienThoaiChuSoHuu || "---"}
+                      </span>
                     </div>
                   </div>
 
-                  {/* Cột 2: Thông tin chi tiết */}
-                  <div className="space-y-8">
+                  {/* Grid Thông tin */}
+                  <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-sm font-medium text-text-heading mb-2">
-                        Giống loài
-                      </label>
-                      <div className="p-3 bg-gray-50 rounded-lg border border-border-light text-text-body">
-                        {pet.giongLoai || "Chưa cập nhật"}
+                      <label className={labelClass}>Ngày sinh / Tuổi</label>
+                      <div className={valueBoxClass}>
+                        {formatDate(pet.ngaySinh)}
+                        <span className="block text-xs text-primary mt-0.5 font-bold">
+                          ({calculateAge(pet.ngaySinh)})
+                        </span>
                       </div>
                     </div>
-
                     <div>
-                      <label className="block text-sm font-medium text-text-heading mb-2">
-                        Giới tính
-                      </label>
-                      <div className="p-3 bg-gray-50 rounded-lg border border-border-light text-text-body flex items-center gap-2">
+                      <label className={labelClass}>Giới tính</label>
+                      <div
+                        className={`${valueBoxClass} flex items-center gap-2`}
+                      >
                         <span
                           className={`w-2 h-2 rounded-full ${
                             pet.gioiTinh === "Đực"
@@ -149,36 +139,36 @@ const PetDetailModal = ({ isOpen, onClose, pet }) => {
                         {pet.gioiTinh}
                       </div>
                     </div>
-
-                    {/* --- CÂN NẶNG (MỚI) --- */}
                     <div>
-                      <label className="block text-sm font-medium text-text-heading mb-2">
-                        Cân nặng
-                      </label>
-                      <div className="p-3 bg-gray-50 rounded-lg border border-border-light text-text-body font-semibold text-gray-700">
+                      <label className={labelClass}>Cân nặng</label>
+                      <div className={valueBoxClass}>
                         {pet.canNang ? `${pet.canNang} kg` : "---"}
                       </div>
                     </div>
+                    <div>
+                      <label className={labelClass}>Chủng loại</label>
+                      <div className={valueBoxClass}>{pet.chungLoai}</div>
+                    </div>
                   </div>
-                </div>
 
-                {/* Ghi chú (Full width) */}
-                <div>
-                  <label className="block text-sm font-medium text-text-heading mb-2">
-                    Ghi chú sức khỏe
-                  </label>
-                  <div className="p-4 bg-gray-50 rounded-lg border border-border-light text-text-body min-h-[80px] whitespace-pre-line leading-relaxed italic text-gray-600">
-                    {pet.ghiChuSucKhoe || "Không có ghi chú nào."}
+                  {/* Ghi chú */}
+                  <div>
+                    <label className={labelClass}>Ghi chú sức khỏe</label>
+                    <div
+                      className={`${valueBoxClass} min-h-[80px] bg-slate-50/50 italic text-slate-500 leading-relaxed`}
+                    >
+                      {pet.ghiChuSucKhoe || "Không có ghi chú nào."}
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
 
-            {/* --- Footer (Giống PetFormModal) --- */}
-            <div className="px-10 py-6 bg-white border-t border-border-light/50 flex justify-end gap-4 sticky bottom-0 z-20">
+            {/* --- FOOTER --- */}
+            <div className="px-8 py-6 border-t border-slate-100 flex justify-end bg-slate-50/30 shrink-0">
               <button
                 onClick={onClose}
-                className="px-6 py-2.5 rounded-lg text-sm font-medium text-text-body hover:bg-surface hover:text-text-heading transition-colors border border-transparent hover:border-border-light bg-gray-100"
+                className="px-8 py-2.5 rounded-xl text-sm font-bold text-slate-600 hover:bg-slate-200 transition-colors bg-white border border-slate-200 shadow-sm"
               >
                 Đóng
               </button>

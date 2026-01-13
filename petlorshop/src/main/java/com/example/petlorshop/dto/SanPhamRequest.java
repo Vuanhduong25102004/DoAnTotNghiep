@@ -18,4 +18,5 @@ public class SanPhamRequest {
     private BigDecimal giaGiam;
     private Integer soLuongTonKho;
     private Integer danhMucId;
+    private Integer trongLuong; // Đơn vị: gram
 }

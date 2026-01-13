@@ -5,6 +5,9 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.hibernate.annotations.CreationTimestamp;
+
+import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "chi_tiet_gio_hang",
@@ -30,4 +33,8 @@ public class ChiTietGioHang {
 
     @Column(nullable = false)
     private int soLuong;
+    
+    @CreationTimestamp
+    @Column(name = "ngay_them", updatable = false)
+    private LocalDateTime ngayThem;
 }
