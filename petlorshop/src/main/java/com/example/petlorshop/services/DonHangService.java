@@ -103,6 +103,13 @@ public class DonHangService {
         donHang.setPhuongThucThanhToan(donHangRequest.getPhuongThucThanhToan());
         donHang.setTrangThai(DonHang.TrangThaiDonHang.CHO_XU_LY);
         
+        // Set trạng thái thanh toán mặc định
+        if (donHangRequest.getPhuongThucThanhToan() == DonHang.PhuongThucThanhToan.COD) {
+            donHang.setTrangThaiThanhToan(DonHang.TrangThaiThanhToan.CHUA_THANH_TOAN);
+        } else {
+            donHang.setTrangThaiThanhToan(DonHang.TrangThaiThanhToan.CHO_THANH_TOAN);
+        }
+        
         donHang.setTongTienHang(calculationResult.getTongTienHang());
         donHang.setSoTienGiam(calculationResult.getSoTienGiam());
         donHang.setPhiVanChuyen(calculationResult.getPhiVanChuyen());
@@ -156,8 +163,11 @@ public class DonHangService {
         DonHang donHang = new DonHang();
         donHang.setNguoiDung(null);
         
-        String fullAddress = String.format("Người nhận: %s - %s, %s, %s, %s", 
-            request.getHoTenNguoiNhan(), 
+        // Lưu tên người nhận vào trường riêng nếu có, hoặc ghép vào địa chỉ
+        donHang.setHoTenNguoiNhan(request.getHoTenNguoiNhan());
+        donHang.setEmailNguoiNhan(request.getEmail());
+        
+        String fullAddress = String.format("%s, %s, %s, %s", 
             request.getDiaChiGiaoHang(),
             request.getPhuongXa(),
             request.getQuanHuyen(),
@@ -167,6 +177,9 @@ public class DonHangService {
         donHang.setSoDienThoaiNhan(request.getSoDienThoaiNhan());
         donHang.setPhuongThucThanhToan(request.getPhuongThucThanhToan());
         donHang.setTrangThai(DonHang.TrangThaiDonHang.CHO_XU_LY);
+        
+        // Set trạng thái thanh toán mặc định (Guest luôn là Online)
+        donHang.setTrangThaiThanhToan(DonHang.TrangThaiThanhToan.CHO_THANH_TOAN);
 
         donHang.setTongTienHang(calculationResult.getTongTienHang());
         donHang.setSoTienGiam(calculationResult.getSoTienGiam());
@@ -191,6 +204,22 @@ public class DonHangService {
         }
 
         return donHangRepository.save(donHang);
+    }
+    
+    @Transactional
+    public void updatePaymentStatus(Integer donHangId, DonHang.TrangThaiThanhToan status, String transactionId) {
+        DonHang donHang = donHangRepository.findById(donHangId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy đơn hàng: " + donHangId));
+        
+        donHang.setTrangThaiThanhToan(status);
+        if (transactionId != null) {
+            donHang.setMaGiaoDich(transactionId);
+        }
+        if (status == DonHang.TrangThaiThanhToan.DA_THANH_TOAN) {
+            donHang.setNgayThanhToan(LocalDateTime.now());
+        }
+        
+        donHangRepository.save(donHang);
     }
 
     public DonHangResponse updateDonHangStatus(Integer id, DonHangUpdateRequest updateRequest) {
@@ -250,20 +279,30 @@ public class DonHangService {
         List<ChiTietDonHangResponse> chiTietResponses = donHang.getChiTietDonHangs().stream()
                 .map(this::convertChiTietToResponse)
                 .collect(Collectors.toList());
+        
+        // Logic lấy tên người dùng: Nếu có User thì lấy tên User, nếu không thì lấy tên người nhận (Guest)
+        String tenNguoiDung = null;
+        if (donHang.getNguoiDung() != null) {
+            tenNguoiDung = donHang.getNguoiDung().getHoTen();
+        } else {
+            tenNguoiDung = donHang.getHoTenNguoiNhan();
+        }
 
         return new DonHangResponse(
                 donHang.getDonHangId(),
                 donHang.getNgayDatHang(),
                 donHang.getTongTienHang(),
                 donHang.getSoTienGiam(),
+                donHang.getPhiVanChuyen(), // Thêm phí vận chuyển
                 donHang.getTongThanhToan(),
                 donHang.getTrangThai() != null ? donHang.getTrangThai().getDisplayName() : null,
                 donHang.getPhuongThucThanhToan(),
+                donHang.getTrangThaiThanhToan(), // Thêm trạng thái thanh toán
                 donHang.getDiaChiGiaoHang(),
                 donHang.getSoDienThoaiNhan(),
                 donHang.getLyDoHuy(),
                 donHang.getNguoiDung() != null ? donHang.getNguoiDung().getUserId() : null,
-                donHang.getNguoiDung() != null ? donHang.getNguoiDung().getHoTen() : null,
+                tenNguoiDung, // Sử dụng tên đã xử lý logic
                 donHang.getKhuyenMai() != null ? donHang.getKhuyenMai().getMaCode() : null,
                 chiTietResponses
         );

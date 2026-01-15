@@ -19,9 +19,11 @@ public class DonHangResponse {
     private LocalDateTime ngayDatHang;
     private BigDecimal tongTienHang;
     private BigDecimal soTienGiam;
+    private BigDecimal phiVanChuyen; // Thêm phí vận chuyển
     private BigDecimal tongThanhToan;
-    private String trangThai; // Sửa thành String
+    private String trangThai; 
     private DonHang.PhuongThucThanhToan phuongThucThanhToan;
+    private DonHang.TrangThaiThanhToan trangThaiThanhToan; // Thêm trạng thái thanh toán
     private String diaChiGiaoHang;
     private String soDienThoaiNhan;
     private String lyDoHuy;

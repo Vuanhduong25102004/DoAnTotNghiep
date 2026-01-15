@@ -37,11 +37,21 @@ public class LichHen {
 
     @Column(name = "ly_do_huy", columnDefinition = "TEXT")
     private String lyDoHuy;
+    
+    // --- Thông tin khách vãng lai ---
+    @Column(name = "ten_khach_hang")
+    private String tenKhachHang;
+
+    @Column(name = "sdt_khach_hang")
+    private String sdtKhachHang;
+    
+    @Column(name = "email_khach_hang")
+    private String emailKhachHang;
 
     // --- Relationships ---
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id", nullable = false)
+    @JoinColumn(name = "user_id", nullable = true) // Cho phép null
     @JsonIgnore
     private NguoiDung nguoiDung;
 

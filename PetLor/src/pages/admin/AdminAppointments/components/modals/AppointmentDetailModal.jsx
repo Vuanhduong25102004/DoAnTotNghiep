@@ -1,10 +1,16 @@
 import React from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { formatDate, AppointmentStatusBadge } from "../../../components/utils";
+import {
+  formatCurrency,
+  AppointmentStatusBadge,
+  formatTimeRange, // 1. Import hàm mới từ utils
+} from "../../../components/utils";
 import useEscapeKey from "../../../../../hooks/useEscapeKey";
 
 const AppointmentDetailModal = ({ isOpen, onClose, appointment }) => {
   useEscapeKey(onClose, isOpen);
+
+  // (Đã xóa hàm formatTimeRange cục bộ ở đây)
 
   return (
     <AnimatePresence>
@@ -70,13 +76,26 @@ const AppointmentDetailModal = ({ isOpen, onClose, appointment }) => {
                     </div>
                   </div>
 
-                  {/* Thời gian */}
+                  {/* Giá dịch vụ */}
+                  <div className="space-y-1.5">
+                    <label className="text-[11px] font-bold text-gray-400 uppercase tracking-widest ml-1">
+                      Giá dịch vụ
+                    </label>
+                    <div className="w-full px-4 py-3 bg-gray-50 border border-gray-100 rounded-2xl text-primary font-bold">
+                      {formatCurrency(appointment.giaDichVu)}
+                    </div>
+                  </div>
+
+                  {/* Thời gian (SỬ DỤNG HÀM TỪ UTILS) */}
                   <div className="space-y-1.5">
                     <label className="text-[11px] font-bold text-gray-400 uppercase tracking-widest ml-1">
                       Thời gian
                     </label>
                     <div className="w-full px-4 py-3 bg-gray-50 border border-gray-100 rounded-2xl text-gray-700 font-medium">
-                      {formatDate(appointment.thoiGianBatDau)}
+                      {formatTimeRange(
+                        appointment.thoiGianBatDau,
+                        appointment.thoiGianKetThuc
+                      )}
                     </div>
                   </div>
 
@@ -90,19 +109,32 @@ const AppointmentDetailModal = ({ isOpen, onClose, appointment }) => {
                     </div>
                   </div>
 
-                  {/* Trạng thái */}
+                  {/* Trạng thái (Cột trái) */}
                   <div className="space-y-1.5">
                     <label className="text-[11px] font-bold text-gray-400 uppercase tracking-widest ml-1">
                       Trạng thái
                     </label>
-                    <div className="flex items-center h-[46px]">
+                    {/* Dùng h-full và items-center để căn giữa dọc badge nếu bên kia cao hơn */}
+                    <div className="flex items-center h-[48px]">
                       <AppointmentStatusBadge
                         status={appointment.trangThaiLichHen}
                       />
                     </div>
                   </div>
 
-                  {/* Ghi chú */}
+                  {/* Lý do hủy (Cột phải) - Đã xóa md:col-span-2 để nằm ngang hàng */}
+                  {appointment.lyDoHuy && (
+                    <div className="space-y-1.5">
+                      <label className="text-[11px] font-bold text-red-400 uppercase tracking-widest ml-1">
+                        Lý do hủy lịch
+                      </label>
+                      <div className="w-full px-4 py-3 bg-red-50 border border-red-100 rounded-2xl text-red-700 font-medium">
+                        {appointment.lyDoHuy}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Ghi chú khách hàng */}
                   {appointment.ghiChuKhachHang && (
                     <div className="md:col-span-2 space-y-1.5">
                       <label className="text-[11px] font-bold text-gray-400 uppercase tracking-widest ml-1">

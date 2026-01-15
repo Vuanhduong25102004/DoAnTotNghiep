@@ -1,8 +1,11 @@
 import React, { useEffect, useState } from "react";
 import { useLocation, useNavigate, Link } from "react-router-dom";
+import axios from "axios";
+import Select from "react-select";
 import { formatCurrency } from "../utils/formatters";
 import { SERVER_URL } from "../services/apiClient";
 import orderService from "../services/orderService";
+import userService from "../services/userService";
 import { useCart } from "../context/CartContext";
 
 const Checkout = () => {
@@ -10,39 +13,64 @@ const Checkout = () => {
   const navigate = useNavigate();
   const { fetchCart } = useCart();
 
-  // 1. Nhận dữ liệu
-  const { selectedItems, totalAmount } = location.state || {};
+  // 1. Nhận dữ liệu từ giỏ hàng
+  const { selectedItems, totalAmount, appliedVoucher } = location.state || {};
 
-  // 2. State Form
+  // State User
+  const [currentUser, setCurrentUser] = useState(null);
+
+  // State Form
   const [formData, setFormData] = useState({
     fullName: "",
     phone: "",
-    address: "",
-    city: "Hồ Chí Minh",
+    email: "",
+    tinhThanh: "",
+    quanHuyen: "",
+    phuongXa: "",
+    diaChi: "",
     note: "",
-    voucherCode: "",
+    voucherCode: appliedVoucher || "",
   });
+
+  // State API Địa lý
+  const [provinces, setProvinces] = useState([]);
+  const [districts, setDistricts] = useState([]);
+  const [wards, setWards] = useState([]);
+
+  // State ID Địa lý
+  const [selectedProvinceId, setSelectedProvinceId] = useState("");
+  const [selectedDistrictId, setSelectedDistrictId] = useState("");
 
   const [paymentMethod, setPaymentMethod] = useState("COD");
   const [loading, setLoading] = useState(false);
 
+  // --- [NEW] STATE CHO MODAL QR CODE ---
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [createdOrderId, setCreatedOrderId] = useState(null); // Lưu ID đơn hàng vừa tạo để hiển thị nội dung CK
+
+  // Tính toán tiền
   const SHIPPING_FEE = 30000;
   const DISCOUNT = 0;
   const FINAL_TOTAL = (totalAmount || 0) + SHIPPING_FEE - DISCOUNT;
 
-  // --- LOGIC MỚI: KIỂM TRA ĐIỀN ĐỦ THÔNG TIN ---
-  // Kiểm tra xem 3 trường bắt buộc có dữ liệu hay không
+  // Validate form
   const isFormValid =
     formData.fullName.trim() !== "" &&
     formData.phone.trim() !== "" &&
-    formData.address.trim() !== "";
+    (!currentUser ? formData.email.trim() !== "" : true) &&
+    formData.tinhThanh !== "" &&
+    formData.quanHuyen !== "" &&
+    formData.phuongXa !== "" &&
+    formData.diaChi.trim() !== "";
 
+  // Helper hiển thị ảnh
   const getImageUrl = (imageName) => {
     if (!imageName) return "https://placehold.co/100x100?text=No+Image";
     if (imageName.startsWith("http")) return imageName;
     return `${SERVER_URL}/uploads/${imageName}`;
   };
 
+  // Check cart items
   useEffect(() => {
     if (!selectedItems || selectedItems.length === 0) {
       alert("Vui lòng chọn sản phẩm từ giỏ hàng trước!");
@@ -50,59 +78,246 @@ const Checkout = () => {
     }
   }, [selectedItems, navigate]);
 
+  // Auto fill user
+  useEffect(() => {
+    const fillUserData = async () => {
+      const token = localStorage.getItem("token");
+      if (token) {
+        try {
+          const res = await userService.getMe();
+          const userData = res.data ? res.data : res;
+          if (userData) {
+            setCurrentUser(userData);
+            setFormData((prev) => ({
+              ...prev,
+              fullName: userData.hoTen || "",
+              phone: userData.soDienThoai || "",
+              email: userData.email || "",
+              diaChi: userData.diaChi || "",
+            }));
+          }
+        } catch (error) {
+          console.error("Lỗi lấy thông tin user:", error);
+          setCurrentUser(null);
+        }
+      }
+    };
+    fillUserData();
+  }, []);
+
+  // --- LOGIC API ĐỊA LÝ ---
+  useEffect(() => {
+    const fetchProvinces = async () => {
+      try {
+        const res = await axios.get("https://esgoo.net/api-tinhthanh/1/0.htm");
+        if (res.data.error === 0) setProvinces(res.data.data);
+      } catch (error) {
+        console.error(error);
+      }
+    };
+    fetchProvinces();
+  }, []);
+
+  useEffect(() => {
+    if (selectedProvinceId) {
+      const fetchDistricts = async () => {
+        try {
+          const res = await axios.get(
+            `https://esgoo.net/api-tinhthanh/2/${selectedProvinceId}.htm`
+          );
+          if (res.data.error === 0) {
+            setDistricts(res.data.data);
+            setWards([]);
+          }
+        } catch (error) {
+          console.error(error);
+        }
+      };
+      fetchDistricts();
+    }
+  }, [selectedProvinceId]);
+
+  useEffect(() => {
+    if (selectedDistrictId) {
+      const fetchWards = async () => {
+        try {
+          const res = await axios.get(
+            `https://esgoo.net/api-tinhthanh/3/${selectedDistrictId}.htm`
+          );
+          if (res.data.error === 0) setWards(res.data.data);
+        } catch (error) {
+          console.error(error);
+        }
+      };
+      fetchWards();
+    }
+  }, [selectedDistrictId]);
+
+  // --- OPTIONS FOR REACT-SELECT ---
+  const provinceOptions = provinces.map((p) => ({
+    value: p.id,
+    label: p.full_name,
+  }));
+  const districtOptions = districts.map((d) => ({
+    value: d.id,
+    label: d.full_name,
+  }));
+  const wardOptions = wards.map((w) => ({ value: w.id, label: w.full_name }));
+
+  // --- HANDLERS FOR REACT-SELECT ---
+  const handleSelectProvince = (option) => {
+    setSelectedProvinceId(option?.value || "");
+    setSelectedDistrictId("");
+    setFormData({
+      ...formData,
+      tinhThanh: option?.label || "",
+      quanHuyen: "",
+      phuongXa: "",
+    });
+  };
+  const handleSelectDistrict = (option) => {
+    setSelectedDistrictId(option?.value || "");
+    setFormData({ ...formData, quanHuyen: option?.label || "", phuongXa: "" });
+  };
+  const handleSelectWard = (option) => {
+    setFormData({ ...formData, phuongXa: option?.label || "" });
+  };
   const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setFormData({ ...formData, [name]: value });
+    setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
+  // --- SUBMIT ---
   const handlePlaceOrder = async () => {
-    // Không cần check lại ở đây nữa vì nút đã disable,
-    // nhưng giữ lại để an toàn
-    if (!isFormValid) return;
-
-    const storedUserId = localStorage.getItem("userId");
-    if (!storedUserId) {
-      alert("Phiên đăng nhập hết hạn hoặc bạn chưa đăng nhập.");
-      navigate("/login");
+    // Log kiểm tra form có hợp lệ không
+    if (!isFormValid) {
+      console.warn("Form chưa hợp lệ! Dữ liệu hiện tại:", formData);
       return;
     }
 
-    try {
-      setLoading(true);
-      const fullAddress = `${formData.address}, ${formData.city} (Người nhận: ${
-        formData.fullName
-      }${formData.note ? ` - Ghi chú: ${formData.note}` : ""})`;
+    setLoading(true);
+    console.log("🚀 --- BẮT ĐẦU QUÁ TRÌNH ĐẶT HÀNG ---");
 
-      const payload = {
-        userId: parseInt(storedUserId),
-        diaChiGiaoHang: fullAddress,
+    try {
+      const itemsPayload = selectedItems.map((item) => ({
+        sanPhamId: item.sanPhamId || item.id,
+        soLuong: item.soLuong,
+      })); // Chuẩn bị payload chung
+
+      const basePayload = {
+        hoTenNguoiNhan: formData.fullName,
         soDienThoaiNhan: formData.phone,
+        diaChiGiaoHang: formData.diaChi,
+        tinhThanh: formData.tinhThanh,
+        quanHuyen: formData.quanHuyen,
+        phuongXa: formData.phuongXa,
         phuongThucThanhToan: paymentMethod,
         maKhuyenMai: formData.voucherCode,
-        chiTietDonHangs: selectedItems.map((item) => ({
-          sanPhamId: item.sanPhamId,
-          soLuong: item.soLuong,
-        })),
+        chiTietDonHangs: itemsPayload,
+        ghiChu: formData.note,
       };
 
-      console.log("📦 Gửi đơn hàng:", payload);
-      await orderService.createOrder(payload);
+      let orderResponse; // Lưu kết quả trả về từ API tạo đơn
 
-      alert("Đặt hàng thành công! Cảm ơn bạn đã mua sắm.");
-      await fetchCart();
-      navigate("/");
+      if (!currentUser) {
+        // --- GUEST ---
+        if (paymentMethod === "COD") {
+          alert("Khách vãng lai vui lòng chọn thanh toán Online (VNPAY/MOMO)!");
+          setLoading(false);
+          return;
+        }
+
+        const guestPayload = { ...basePayload, email: formData.email }; // [LOG] Xem dữ liệu Guest gửi đi
+        console.log(
+          "📦 PAYLOAD GUEST GỬI ĐI:",
+          JSON.stringify(guestPayload, null, 2)
+        ); // Gọi API tạo đơn guest
+
+        const res = await orderService.createOrder(guestPayload, true); // [LOG] Xem server trả về gì
+        console.log("✅ SERVER PHẢN HỒI (GUEST):", res);
+
+        orderResponse = res.data || res;
+      } else {
+        // --- USER ---
+        const userPayload = {
+          ...basePayload,
+          userId: currentUser.userId,
+          hoTen: formData.fullName,
+        }; // [LOG] Xem dữ liệu User gửi đi
+
+        console.log(
+          "📦 PAYLOAD USER GỬI ĐI:",
+          JSON.stringify(userPayload, null, 2)
+        );
+
+        const res = await orderService.createOrder(userPayload, false); // [LOG] Xem server trả về gì
+
+        console.log("✅ SERVER PHẢN HỒI (USER):", res);
+
+        orderResponse = res.data || res;
+      } // --- XỬ LÝ SAU KHI TẠO ĐƠN ---
+
+      if (paymentMethod === "COD") {
+        console.log("👉 Thanh toán COD -> Hoàn tất ngay.");
+        finishOrderProcess();
+      } else {
+        console.log("👉 Thanh toán Online -> Mở Modal QR."); // Giả lập lấy ID đơn hàng từ response
+        const newOrderId = orderResponse?.id || "MDH" + Date.now();
+        console.log("🆔 Order ID mới tạo:", newOrderId);
+        setCreatedOrderId(newOrderId);
+        setShowPaymentModal(true);
+        setLoading(false);
+      }
     } catch (error) {
-      console.error("Lỗi đặt hàng:", error);
+      // [LOG] Xem lỗi chi tiết
+      console.error("❌ LỖI KHI GỌI API:", error);
+      if (error.response) {
+        console.error("Chi tiết lỗi từ Server:", error.response.data);
+      }
+
       alert("Đặt hàng thất bại. Vui lòng thử lại!");
-    } finally {
       setLoading(false);
     }
+  };
+
+  // Hàm dọn dẹp và chuyển trang (dùng khi COD xong hoặc User ấn "Đã thanh toán" trên Modal)
+  const finishOrderProcess = async () => {
+    localStorage.removeItem("cart");
+    await fetchCart();
+    alert("Đặt hàng thành công!");
+    navigate("/");
+  };
+
+  // --- STYLE REACT-SELECT ---
+  const selectClassNames = {
+    control: ({ isFocused, isDisabled }) =>
+      `w-full bg-white rounded-lg border h-12 px-4 flex items-center justify-between transition-all
+       ${isDisabled ? "bg-gray-100 cursor-not-allowed" : "cursor-pointer"}
+       ${
+         isFocused
+           ? "ring-1 ring-primary border-primary"
+           : "border-gray-300 hover:border-primary"
+       }`,
+    menu: () =>
+      "mt-1 bg-white border border-gray-100 rounded-lg shadow-lg py-1 z-50 absolute w-full",
+    option: ({ isSelected, isFocused }) =>
+      `px-4 py-2 cursor-pointer text-sm
+       ${isSelected ? "bg-primary text-white" : ""}
+       ${
+         isFocused && !isSelected
+           ? "bg-gray-100 text-gray-800"
+           : "text-gray-800"
+       }`,
+    input: () => "text-sm text-gray-800",
+    placeholder: () => "text-gray-500 text-sm",
+    singleValue: () => "text-gray-800 text-sm",
+    noOptionsMessage: () => "text-gray-500 text-sm p-2",
+    valueContainer: () => "flex gap-1",
   };
 
   if (!selectedItems) return null;
 
   return (
-    <main className="max-w-screen-xl mx-auto mt-16">
+    <main className="max-w-screen-xl mx-auto mt-16 px-4 pb-10 relative">
       {/* Breadcrumb */}
       <div className="flex items-center gap-2 mb-8 text-sm">
         <Link className="text-gray-500 hover:text-primary" to="/cart">
@@ -119,7 +334,7 @@ const Checkout = () => {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
-        {/* Left Column */}
+        {/* --- CỘT TRÁI: FORM --- */}
         <div className="lg:col-span-7 space-y-10">
           <section>
             <div className="mb-10">
@@ -127,7 +342,9 @@ const Checkout = () => {
                 Thanh toán
               </h1>
               <p className="text-gray-500">
-                Vui lòng kiểm tra lại thông tin và xác nhận đơn hàng của bạn.
+                {currentUser
+                  ? `Xin chào, ${currentUser.hoTen}.`
+                  : "Vui lòng kiểm tra lại thông tin."}
               </p>
             </div>
 
@@ -139,62 +356,125 @@ const Checkout = () => {
                 Thông tin giao hàng
               </h2>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="flex flex-col gap-2">
-                <label className="text-sm font-semibold text-gray-700">
-                  Họ và tên <span className="text-red-500">*</span>
-                </label>
-                <input
-                  name="fullName"
-                  value={formData.fullName}
-                  onChange={handleInputChange}
-                  className="form-input w-full bg-white rounded-lg border border-gray-300 h-12 px-4 focus:ring-1 focus:ring-primary focus:border-primary outline-none"
-                  placeholder="Nguyễn Văn A"
-                  type="text"
-                />
+
+            <div className="grid grid-cols-1 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="flex flex-col gap-2">
+                  <label className="text-sm font-semibold text-gray-700">
+                    Họ và tên <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    name="fullName"
+                    value={formData.fullName}
+                    onChange={handleInputChange}
+                    className="form-input w-full bg-white rounded-lg border border-gray-300 h-12 px-4 focus:ring-1 focus:ring-primary focus:border-primary outline-none"
+                    placeholder="Nguyễn Văn A"
+                  />
+                </div>
+                <div className="flex flex-col gap-2">
+                  <label className="text-sm font-semibold text-gray-700">
+                    Số điện thoại <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    name="phone"
+                    value={formData.phone}
+                    onChange={handleInputChange}
+                    className="form-input w-full bg-white rounded-lg border border-gray-300 h-12 px-4 focus:ring-1 focus:ring-primary focus:border-primary outline-none"
+                    placeholder="0901 234 567"
+                  />
+                </div>
               </div>
               <div className="flex flex-col gap-2">
                 <label className="text-sm font-semibold text-gray-700">
-                  Số điện thoại <span className="text-red-500">*</span>
+                  Email{" "}
+                  {!currentUser && <span className="text-red-500">*</span>}
                 </label>
                 <input
-                  name="phone"
-                  value={formData.phone}
+                  name="email"
+                  value={formData.email}
                   onChange={handleInputChange}
                   className="form-input w-full bg-white rounded-lg border border-gray-300 h-12 px-4 focus:ring-1 focus:ring-primary focus:border-primary outline-none"
-                  placeholder="0901 234 567"
-                  type="tel"
+                  placeholder="email@example.com"
                 />
               </div>
-              <div className="flex flex-col gap-2 md:col-span-2">
-                <label className="text-sm font-semibold text-gray-700">
-                  Địa chỉ nhận hàng <span className="text-red-500">*</span>
-                </label>
-                <input
-                  name="address"
-                  value={formData.address}
-                  onChange={handleInputChange}
-                  className="form-input w-full bg-white rounded-lg border border-gray-300 h-12 px-4 focus:ring-1 focus:ring-primary focus:border-primary outline-none"
-                  placeholder="Số nhà, tên đường, phường/xã"
-                  type="text"
-                />
+
+              {/* React Select */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="flex flex-col gap-2">
+                  <label className="text-sm font-semibold text-gray-700">
+                    Tỉnh / Thành <span className="text-red-500">*</span>
+                  </label>
+                  <Select
+                    unstyled
+                    options={provinceOptions}
+                    value={
+                      provinceOptions.find(
+                        (opt) => opt.value === selectedProvinceId
+                      ) || null
+                    }
+                    onChange={handleSelectProvince}
+                    placeholder="Chọn Tỉnh/Thành"
+                    isSearchable
+                    isClearable
+                    classNames={selectClassNames}
+                    noOptionsMessage={() => "Không tìm thấy kết quả"}
+                  />
+                </div>
+                <div className="flex flex-col gap-2">
+                  <label className="text-sm font-semibold text-gray-700">
+                    Quận / Huyện <span className="text-red-500">*</span>
+                  </label>
+                  <Select
+                    unstyled
+                    options={districtOptions}
+                    value={
+                      districtOptions.find(
+                        (opt) => opt.value === selectedDistrictId
+                      ) || null
+                    }
+                    onChange={handleSelectDistrict}
+                    placeholder="Chọn Quận/Huyện"
+                    isSearchable
+                    isClearable
+                    isDisabled={!selectedProvinceId}
+                    classNames={selectClassNames}
+                    noOptionsMessage={() => "Không tìm thấy kết quả"}
+                  />
+                </div>
+                <div className="flex flex-col gap-2">
+                  <label className="text-sm font-semibold text-gray-700">
+                    Phường / Xã <span className="text-red-500">*</span>
+                  </label>
+                  <Select
+                    unstyled
+                    options={wardOptions}
+                    value={
+                      wardOptions.find(
+                        (opt) => opt.label === formData.phuongXa
+                      ) || null
+                    }
+                    onChange={handleSelectWard}
+                    placeholder="Chọn Phường/Xã"
+                    isSearchable
+                    isClearable
+                    isDisabled={!selectedDistrictId}
+                    classNames={selectClassNames}
+                    noOptionsMessage={() => "Không tìm thấy kết quả"}
+                  />
+                </div>
               </div>
+
               <div className="flex flex-col gap-2">
                 <label className="text-sm font-semibold text-gray-700">
-                  Thành phố / Tỉnh
+                  Địa chỉ cụ thể <span className="text-red-500">*</span>
                 </label>
-                <select
-                  name="city"
-                  value={formData.city}
+                <input
+                  name="diaChi"
+                  value={formData.diaChi}
                   onChange={handleInputChange}
                   className="form-input w-full bg-white rounded-lg border border-gray-300 h-12 px-4 focus:ring-1 focus:ring-primary focus:border-primary outline-none"
-                >
-                  <option value="Hồ Chí Minh">Hồ Chí Minh</option>
-                  <option value="Hà Nội">Hà Nội</option>
-                  <option value="Đà Nẵng">Đà Nẵng</option>
-                  <option value="Cần Thơ">Cần Thơ</option>
-                  <option value="Khác">Khác</option>
-                </select>
+                  placeholder="Số nhà, tên đường, tòa nhà..."
+                />
               </div>
               <div className="flex flex-col gap-2">
                 <label className="text-sm font-semibold text-gray-700">
@@ -206,13 +486,12 @@ const Checkout = () => {
                   onChange={handleInputChange}
                   className="form-input w-full bg-white rounded-lg border border-gray-300 h-12 px-4 focus:ring-1 focus:ring-primary focus:border-primary outline-none"
                   placeholder="Ghi chú cho shipper..."
-                  type="text"
                 />
               </div>
             </div>
           </section>
 
-          {/* Payment Method */}
+          {/* Payment Methods */}
           <section>
             <div className="flex items-center gap-2 mb-6">
               <span className="material-symbols-outlined text-primary">
@@ -228,6 +507,10 @@ const Checkout = () => {
                   paymentMethod === "COD"
                     ? "border-primary bg-primary/5"
                     : "border-gray-200 hover:border-primary/50"
+                } ${
+                  !currentUser
+                    ? "opacity-50 cursor-not-allowed bg-gray-100"
+                    : ""
                 }`}
               >
                 <div className="flex items-center gap-4">
@@ -238,21 +521,22 @@ const Checkout = () => {
                     value="COD"
                     checked={paymentMethod === "COD"}
                     onChange={(e) => setPaymentMethod(e.target.value)}
+                    disabled={!currentUser}
                   />
                   <div className="flex flex-col">
                     <span className="font-bold text-gray-900">
                       Thanh toán khi nhận hàng (COD)
                     </span>
                     <span className="text-xs text-gray-500">
-                      Thanh toán tiền mặt cho shipper khi nhận hàng
+                      {!currentUser
+                        ? "Chỉ dành cho thành viên"
+                        : "Thanh toán tiền mặt cho shipper"}
                     </span>
                   </div>
                 </div>
-                <div className="flex gap-2">
-                  <span className="material-symbols-outlined text-gray-400 group-hover:text-primary transition-colors">
-                    local_shipping
-                  </span>
-                </div>
+                <span className="material-symbols-outlined text-gray-400 group-hover:text-primary">
+                  local_shipping
+                </span>
               </label>
 
               <label
@@ -276,7 +560,7 @@ const Checkout = () => {
                       Ví điện tử MoMo
                     </span>
                     <span className="text-xs text-gray-500">
-                      Thanh toán nhanh chóng qua ứng dụng MoMo
+                      Quét mã QR MoMo
                     </span>
                   </div>
                 </div>
@@ -306,7 +590,7 @@ const Checkout = () => {
                       VNPAY / Ngân hàng
                     </span>
                     <span className="text-xs text-gray-500">
-                      Quét mã QR qua ứng dụng ngân hàng
+                      Quét mã QR ngân hàng (MB, VCB...)
                     </span>
                   </div>
                 </div>
@@ -331,16 +615,15 @@ const Checkout = () => {
           </div>
         </div>
 
-        {/* Right Column */}
+        {/* --- CỘT PHẢI: SUMMARY --- */}
         <div className="lg:col-span-5">
           <div className="sticky top-24 bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
             <h2 className="text-xl font-bold mb-6 text-gray-900">
               Đơn hàng của bạn ({selectedItems.length})
             </h2>
-
             <div className="space-y-4 mb-8 max-h-[300px] overflow-y-auto scrollbar-thin pr-2">
               {selectedItems.map((item) => (
-                <div key={item.id} className="flex gap-4">
+                <div key={item.sanPhamId || item.id} className="flex gap-4">
                   <div className="size-20 bg-gray-50 rounded-lg overflow-hidden flex-shrink-0 border border-gray-100">
                     <img
                       src={getImageUrl(item.hinhAnh)}
@@ -374,7 +657,6 @@ const Checkout = () => {
                   onChange={handleInputChange}
                   className="form-input flex-1 bg-white rounded-lg border border-gray-300 h-10 px-3 focus:ring-1 focus:ring-primary focus:border-primary text-sm outline-none"
                   placeholder="Nhập mã..."
-                  type="text"
                 />
                 <button
                   type="button"
@@ -397,7 +679,7 @@ const Checkout = () => {
               </div>
               {DISCOUNT > 0 && (
                 <div className="flex justify-between text-primary font-medium italic">
-                  <span>Giảm giá voucher</span>
+                  <span>Giảm giá</span>
                   <span>-{formatCurrency(DISCOUNT)}</span>
                 </div>
               )}
@@ -416,15 +698,13 @@ const Checkout = () => {
               </div>
             </div>
 
-            {/* --- NÚT ĐẶT HÀNG ĐÃ SỬA --- */}
             <button
               onClick={handlePlaceOrder}
               disabled={loading || !isFormValid}
-              className={`w-full font-extrabold py-4 rounded-xl text-lg transition-all flex items-center justify-center gap-2 
-              ${
+              className={`w-full font-extrabold py-4 rounded-xl text-lg transition-all flex items-center justify-center gap-2 ${
                 loading || !isFormValid
-                  ? "bg-gray-300 text-gray-500 cursor-not-allowed shadow-none" // Thêm shadow-none hoặc không có shadow
-                  : "bg-primary text-white hover:brightness-105 active:scale-[0.98] shadow-lg shadow-primary/20" // Chuyển shadow xuống đây
+                  ? "bg-gray-300 text-gray-500 cursor-not-allowed shadow-none"
+                  : "bg-primary text-white hover:brightness-105 active:scale-[0.98] shadow-lg shadow-primary/20"
               }`}
             >
               {loading ? (
@@ -438,7 +718,6 @@ const Checkout = () => {
                 </>
               )}
             </button>
-
             <p className="text-[11px] text-center text-gray-400 mt-4 px-4">
               Bằng việc nhấn "Đặt hàng", bạn đồng ý với Điều khoản dịch vụ &
               Chính sách bảo mật của PetLor.
@@ -446,6 +725,79 @@ const Checkout = () => {
           </div>
         </div>
       </div>
+
+      {/* --- [NEW] MODAL QUÉT QR CODE --- */}
+      {showPaymentModal && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-fade-in-up">
+            {/* Header */}
+            <div className="bg-primary p-6 text-center">
+              <h3 className="text-white text-xl font-bold uppercase tracking-wide">
+                Thanh toán {paymentMethod}
+              </h3>
+              <p className="text-white/80 text-sm mt-1">
+                Vui lòng quét mã bên dưới để thanh toán
+              </p>
+            </div>
+
+            {/* QR Image */}
+            <div className="p-8 flex flex-col items-center justify-center space-y-4">
+              <div className="relative group">
+                {/* Sử dụng API VietQR để tạo mã QR động.
+                  - BankID: 970422 (MBBank) - Bạn hãy đổi thành ID ngân hàng của bạn.
+                  - AccountNo: 123456789 - Bạn hãy đổi thành số tài khoản của bạn.
+                  - Template: compact2
+                  - Amount: Số tiền đơn hàng
+                  - AddInfo: Nội dung chuyển khoản
+                */}
+                <img
+                  src={`https://img.vietqr.io/image/MB-0969696969-compact2.png?amount=${FINAL_TOTAL}&addInfo=${paymentMethod}%20${
+                    createdOrderId || "DONHANG"
+                  }`}
+                  alt="QR Code Payment"
+                  className="w-64 h-64 object-contain border-2 border-dashed border-gray-300 rounded-lg p-2"
+                />
+                <div className="absolute -bottom-6 left-0 w-full text-center">
+                  <span className="bg-white px-2 text-xs font-bold text-gray-500">
+                    Tự động điền số tiền & nội dung
+                  </span>
+                </div>
+              </div>
+
+              <div className="text-center space-y-1 pt-4">
+                <p className="text-gray-500 text-sm">Tổng tiền thanh toán</p>
+                <p className="text-3xl font-black text-primary">
+                  {formatCurrency(FINAL_TOTAL)}
+                </p>
+              </div>
+
+              <div className="bg-yellow-50 text-yellow-800 text-xs p-3 rounded-lg w-full text-center">
+                <span className="font-bold">Lưu ý:</span> Vui lòng không sửa nội
+                dung chuyển khoản để hệ thống tự động xác nhận.
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div className="p-6 pt-0 flex gap-3">
+              <button
+                onClick={() => setShowPaymentModal(false)}
+                className="flex-1 py-3 rounded-xl border border-gray-300 text-gray-700 font-bold hover:bg-gray-50 transition-colors"
+              >
+                Đóng / Hủy
+              </button>
+              <button
+                onClick={finishOrderProcess}
+                className="flex-1 py-3 rounded-xl bg-green-600 text-white font-bold hover:bg-green-700 shadow-lg shadow-green-600/20 transition-colors flex items-center justify-center gap-2"
+              >
+                <span className="material-symbols-outlined text-sm">
+                  check_circle
+                </span>
+                Đã thanh toán
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   );
 };

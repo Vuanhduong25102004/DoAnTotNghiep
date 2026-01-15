@@ -1,6 +1,5 @@
 import apiClient from './apiClient';
 
-// Hàm phụ: Giải mã JWT Token để lấy thông tin ẩn bên trong (như userId)
 const parseJwt = (token) => {
   try {
     const base64Url = token.split('.')[1];
@@ -18,38 +17,38 @@ const authService = {
   register: (userData) => apiClient.post('/auth/register', userData),
   
   login: async (credentials) => {
-    const data = await apiClient.post('/auth/login', credentials);
+    const response = await apiClient.post('/auth/login', credentials);
     
-    if (data && data.accessToken) {
- 
-      localStorage.setItem('accessToken', data.accessToken);
+    // Xử lý dữ liệu trả về (hỗ trợ cả trường hợp axios bọc data và không)
+    const data = response.data ? response.data : response;
 
-      let userId = null;
+    const token = data.accessToken || data.token; 
 
-      if (data.userId) userId = data.userId;
-      else if (data.id) userId = data.id;
-      else if (data.user && data.user.id) userId = data.user.id;
+    if (token) {
+      localStorage.setItem('accessToken', token); 
+      localStorage.setItem('token', token); 
+      
+      let userId = data.userId || data.id || (data.user && data.user.id);
 
       if (!userId) {
-        const decoded = parseJwt(data.accessToken);
+        const decoded = parseJwt(token);
         if (decoded) {
-    
           userId = decoded.userId || decoded.id || decoded.sub;
         }
       }
 
       if (userId) {
         localStorage.setItem('userId', userId);
-      } else {
-        console.warn("Không tìm thấy UserID trong phản hồi đăng nhập");
       }
-    }
+    } 
+
     return data;
   },
   
   logout: () => {
     localStorage.removeItem('accessToken');
-    localStorage.removeItem('userId'); // Xóa luôn userId khi đăng xuất
+    localStorage.removeItem('token');
+    localStorage.removeItem('userId'); 
   },
 
   getAuthHeader: () => {
@@ -57,7 +56,6 @@ const authService = {
     return token ? { Authorization: `Bearer ${token}` } : {};
   },
   
-  // Hàm tiện ích để lấy userId hiện tại bất cứ lúc nào
   getCurrentUserId: () => {
     return localStorage.getItem('userId');
   }

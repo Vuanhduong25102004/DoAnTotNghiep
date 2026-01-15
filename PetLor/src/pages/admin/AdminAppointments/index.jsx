@@ -1,11 +1,12 @@
 /**
  * @file index.jsx
- * @description Trang quản lý lịch hẹn (Container) - Đã fix logic đếm tháng.
+ * @description Trang quản lý lịch hẹn (Container) - Đã cập nhật dùng bookingService.
  */
 import React, { useState, useEffect } from "react";
 import useEscapeKey from "../../../hooks/useEscapeKey";
-import petService from "../../../services/petService";
+import petService from "../../../services/petService"; // Giữ lại để lấy Dịch vụ
 import userService from "../../../services/userService";
+import bookingService from "../../../services/bookingService"; // <--- IMPORT MỚI
 import { toast } from "react-toastify";
 
 // Components
@@ -58,7 +59,8 @@ const AdminAppointments = () => {
   // Hàm tính toán thống kê (Fix lỗi logic năm)
   const fetchStats = async () => {
     try {
-      const response = await petService.getAllAppointments({
+      // SỬA: Dùng bookingService
+      const response = await bookingService.getAllAppointments({
         page: 0,
         size: 1000, // Lấy danh sách lớn để tính toán
       });
@@ -125,7 +127,8 @@ const AdminAppointments = () => {
       if (!params.search) delete params.search;
       if (!params.status) delete params.status;
 
-      const response = await petService.getAllAppointments(params);
+      // SỬA: Dùng bookingService
+      const response = await bookingService.getAllAppointments(params);
       setAppointments(response?.content || []);
       setTotalPages(response?.totalPages || 0);
       setTotalElements(response?.totalElements || 0);
@@ -142,7 +145,7 @@ const AdminAppointments = () => {
       try {
         const [staffRes, servicesRes] = await Promise.all([
           userService.getAllStaff({ page: 0, size: 100 }),
-          petService.getAllServices(),
+          petService.getAllServices(), // Vẫn dùng petService cho Dịch vụ
         ]);
         setStaffList(staffRes?.content || []);
         setServicesList(
@@ -185,7 +188,8 @@ const AdminAppointments = () => {
   const confirmDelete = async () => {
     if (!appointmentToDeleteId) return;
     try {
-      await petService.deleteAppointment(appointmentToDeleteId);
+      // SỬA: Dùng bookingService
+      await bookingService.deleteAppointment(appointmentToDeleteId);
 
       toast.success("Xóa lịch hẹn thành công!");
       fetchAppointments();
@@ -246,7 +250,9 @@ const AdminAppointments = () => {
             ([_, v]) => v !== null && v !== undefined && v !== ""
           )
         );
-        await petService.updateAppointment(
+
+        // SỬA: Dùng bookingService
+        await bookingService.updateAppointment(
           editingAppointment.lichHenId,
           cleanPayload
         );
@@ -273,7 +279,9 @@ const AdminAppointments = () => {
             ([_, v]) => v != null && v !== ""
           )
         );
-        await petService.createAppointment(cleanPayload);
+
+        // SỬA: Dùng bookingService
+        await bookingService.createAppointment(cleanPayload);
         toast.success("Tạo lịch hẹn mới thành công!");
       }
       setIsFormModalOpen(false);

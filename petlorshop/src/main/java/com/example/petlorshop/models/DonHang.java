@@ -48,6 +48,16 @@ public class DonHang {
     @Enumerated(EnumType.STRING)
     @Column(name = "phuong_thuc_thanh_toan")
     private PhuongThucThanhToan phuongThucThanhToan = PhuongThucThanhToan.COD;
+    
+    @Enumerated(EnumType.STRING)
+    @Column(name = "trang_thai_thanh_toan")
+    private TrangThaiThanhToan trangThaiThanhToan = TrangThaiThanhToan.CHUA_THANH_TOAN;
+    
+    @Column(name = "ma_giao_dich")
+    private String maGiaoDich; // Mã giao dịch từ VNPAY/MOMO
+    
+    @Column(name = "ngay_thanh_toan")
+    private LocalDateTime ngayThanhToan;
 
     @Column(name = "dia_chi_giao_hang", nullable = false, columnDefinition = "TEXT")
     private String diaChiGiaoHang;
@@ -100,6 +110,10 @@ public class DonHang {
 
     public enum PhuongThucThanhToan {
         COD, VNPAY, MOMO
+    }
+    
+    public enum TrangThaiThanhToan {
+        CHUA_THANH_TOAN, CHO_THANH_TOAN, DA_THANH_TOAN, THAT_BAI, HOAN_TIEN
     }
 
     public enum LyDoHuyDon {

@@ -1,5 +1,6 @@
 package com.example.petlorshop.services;
 
+import com.example.petlorshop.dto.GuestAppointmentRequest;
 import com.example.petlorshop.dto.LichHenRequest;
 import com.example.petlorshop.dto.LichHenResponse;
 import com.example.petlorshop.dto.LichHenUpdateRequest;
@@ -79,6 +80,53 @@ public class LichHenService {
         lichHen.setNguoiDung(nguoiDung);
         lichHen.setDichVu(dichVu);
         lichHen.setThuCung(thuCung);
+        lichHen.setNhanVien(assignedNhanVien);
+        lichHen.setTrangThai(LichHen.TrangThai.CHO_XAC_NHAN);
+
+        LichHen savedLichHen = lichHenRepository.save(lichHen);
+        return convertToResponse(savedLichHen);
+    }
+    
+    @Transactional
+    public LichHenResponse createGuestAppointment(GuestAppointmentRequest request) {
+        validateBusinessHours(request.getThoiGianBatDau());
+
+        DichVu dichVu = dichVuRepository.findById(request.getDichVuId())
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy dịch vụ với ID: " + request.getDichVuId()));
+
+        int thoiLuongPhut = dichVu.getThoiLuongUocTinh() != null ? dichVu.getThoiLuongUocTinh() : 60;
+        LocalDateTime thoiGianKetThuc = request.getThoiGianBatDau().plusMinutes(thoiLuongPhut);
+        
+        if (thoiGianKetThuc.toLocalTime().isAfter(CLOSING_TIME)) {
+            throw new RuntimeException("Dịch vụ dự kiến kết thúc lúc " + thoiGianKetThuc.toLocalTime() + ", vượt quá giờ đóng cửa (" + CLOSING_TIME + ").");
+        }
+
+        // Tìm nhân viên rảnh (tái sử dụng logic cũ nhưng cần adapt vì request khác kiểu)
+        // Tạo tạm LichHenRequest để dùng lại hàm findAvailableStaff
+        LichHenRequest tempRequest = new LichHenRequest();
+        tempRequest.setNhanVienId(request.getNhanVienId());
+        NhanVien assignedNhanVien = findAvailableStaff(tempRequest, dichVu, request.getThoiGianBatDau(), thoiGianKetThuc);
+
+        LichHen lichHen = new LichHen();
+        lichHen.setThoiGianBatDau(request.getThoiGianBatDau());
+        lichHen.setThoiGianKetThuc(thoiGianKetThuc);
+        lichHen.setGhiChu(request.getGhiChu());
+        
+        // Lưu thông tin khách vãng lai
+        lichHen.setNguoiDung(null);
+        lichHen.setTenKhachHang(request.getTenKhachHang());
+        lichHen.setSdtKhachHang(request.getSoDienThoaiKhachHang());
+        lichHen.setEmailKhachHang(request.getEmailKhachHang());
+        
+        // Lưu thông tin thú cưng vào ghi chú hoặc xử lý riêng nếu cần
+        // Ở đây ta có thể tạo một ThuCung tạm thời hoặc chỉ lưu tên vào ghi chú
+        if (request.getTenThuCung() != null) {
+            String note = (lichHen.getGhiChu() != null ? lichHen.getGhiChu() : "") + 
+                          " [Thú cưng: " + request.getTenThuCung() + " - " + request.getChungLoai() + "]";
+            lichHen.setGhiChu(note);
+        }
+        
+        lichHen.setDichVu(dichVu);
         lichHen.setNhanVien(assignedNhanVien);
         lichHen.setTrangThai(LichHen.TrangThai.CHO_XAC_NHAN);
 
@@ -252,14 +300,7 @@ public class LichHenService {
             if (thoiGianKetThuc.toLocalTime().isAfter(CLOSING_TIME)) {
                 throw new RuntimeException("Dịch vụ dự kiến kết thúc lúc " + thoiGianKetThuc.toLocalTime() + ", vượt quá giờ đóng cửa (" + CLOSING_TIME + ").");
             }
-
-            // Kiểm tra xem nhân viên hiện tại có rảnh vào giờ mới không
-            // Lưu ý: Cần loại trừ chính lịch hẹn này ra khỏi phép kiểm tra trùng lặp (nếu cần thiết, nhưng ở đây ta check đơn giản trước)
-            // Tuy nhiên, hàm findOverlappingAppointments hiện tại sẽ tìm thấy chính lịch hẹn này nếu thời gian trùng.
-            // Để đơn giản, ta giả định nhân viên vẫn là người cũ. Nếu muốn đổi nhân viên thì phức tạp hơn.
-            
-            // Tạm thời cho phép đổi giờ, nếu trùng thì nhân viên sẽ phải xử lý thủ công hoặc ta phải viết thêm query check trùng loại trừ ID hiện tại.
-            // Ở đây tôi sẽ dùng lại logic check trùng đơn giản:
+            // Kiểm tra lịch hẹn của nhân viên nếu trùng
             List<LichHen> conflicts = lichHenRepository.findOverlappingAppointments(lichHen.getNhanVien().getNhanVienId(), request.getThoiGianBatDau(), thoiGianKetThuc);
             // Loại bỏ chính lịch hẹn đang sửa khỏi danh sách conflict
             conflicts.removeIf(lh -> lh.getLichHenId().equals(id));
@@ -299,13 +340,27 @@ public class LichHenService {
         ThuCung thuCung = lichHen.getThuCung();
         DichVu dichVu = lichHen.getDichVu();
         NhanVien nhanVien = lichHen.getNhanVien();
+        
+        // Logic hiển thị tên khách hàng: Nếu có User thì lấy tên User, nếu không thì lấy tên khách vãng lai
+        String tenKhachHang = null;
+        String sdtKhachHang = null;
+        
+        if (nguoiDung != null) {
+            tenKhachHang = nguoiDung.getHoTen();
+            sdtKhachHang = nguoiDung.getSoDienThoai();
+        } else {
+            tenKhachHang = lichHen.getTenKhachHang();
+            sdtKhachHang = lichHen.getSdtKhachHang();
+        }
+        
         return new LichHenResponse(
                 lichHen.getLichHenId(), lichHen.getThoiGianBatDau(), lichHen.getThoiGianKetThuc(),
                 lichHen.getTrangThai().name(),
                 lichHen.getGhiChu(),
                 lichHen.getLyDoHuy(),
-                nguoiDung != null ? nguoiDung.getUserId() : null, nguoiDung != null ? nguoiDung.getHoTen() : null,
-                nguoiDung != null ? nguoiDung.getSoDienThoai() : null,
+                nguoiDung != null ? nguoiDung.getUserId() : null, 
+                tenKhachHang, // Tên hiển thị
+                sdtKhachHang, // SĐT hiển thị
                 thuCung != null ? thuCung.getThuCungId() : null, thuCung != null ? thuCung.getTenThuCung() : null,
                 dichVu != null ? dichVu.getDichVuId() : null, dichVu != null ? dichVu.getTenDichVu() : null, dichVu != null ? dichVu.getGiaDichVu() : null,
                 nhanVien != null ? nhanVien.getNhanVienId() : null, nhanVien != null ? nhanVien.getHoTen() : null

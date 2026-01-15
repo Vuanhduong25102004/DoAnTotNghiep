@@ -6,10 +6,14 @@ import {
   OrderStatusBadge,
   formatDate,
   getImageUrl,
+  PaymentStatusBadge, // 1. IMPORT COMPONENT MỚI TẠI ĐÂY
 } from "../../../components/utils";
 
 const OrderDetailModal = ({ isOpen, onClose, order, orderItems }) => {
   useEscapeKey(onClose, isOpen);
+
+  // Đảm bảo lấy đúng danh sách sản phẩm từ order nếu prop orderItems không truyền vào
+  const itemsToRender = orderItems || order?.chiTietDonHangs || [];
 
   // Style constants
   const labelClass =
@@ -74,14 +78,18 @@ const OrderDetailModal = ({ isOpen, onClose, order, orderItems }) => {
                   </h3>
                 </div>
 
+                {/* Grid layout cho thông tin khách hàng */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 bg-slate-50/50 p-6 rounded-2xl border border-slate-100">
+                  {/* Cột 1: Người đặt */}
                   <div>
                     <span className={labelClass}>Khách hàng</span>
-                    <div className={valueClass}>
-                      {order.tenNguoiDung || order.userName}
+                    <div className={valueClass}>{order.tenNguoiDung}</div>
+                    <div className="text-sm text-slate-500 mt-1">
+                      {order.soDienThoaiNhan}
                     </div>
                   </div>
 
+                  {/* Cột 2: Thời gian */}
                   <div>
                     <span className={labelClass}>Ngày đặt</span>
                     <div className={valueClass}>
@@ -89,6 +97,19 @@ const OrderDetailModal = ({ isOpen, onClose, order, orderItems }) => {
                     </div>
                   </div>
 
+                  {/* Cột 3: Thanh toán */}
+                  <div>
+                    <span className={labelClass}>Thanh toán</span>
+                    <div className={valueClass}>
+                      {order.phuongThucThanhToan}
+                    </div>
+                    {/* 2. SỬ DỤNG COMPONENT MỚI TẠI ĐÂY */}
+                    <div className="mt-1">
+                      <PaymentStatusBadge status={order.trangThaiThanhToan} />
+                    </div>
+                  </div>
+
+                  {/* Cột 4: Trạng thái đơn */}
                   <div>
                     <span className={labelClass}>Trạng thái</span>
                     <div className="mt-1">
@@ -96,12 +117,23 @@ const OrderDetailModal = ({ isOpen, onClose, order, orderItems }) => {
                     </div>
                   </div>
 
-                  <div>
-                    <span className={labelClass}>Địa chỉ</span>
-                    <div className={valueClass}>
-                      {order.diaChiGiaoHang || order.diaChi}
-                    </div>
+                  {/* Dòng 2: Địa chỉ (Full width) */}
+                  <div className="md:col-span-2 lg:col-span-4 border-t border-slate-200/60 pt-4 mt-2">
+                    <span className={labelClass}>Địa chỉ giao hàng</span>
+                    <div className={valueClass}>{order.diaChiGiaoHang}</div>
                   </div>
+
+                  {/* Dòng 2: Ghi chú hủy (Nếu có) */}
+                  {order.lyDoHuy && (
+                    <div className="md:col-span-2 lg:col-span-4 border-t border-red-200 pt-4 mt-2 bg-red-50 p-3 rounded-lg">
+                      <span className="text-[11px] font-bold text-red-500 uppercase tracking-widest mb-1 block">
+                        Lý do hủy đơn
+                      </span>
+                      <div className="text-red-700 font-medium">
+                        {order.lyDoHuy}
+                      </div>
+                    </div>
+                  )}
                 </div>
               </section>
 
@@ -131,41 +163,42 @@ const OrderDetailModal = ({ isOpen, onClose, order, orderItems }) => {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
-                      {orderItems && orderItems.length > 0 ? (
-                        orderItems.map((item, index) => (
+                      {itemsToRender && itemsToRender.length > 0 ? (
+                        itemsToRender.map((item, index) => (
                           <tr
-                            key={index}
+                            key={item.id || index}
                             className="hover:bg-slate-50/50 transition-colors"
                           >
                             <td className="px-6 py-4 font-medium text-slate-900">
                               <div className="flex items-center">
-                                {/* 2. SỬA PHẦN HIỂN THỊ ẢNH TẠI ĐÂY */}
                                 <img
                                   src={getImageUrl(item.hinhAnhUrl)}
-                                  // item.hinhAnhUrl khớp với JSON backend trả về
-                                  alt="Product"
-                                  className="w-12 h-12 object-cover rounded-lg mr-4 border border-slate-100 shadow-sm bg-white"
+                                  alt={item.tenSanPham}
+                                  className="w-12 h-12 object-contain mix-blend-multiply rounded-lg mr-4 border border-slate-100 shadow-sm bg-white"
                                   onError={(e) => {
-                                    e.target.onerror = null; // Tránh loop vô tận
+                                    e.target.onerror = null;
                                     e.target.src =
-                                      "https://via.placeholder.com/40?text=N/A";
+                                      "https://placehold.co/100x100?text=No+Img";
                                   }}
                                 />
-                                <span>
-                                  {item.tenSanPham || "Sản phẩm không xác định"}
-                                </span>
+                                <div>
+                                  <div
+                                    className="line-clamp-2"
+                                    title={item.tenSanPham}
+                                  >
+                                    {item.tenSanPham}
+                                  </div>
+                                </div>
                               </div>
                             </td>
                             <td className="px-6 py-4 text-right">
-                              {formatCurrency(item.donGia || 0)}
+                              {formatCurrency(item.donGia)}
                             </td>
                             <td className="px-6 py-4 text-center font-semibold text-slate-700">
                               {item.soLuong}
                             </td>
                             <td className="px-6 py-4 text-right font-bold text-primary">
-                              {formatCurrency(
-                                (item.donGia || 0) * item.soLuong
-                              )}
+                              {formatCurrency(item.donGia * item.soLuong)}
                             </td>
                           </tr>
                         ))
@@ -183,18 +216,48 @@ const OrderDetailModal = ({ isOpen, onClose, order, orderItems }) => {
                   </table>
                 </div>
               </section>
+
+              {/* TỔNG KẾT CHI PHÍ */}
+              <section className="flex justify-end">
+                <div className="w-full md:w-1/2 lg:w-1/3 bg-slate-50 rounded-2xl p-6 border border-slate-100 space-y-3">
+                  <div className="flex justify-between text-slate-600">
+                    <span>Tổng tiền hàng</span>
+                    <span className="font-medium">
+                      {formatCurrency(order.tongTienHang)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between text-slate-600">
+                    <span>Phí vận chuyển</span>
+                    <span className="font-medium">
+                      {formatCurrency(order.phiVanChuyen)}
+                    </span>
+                  </div>
+                  {order.soTienGiam > 0 && (
+                    <div className="flex justify-between text-green-600">
+                      <span>
+                        Giảm giá{" "}
+                        {order.maKhuyenMai ? `(${order.maKhuyenMai})` : ""}
+                      </span>
+                      <span className="font-medium">
+                        -{formatCurrency(order.soTienGiam)}
+                      </span>
+                    </div>
+                  )}
+                  <div className="h-px bg-slate-200 my-2"></div>
+                  <div className="flex justify-between items-center">
+                    <span className="font-bold text-slate-900 text-lg">
+                      Tổng thanh toán
+                    </span>
+                    <span className="font-extrabold text-primary text-xl">
+                      {formatCurrency(order.tongThanhToan)}
+                    </span>
+                  </div>
+                </div>
+              </section>
             </div>
 
             {/* --- FOOTER --- */}
-            <div className="px-8 py-6 border-t border-slate-100 flex justify-between items-center bg-slate-50/30 shrink-0">
-              <div className="flex items-baseline gap-2">
-                <span className="text-sm font-bold text-slate-500 uppercase tracking-widest">
-                  Tổng cộng:
-                </span>
-                <span className="text-2xl font-extrabold text-primary">
-                  {formatCurrency(order.tongThanhToan || order.tongTien)}
-                </span>
-              </div>
+            <div className="px-8 py-6 border-t border-slate-100 flex justify-end items-center bg-slate-50/30 shrink-0 gap-3">
               <button
                 onClick={onClose}
                 className="px-8 py-2.5 rounded-xl text-sm font-bold text-slate-600 hover:bg-slate-200 transition-colors bg-slate-100 border border-transparent"

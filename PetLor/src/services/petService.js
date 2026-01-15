@@ -1,12 +1,14 @@
 import apiClient from './apiClient';
 
 const petService = {
+  // --- TÌM KIẾM CHUNG ---
   searchGlobal: (keyword) => {
     return apiClient.get('/search', { 
       params: { keyword } 
     });
   },
-  // --- THÚ CƯNG --- // Updated for pagination
+
+  // --- THÚ CƯNG ---
   getAllPets: (params) => apiClient.get('/thu-cung', { params }),
 
   getMyPets: () => apiClient.get('/thu-cung/me'),
@@ -21,7 +23,6 @@ const petService = {
   
   updateMyPet: (id, data) => {
     const config = {};
-    // Cấu hình để gửi multipart/form-data
     if (data instanceof FormData) {
       config.headers = { 'Content-Type': undefined };
     }
@@ -70,25 +71,6 @@ const petService = {
   },
   
   deleteService: (id) => apiClient.delete(`/dich-vu/${id}`),
-
-  // --- LỊCH HẸN ---
-  getAllAppointments: (params) => apiClient.get('/lich-hen', { params }),
-  
-  getAppointmentById: (id) => apiClient.get(`/lich-hen/${id}`),
-  
-  createAppointment: (data) => apiClient.post('/lich-hen', data),
-  
-  updateAppointment: (id, data) => apiClient.put(`/lich-hen/${id}`, data),
-  
-  deleteAppointment: (id) => apiClient.delete(`/lich-hen/${id}`),
-
-  getMyAppointments: () => apiClient.get('/lich-hen/me'),
-  
-  getAppointmentById: (id) => apiClient.get(`/lich-hen/me/${id}`),
-
-  getCancelReasons: () => apiClient.get('/lich-hen/ly-do-huy'),
-
-  cancelMyAppointment: (id, data) => apiClient.put(`/lich-hen/me/${id}/cancel`, data),
 };
 
 export default petService;

@@ -63,6 +63,16 @@ public class SecurityConfig {
                         .requestMatchers("/api/search/**").permitAll()
                         .requestMatchers("/uploads/**").permitAll() // Cho phép truy cập ảnh
                         .requestMatchers(HttpMethod.GET, "/api/san-pham/**", "/api/dich-vu/**", "/api/danh-muc-san-pham/**").permitAll()
+                        
+                        // Public Order & Promotion APIs
+                        .requestMatchers(HttpMethod.POST, "/api/don-hang/guest").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/don-hang/tinh-phi-ship").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/khuyen-mai/kiem-tra").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/don-hang/ly-do-huy").permitAll()
+                        
+                        // Public Appointment API
+                        .requestMatchers(HttpMethod.POST, "/api/lich-hen/guest").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/lich-hen/ly-do-huy").permitAll()
 
                         // == SPECIFIC RULES FIRST ==
                         .requestMatchers(HttpMethod.GET, "/api/nhan-vien/*/lich-trong").authenticated() // Cho phép xem lịch trống

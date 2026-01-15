@@ -16,22 +16,25 @@ const LoginPage = () => {
     e.preventDefault();
     setError("");
     try {
-      // Chỉ cần gọi hàm login, việc lưu token đã được service xử lý
       await authService.login(credentials);
 
-      console.log("Đăng nhập thành công!");
-      // Chuyển hướng đến trang được bảo vệ (ví dụ: /admin/dashboard)
-      navigate("/");
+      if (
+        localStorage.getItem("token") ||
+        localStorage.getItem("accessToken")
+      ) {
+        navigate("/");
+      } else {
+        setError("Lỗi: Không lưu được phiên đăng nhập.");
+      }
     } catch (err) {
-      console.error("Lỗi đăng nhập:", err);
-      // err.message được trả về từ interceptor response
-      setError(err.message || "Email hoặc mật khẩu không chính xác.");
+      setError("Email hoặc mật khẩu không chính xác.");
     }
   };
+
   return (
     <div className="w-full h-screen font-display bg-white text-text-main antialiased overflow-hidden">
       <div className="flex w-full h-full">
-        {/* LEFT SIDE - IMAGE & BRANDING (Hidden on mobile) */}
+        {/* LEFT SIDE - IMAGE & BRANDING */}
         <div className="hidden lg:flex w-1/2 h-full relative bg-gray-100">
           <div
             className="absolute inset-0 bg-cover bg-center"

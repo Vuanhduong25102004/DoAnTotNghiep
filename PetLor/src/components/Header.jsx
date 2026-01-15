@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
+import BookingModal from "../components/modals/BookingModal";
 import authService from "../services/authService";
 import userService from "../services/userService";
 
 const Header = () => {
   const [user, setUser] = useState(null);
+  const [isBookingModalOpen, setIsBookingModalOpen] = useState(false); // 1. Thêm state quản lý modal
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -38,7 +40,7 @@ const Header = () => {
   const handleLogout = () => {
     authService.logout();
     setUser(null);
-    navigate("/login");
+    navigate("/");
   };
 
   const [isScrolled, setIsScrolled] = useState(false);
@@ -63,132 +65,151 @@ const Header = () => {
     "w-10 h-10 flex items-center justify-center rounded-full transition-colors hover:bg-slate-100 text-slate-600";
 
   return (
-    <header
-      className={`fixed top-0 left-0 z-50 w-full transition-all duration-300 ${
-        isScrolled ? "bg-white/40 backdrop-blur-md shadow-sm" : "bg-transparent"
-      }`}
-    >
-      <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
-        {/* LEFT SECTION: LOGO & NAV */}
-        <div className="flex items-center gap-8">
-          {/* Logo */}
-          <Link to="/" className="flex items-center gap-2 group">
-            <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center text-white shadow-md group-hover:scale-105 transition-transform">
-              <span className="material-symbols-outlined">pets</span>
-            </div>
-            <span className="text-xl font-bold tracking-tight text-slate-800">
-              PetLor
-            </span>
-          </Link>
+    // 2. Bọc tất cả trong Fragment (<>...</>) để render được cả Header và Modal cùng lúc
+    <>
+      <header
+        className={`fixed top-0 left-0 z-50 w-full transition-all duration-300 ${
+          isScrolled
+            ? "bg-white/40 backdrop-blur-md shadow-sm"
+            : "bg-transparent"
+        }`}
+      >
+        <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
+          {/* LEFT SECTION: LOGO & NAV */}
+          <div className="flex items-center gap-8">
+            {/* Logo */}
+            <Link to="/" className="flex items-center gap-2 group">
+              <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center text-white shadow-md group-hover:scale-105 transition-transform">
+                <span className="material-symbols-outlined">pets</span>
+              </div>
+              <span className="text-xl font-bold tracking-tight text-slate-800">
+                PetLor
+              </span>
+            </Link>
 
-          {/* Navigation - Desktop */}
-          <nav className="hidden md:flex items-center gap-6 text-sm font-medium">
-            <Link className={`${isActive("/")} transition-colors`} to="/">
-              Trang chủ
-            </Link>
-            <Link
-              className={`${isActive("/services")} transition-colors`}
-              to="/services"
-            >
-              Dịch vụ
-            </Link>
-            <Link
-              className={`${isActive("/products")} transition-colors`}
-              to="/products"
-            >
-              Sản phẩm
-            </Link>
-            <Link
-              className={`${isActive("/aboutus")} transition-colors`}
-              to="/aboutus"
-            >
-              Về chúng tôi
-            </Link>
-            <Link
-              className={`${isActive("/blog")} transition-colors`}
-              to="/blog"
-            >
-              Blog
-            </Link>
-          </nav>
-        </div>
-
-        {/* RIGHT SECTION: ACTIONS & AUTH */}
-        <div className="flex items-center gap-3">
-          {/* Search Button - Đã sửa thành tròn và căn giữa */}
-          <button className={iconButtonClass}>
-            <span className="material-symbols-outlined">search</span>
-          </button>
-
-          {/* Cart Button - Đã sửa thành tròn và căn giữa */}
-          <Link to="/cart" className={`relative ${iconButtonClass}`}>
-            <span className="material-symbols-outlined">shopping_cart</span>
-            {/* Badge số lượng */}
-            <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-[10px] font-bold flex items-center justify-center rounded-full border-2 border-white">
-              2
-            </span>
-          </Link>
-
-          {/* User Auth Logic */}
-          {user ? (
-            <div className="flex items-center gap-3 ml-2">
-              <Link
-                to="/profile"
-                className="flex items-center gap-2 p-1 pl-2 pr-1 hover:bg-slate-100 rounded-full transition-all border border-transparent hover:border-slate-200"
-              >
-                <span className="text-sm font-semibold text-slate-700 hidden sm:block max-w-[100px] truncate">
-                  {user.hoTen?.split(" ").pop()}
-                </span>
-                <img
-                  src={
-                    user.anhDaiDien
-                      ? `${API_URL}/uploads/${user.anhDaiDien}`
-                      : `https://ui-avatars.com/api/?name=${user.hoTen}&background=random`
-                  }
-                  alt={user.hoTen}
-                  className="w-8 h-8 rounded-full object-cover border border-white shadow-sm"
-                  onError={(e) => {
-                    e.target.onerror = null;
-                    e.target.src = `https://ui-avatars.com/api/?name=${user.hoTen}&background=random`;
-                  }}
-                />
+            {/* Navigation - Desktop */}
+            <nav className="hidden md:flex items-center gap-6 text-sm font-medium">
+              <Link className={`${isActive("/")} transition-colors`} to="/">
+                Trang chủ
               </Link>
+              <Link
+                className={`${isActive("/services")} transition-colors`}
+                to="/services"
+              >
+                Dịch vụ
+              </Link>
+              <Link
+                className={`${isActive("/products")} transition-colors`}
+                to="/products"
+              >
+                Sản phẩm
+              </Link>
+              <Link
+                className={`${isActive("/aboutus")} transition-colors`}
+                to="/aboutus"
+              >
+                Về chúng tôi
+              </Link>
+              <Link
+                className={`${isActive("/blog")} transition-colors`}
+                to="/blog"
+              >
+                Blog
+              </Link>
+            </nav>
+          </div>
 
-              {/* Nút Logout - Đã sửa thành tròn và căn giữa */}
+          {/* RIGHT SECTION: ACTIONS & AUTH */}
+          <div className="flex items-center gap-3">
+            {/* Search Button */}
+            <button className={iconButtonClass}>
+              <span className="material-symbols-outlined">search</span>
+            </button>
+
+            {/* Cart Button */}
+            <Link to="/cart" className={`relative ${iconButtonClass}`}>
+              <span className="material-symbols-outlined">shopping_cart</span>
+              {/* Badge số lượng */}
+              <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-[10px] font-bold flex items-center justify-center rounded-full border-2 border-white">
+                2
+              </span>
+            </Link>
+
+            {/* User Auth Logic */}
+            {user ? (
+              <div className="flex items-center gap-3 ml-2">
+                <Link
+                  to="/profile"
+                  className="flex items-center gap-2 p-1 pl-2 pr-1 hover:bg-slate-100 rounded-full transition-all border border-transparent hover:border-slate-200"
+                >
+                  <span className="text-sm font-semibold text-slate-700 hidden sm:block max-w-[100px] truncate">
+                    {user.hoTen?.split(" ").pop()}
+                  </span>
+                  <img
+                    src={
+                      user.anhDaiDien
+                        ? `${API_URL}/uploads/${user.anhDaiDien}`
+                        : `https://ui-avatars.com/api/?name=${user.hoTen}&background=random`
+                    }
+                    alt={user.hoTen}
+                    className="w-8 h-8 rounded-full object-cover border border-white shadow-sm"
+                    onError={(e) => {
+                      e.target.onerror = null;
+                      e.target.src = `https://ui-avatars.com/api/?name=${user.hoTen}&background=random`;
+                    }}
+                  />
+                </Link>
+
+                {/* Nút Logout */}
+                <button
+                  onClick={handleLogout}
+                  className="w-10 h-10 flex items-center justify-center rounded-full transition-colors text-slate-400 hover:text-red-600 hover:bg-red-50"
+                  title="Đăng xuất"
+                >
+                  <span className="material-symbols-outlined text-[20px]">
+                    logout
+                  </span>
+                </button>
+              </div>
+            ) : (
+              <div className="flex items-center gap-4 ml-2">
+                <Link
+                  to="/login"
+                  className="text-sm font-semibold text-slate-600 hover:text-primary transition-colors"
+                >
+                  Đăng nhập
+                </Link>
+                {/* 3. Button cho GUEST: Thêm onClick */}
+                <button
+                  onClick={() => setIsBookingModalOpen(true)}
+                  className="bg-primary text-white px-5 py-2.5 rounded-full font-semibold text-sm hover:opacity-90 hover:shadow-lg hover:-translate-y-0.5 transition-all"
+                >
+                  Đặt lịch ngay
+                </button>
+              </div>
+            )}
+
+            {/* Nút Đặt lịch (USER): Chỉ hiện khi đã đăng nhập */}
+            {/* 4. Button cho USER: Thêm onClick */}
+            {user && (
               <button
-                onClick={handleLogout}
-                // Sử dụng lại logic căn giữa, nhưng override màu sắc khi hover
-                className="w-10 h-10 flex items-center justify-center rounded-full transition-colors text-slate-400 hover:text-red-600 hover:bg-red-50"
-                title="Đăng xuất"
+                onClick={() => setIsBookingModalOpen(true)}
+                className="hidden lg:block ml-2 bg-primary text-white px-5 py-2.5 rounded-full font-semibold text-sm hover:opacity-90 hover:shadow-lg hover:-translate-y-0.5 transition-all"
               >
-                <span className="material-symbols-outlined text-[20px]">
-                  logout
-                </span>
-              </button>
-            </div>
-          ) : (
-            <div className="flex items-center gap-4 ml-2">
-              <Link
-                to="/login"
-                className="text-sm font-semibold text-slate-600 hover:text-primary transition-colors"
-              >
-                Đăng nhập
-              </Link>
-              <button className="bg-primary text-white px-5 py-2.5 rounded-full font-semibold text-sm hover:opacity-90 hover:shadow-lg hover:-translate-y-0.5 transition-all">
                 Đặt lịch ngay
               </button>
-            </div>
-          )}
-
-          {/* Nút Đặt lịch (Chỉ hiện khi đã đăng nhập) */}
-          {user && (
-            <button className="hidden lg:block ml-2 bg-primary text-white px-5 py-2.5 rounded-full font-semibold text-sm hover:opacity-90 hover:shadow-lg hover:-translate-y-0.5 transition-all">
-              Đặt lịch ngay
-            </button>
-          )}
+            )}
+          </div>
         </div>
-      </div>
-    </header>
+      </header>
+
+      {/* 5. Đặt Modal ở đây, nằm trong Fragment */}
+      <BookingModal
+        isOpen={isBookingModalOpen}
+        onClose={() => setIsBookingModalOpen(false)}
+        user={user}
+      />
+    </>
   );
 };
 

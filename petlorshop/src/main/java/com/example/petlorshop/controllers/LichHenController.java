@@ -1,5 +1,6 @@
 package com.example.petlorshop.controllers;
 
+import com.example.petlorshop.dto.GuestAppointmentRequest;
 import com.example.petlorshop.dto.LichHenRequest;
 import com.example.petlorshop.dto.LichHenResponse;
 import com.example.petlorshop.dto.LichHenUpdateRequest;
@@ -56,6 +57,12 @@ public class LichHenController {
     @PostMapping
     public ResponseEntity<LichHenResponse> createLichHen(@RequestBody LichHenRequest request) {
         LichHenResponse createdLichHen = lichHenService.createLichHen(request);
+        return new ResponseEntity<>(createdLichHen, HttpStatus.CREATED);
+    }
+    
+    @PostMapping("/guest")
+    public ResponseEntity<LichHenResponse> createGuestAppointment(@RequestBody GuestAppointmentRequest request) {
+        LichHenResponse createdLichHen = lichHenService.createGuestAppointment(request);
         return new ResponseEntity<>(createdLichHen, HttpStatus.CREATED);
     }
 

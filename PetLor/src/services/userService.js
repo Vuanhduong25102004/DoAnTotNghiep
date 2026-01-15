@@ -9,8 +9,6 @@ const userService = {
 
   getMe: () => apiClient.get("/nguoi-dung/me"),
 
-  // This is a unified endpoint for creating both users and employees
-  // The backend expects multipart/form-data with a JSON part 'nguoiDung' and an optional file part 'anhDaiDien'
   createUnifiedUser: (formData) => {
     return apiClient.post("/nguoi-dung/register", formData, {
       headers: {

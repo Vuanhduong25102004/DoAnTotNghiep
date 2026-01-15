@@ -51,10 +51,10 @@ const AdminOrders = () => {
 
   const STATUS_MAPPING_TO_BACKEND = {
     "Chờ xử lý": "CHO_XU_LY",
+    "Đã xác nhận": "DA_XAC_NHAN",
     "Đang giao": "DANG_GIAO",
-    "Đã giao": "DA_GIAO", // Hoặc DA_XAC_NHAN tùy logic của bạn, nhưng thường hoàn thành là DA_GIAO
+    "Đã giao": "DA_GIAO",
     "Đã hủy": "DA_HUY",
-    // Map thêm các trường hợp khác nếu có
   };
 
   // --- Fetching ---

@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from "react"; // Thêm hook
-import axios from "axios"; // Thêm axios
-// Kiểm tra lại đường dẫn authService cho đúng với cấu trúc dự án của bạn
+import React, { useState, useEffect } from "react";
+import axios from "axios";
+// Hãy đảm bảo đường dẫn này đúng với cấu trúc dự án của bạn
 import authService from "../../../services/authService";
 
 // ============================================================================
@@ -8,10 +8,28 @@ import authService from "../../../services/authService";
 // ============================================================================
 
 export const API_BASE_URL = "http://localhost:8080";
-const DEFAULT_AVATAR_URL = "https://placehold.co/40x40?text=A"; // Thêm hằng số này
+const DEFAULT_AVATAR_URL = "https://placehold.co/40x40?text=A";
 
-export const ORDER_STATUSES = ["Chờ xử lý", "Đang giao", "Đã giao", "Đã hủy"];
-// ... (Giữ nguyên các hằng số khác: POST_STATUS_MAP, APPOINTMENT_STATUS_MAP...)
+// --- Trạng thái Đơn hàng (Order) ---
+export const ORDER_STATUSES = [
+  "Chờ xử lý",
+  "Đã xác nhận", // Đã thêm theo yêu cầu để khớp với dropdown
+  "Đang giao",
+  "Đã giao",
+  "Đã hủy",
+];
+
+// --- Trạng thái Thanh toán (Payment) - MỚI ---
+export const PAYMENT_STATUS_MAP = {
+  CHUA_THANH_TOAN: "Chưa thanh toán",
+  CHO_THANH_TOAN: "Chờ thanh toán",
+  DA_THANH_TOAN: "Đã thanh toán",
+  THAT_BAI: "Thất bại",
+  HOAN_TIEN: "Hoàn tiền",
+};
+export const PAYMENT_STATUSES = Object.keys(PAYMENT_STATUS_MAP);
+
+// --- Trạng thái Bài viết (Post) ---
 export const POST_STATUS_MAP = {
   CONG_KHAI: "Công khai",
   NHAP: "Bản nháp",
@@ -19,6 +37,7 @@ export const POST_STATUS_MAP = {
 };
 export const POST_STATUSES = Object.keys(POST_STATUS_MAP);
 
+// --- Trạng thái Lịch hẹn (Appointment) ---
 export const APPOINTMENT_STATUS_MAP = {
   CHO_XAC_NHAN: "Chờ xác nhận",
   DA_XAC_NHAN: "Đã xác nhận",
@@ -30,7 +49,6 @@ export const APPOINTMENT_STATUSES = Object.keys(APPOINTMENT_STATUS_MAP);
 // ============================================================================
 // PHẦN 2: CÁC HÀM FORMAT DỮ LIỆU (FORMATTERS)
 // ============================================================================
-// ... (Giữ nguyên các hàm formatCurrency, formatDate, calculateAge...)
 
 export const formatCurrency = (amount) => {
   if (amount === undefined || amount === null) return "0 ₫";
@@ -91,7 +109,6 @@ export const calculateAge = (dateString) => {
 // ============================================================================
 // PHẦN 3: HÀM HỖ TRỢ LOGIC (HELPERS)
 // ============================================================================
-// ... (Giữ nguyên getImageUrl, createPostFormData, getReviewTargetInfo, getStockInfo...)
 
 export const getImageUrl = (imagePath, fallbackText = "Image") => {
   if (!imagePath) return `https://placehold.co/100x100?text=${fallbackText}`;
@@ -158,8 +175,8 @@ export const getStockInfo = (quantity) => {
 // ============================================================================
 // PHẦN 4: UI COMPONENTS (BADGES, LABELS, AVATAR)
 // ============================================================================
-// ... (Giữ nguyên các Badge cũ: AppointmentStatusBadge, OrderStatusBadge, RoleBadge...)
 
+// 1. Badge Trạng thái Lịch hẹn
 export const AppointmentStatusBadge = ({ status }) => {
   const safeStatus = status ? status.trim() : "DEFAULT";
   const statusMap = {
@@ -185,6 +202,7 @@ export const AppointmentStatusBadge = ({ status }) => {
   );
 };
 
+// 2. Badge Trạng thái Đơn hàng
 export const OrderStatusBadge = ({ status }) => {
   const normalizedStatus = status ? status.toLowerCase() : "";
   let style = "bg-yellow-100 text-yellow-800 border-yellow-200";
@@ -212,6 +230,60 @@ export const OrderStatusBadge = ({ status }) => {
   );
 };
 
+// 3. Badge Trạng thái Thanh toán (MỚI)
+export const PaymentStatusBadge = ({ status }) => {
+  const safeStatus = status ? status.trim() : "DEFAULT";
+
+  const statusMap = {
+    // Màu xám: Chưa có hành động gì
+    CHUA_THANH_TOAN: {
+      text: "Chưa thanh toán",
+      styles: "bg-orange-100 text-orange-700 border-orange-200",
+    },
+
+    // Màu vàng: Đang chờ xử lý (Ví dụ: Đang đợi cổng thanh toán)
+    CHO_THANH_TOAN: {
+      text: "Chờ thanh toán",
+      styles: "bg-amber-100 text-amber-700 border-amber-200",
+    },
+
+    // Màu xanh lá: Thành công
+    DA_THANH_TOAN: {
+      text: "Đã thanh toán",
+      styles: "bg-emerald-100 text-emerald-700 border-emerald-200",
+    },
+
+    // Màu đỏ: Lỗi
+    THAT_BAI: {
+      text: "Thất bại",
+      styles: "bg-red-100 text-red-700 border-red-200",
+    },
+
+    // Màu tím: Hoàn tiền
+    HOAN_TIEN: {
+      text: "Hoàn tiền",
+      styles: "bg-purple-100 text-purple-700 border-purple-200",
+    },
+
+    // Trường hợp mặc định
+    DEFAULT: {
+      text: status,
+      styles: "bg-gray-100 text-gray-800 border-gray-200",
+    },
+  };
+
+  const info = statusMap[safeStatus] || statusMap.DEFAULT;
+
+  return (
+    <span
+      className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full border ${info.styles}`}
+    >
+      {info.text}
+    </span>
+  );
+};
+
+// 4. Badge Vai trò (Role)
 export const RoleBadge = ({ role }) => {
   const styles = {
     ADMIN: "bg-purple-100 text-purple-800",
@@ -231,6 +303,7 @@ export const RoleBadge = ({ role }) => {
   );
 };
 
+// 5. Badge Chức vụ/Vị trí
 export const PositionBadge = ({ position }) => {
   const pos = position ? position.toLowerCase() : "";
   let style = "bg-gray-100 text-gray-800 border-gray-200";
@@ -253,6 +326,7 @@ export const PositionBadge = ({ position }) => {
   );
 };
 
+// 6. Badge Trạng thái Tiêm chủng
 export const VaccinationStatusBadge = ({ reVaccinationDate }) => {
   if (!reVaccinationDate)
     return (
@@ -284,6 +358,7 @@ export const VaccinationStatusBadge = ({ reVaccinationDate }) => {
   );
 };
 
+// 7. Badge Trạng thái Bài viết
 export const PostStatusBadge = ({ status }) => {
   const safeStatus = status ? status.trim() : "DEFAULT";
   const statusMap = {
@@ -302,6 +377,7 @@ export const PostStatusBadge = ({ status }) => {
   );
 };
 
+// 8. Badge Tồn kho
 export const StockBadge = ({ quantity }) => {
   const { label, color } = getStockInfo(quantity);
   return (
@@ -313,6 +389,7 @@ export const StockBadge = ({ quantity }) => {
   );
 };
 
+// 9. Badge Khuyến mãi
 export const DiscountStatusBadge = ({ isActive, endDate }) => {
   const now = new Date();
   const end = new Date(endDate);
@@ -342,6 +419,7 @@ export const getDiscountTypeLabel = (type) => {
   return type;
 };
 
+// 10. Star Rating
 export const StarRating = ({ count }) => {
   return (
     <div className="flex items-center text-yellow-400">
@@ -357,7 +435,7 @@ export const StarRating = ({ count }) => {
   );
 };
 
-// --- 4.10 Component hiển thị Avatar User (NEW) ---
+// 11. User Avatar (Có fetch ảnh bảo mật)
 export const UserAvatar = ({ user, className = "h-8 w-8" }) => {
   const [avatarUrl, setAvatarUrl] = useState(DEFAULT_AVATAR_URL);
 
@@ -407,7 +485,27 @@ export const UserAvatar = ({ user, className = "h-8 w-8" }) => {
     />
   );
 };
+export const formatTimeRange = (start, end) => {
+  if (!start) return "---";
 
+  const startTime = new Date(start).toLocaleTimeString("vi-VN", {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+
+  // Tái sử dụng hàm formatDate đã có trong file này
+  const date = formatDate(start);
+
+  if (!end) return `${startTime} | ${date}`;
+
+  const endTime = new Date(end).toLocaleTimeString("vi-VN", {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+
+  return `${startTime} - ${endTime} | ${date}`;
+};
+// 12. Badge Giới tính
 export const GenderBadge = (gender) => {
   if (!gender) return <span className="text-gray-400 text-sm">-</span>;
 
