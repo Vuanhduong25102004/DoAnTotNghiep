@@ -72,6 +72,15 @@ public class LichHenController {
         return ResponseEntity.ok(confirmedLichHen);
     }
 
+    // API cho bác sĩ hoàn thành lịch hẹn
+    @PutMapping("/doctor/{id}/complete")
+    public ResponseEntity<LichHenResponse> completeAppointment(@PathVariable Integer id) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String userEmail = authentication.getName();
+        LichHenResponse completedLichHen = lichHenService.completeAppointment(userEmail, id);
+        return ResponseEntity.ok(completedLichHen);
+    }
+
     @PostMapping
     public ResponseEntity<LichHenResponse> createLichHen(@RequestBody LichHenRequest request) {
         LichHenResponse createdLichHen = lichHenService.createLichHen(request);

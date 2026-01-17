@@ -1,5 +1,6 @@
 package com.example.petlorshop.controllers;
 
+import com.example.petlorshop.dto.HoSoBenhAnResponse;
 import com.example.petlorshop.dto.ThuCungRequest;
 import com.example.petlorshop.dto.ThuCungResponse;
 import com.example.petlorshop.dto.ThuCungUpdateRequest;
@@ -125,5 +126,11 @@ public class ThuCungController {
     public ResponseEntity<Map<String, String>> deleteThuCung(@PathVariable Integer id) {
         thuCungService.deleteThuCung(id);
         return ResponseEntity.ok(Map.of("message", "Xóa thú cưng thành công"));
+    }
+    
+    @GetMapping("/{id}/ho-so-benh-an")
+    public ResponseEntity<HoSoBenhAnResponse> getHoSoBenhAn(@PathVariable Integer id) {
+        HoSoBenhAnResponse hoSo = thuCungService.getHoSoBenhAn(id);
+        return ResponseEntity.ok(hoSo);
     }
 }

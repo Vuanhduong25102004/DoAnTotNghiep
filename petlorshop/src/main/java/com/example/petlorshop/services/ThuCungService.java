@@ -1,11 +1,16 @@
 package com.example.petlorshop.services;
 
+import com.example.petlorshop.dto.HoSoBenhAnResponse;
 import com.example.petlorshop.dto.ThuCungRequest;
 import com.example.petlorshop.dto.ThuCungUpdateRequest;
+import com.example.petlorshop.models.LichHen;
 import com.example.petlorshop.models.NguoiDung;
 import com.example.petlorshop.models.Role;
+import com.example.petlorshop.models.SoTiemChung;
 import com.example.petlorshop.models.ThuCung;
+import com.example.petlorshop.repositories.LichHenRepository;
 import com.example.petlorshop.repositories.NguoiDungRepository;
+import com.example.petlorshop.repositories.SoTiemChungRepository;
 import com.example.petlorshop.repositories.ThuCungRepository;
 import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -16,8 +21,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Service
 public class ThuCungService {
@@ -27,6 +34,12 @@ public class ThuCungService {
 
     @Autowired
     private NguoiDungRepository nguoiDungRepository;
+    
+    @Autowired
+    private LichHenRepository lichHenRepository;
+    
+    @Autowired
+    private SoTiemChungRepository soTiemChungRepository;
 
     @Autowired
     private PasswordEncoder passwordEncoder;
@@ -184,5 +197,54 @@ public class ThuCungService {
             throw new RuntimeException("Không tìm thấy thú cưng với ID: " + id);
         }
         thuCungRepository.deleteById(id);
+    }
+    
+    public HoSoBenhAnResponse getHoSoBenhAn(Integer thuCungId) {
+        ThuCung thuCung = thuCungRepository.findById(thuCungId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy thú cưng với ID: " + thuCungId));
+        
+        // Lấy lịch sử khám bệnh (Lịch hẹn đã hoàn thành)
+        List<LichHen> lichSuKhamRaw = lichHenRepository.findAll().stream() // Cần tối ưu query sau này
+                .filter(lh -> lh.getThuCung() != null && lh.getThuCung().getThuCungId().equals(thuCungId))
+                .filter(lh -> lh.getTrangThai() == LichHen.TrangThai.DA_HOAN_THANH)
+                .collect(Collectors.toList());
+        
+        List<HoSoBenhAnResponse.LichSuKham> lichSuKham = lichSuKhamRaw.stream()
+                .map(lh -> new HoSoBenhAnResponse.LichSuKham(
+                        lh.getLichHenId(),
+                        lh.getThoiGianBatDau(),
+                        lh.getDichVu().getTenDichVu(),
+                        lh.getNhanVien() != null ? lh.getNhanVien().getHoTen() : "Không rõ",
+                        lh.getGhiChu(), // Tạm dùng ghi chú làm chẩn đoán
+                        null // Kết luận chưa có trường riêng
+                ))
+                .collect(Collectors.toList());
+        
+        // Lấy lịch sử tiêm chủng
+        List<SoTiemChung> lichSuTiemChungRaw = soTiemChungRepository.findByThuCung_ThuCungId(thuCungId);
+        
+        List<HoSoBenhAnResponse.LichSuTiemChung> lichSuTiemChung = lichSuTiemChungRaw.stream()
+                .map(stc -> new HoSoBenhAnResponse.LichSuTiemChung(
+                        stc.getTiemChungId(),
+                        stc.getTenVacXin(),
+                        stc.getNgayTiem(),
+                        stc.getNgayTaiChung(),
+                        stc.getNhanVien() != null ? stc.getNhanVien().getHoTen() : "Không rõ",
+                        stc.getGhiChu()
+                ))
+                .collect(Collectors.toList());
+        
+        return new HoSoBenhAnResponse(
+                thuCung.getThuCungId(),
+                thuCung.getTenThuCung(),
+                thuCung.getChungLoai(),
+                thuCung.getGiongLoai(),
+                thuCung.getNgaySinh(),
+                thuCung.getGioiTinh(),
+                thuCung.getCanNang(),
+                thuCung.getGhiChuSucKhoe(),
+                lichSuKham,
+                lichSuTiemChung
+        );
     }
 }

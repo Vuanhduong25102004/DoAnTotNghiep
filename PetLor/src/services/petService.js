@@ -13,6 +13,9 @@ const petService = {
 
   getMyPets: () => apiClient.get('/thu-cung/me'),
 
+  // [MỚI] Lấy hồ sơ bệnh án (Chi tiết thú cưng + Lịch sử)
+  getPetMedicalRecord: (id) => apiClient.get(`/thu-cung/${id}/ho-so-benh-an`),
+
   createMyPet: (data) => {
     const config = {};
     if (data instanceof FormData) {

@@ -343,6 +343,47 @@ public class LichHenService {
         return convertToResponse(savedLichHen);
     }
 
+    // API hoàn thành lịch hẹn cho bác sĩ
+    @Transactional
+    public LichHenResponse completeAppointment(String email, Integer id) {
+        NguoiDung user = nguoiDungRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy người dùng với email: " + email));
+        
+        if (user.getNhanVien() == null) {
+            throw new RuntimeException("Tài khoản này không được liên kết với hồ sơ nhân viên.");
+        }
+        
+        LichHen lichHen = lichHenRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Lịch hẹn không tồn tại: " + id));
+        
+        // Kiểm tra xem lịch hẹn có phải của bác sĩ này không
+        if (!lichHen.getNhanVien().getNhanVienId().equals(user.getNhanVien().getNhanVienId())) {
+            throw new RuntimeException("Bạn không có quyền hoàn thành lịch hẹn này.");
+        }
+        
+        if (lichHen.getTrangThai() != LichHen.TrangThai.DA_XAC_NHAN) {
+            throw new RuntimeException("Lịch hẹn phải được xác nhận trước khi hoàn thành.");
+        }
+        
+        lichHen.setTrangThai(LichHen.TrangThai.DA_HOAN_THANH);
+        
+        // Logic tự động tạo sổ tiêm chủng khi hoàn thành lịch hẹn (nếu có thú cưng)
+        if (lichHen.getThuCung() != null) {
+            SoTiemChung stc = new SoTiemChung();
+            stc.setThuCung(lichHen.getThuCung());
+            stc.setTenVacXin("Chưa cập nhật"); // Để placeholder
+            stc.setNgayTiem(LocalDateTime.now().toLocalDate());
+            stc.setNhanVien(lichHen.getNhanVien());
+            stc.setLichHen(lichHen);
+            stc.setGhiChu(lichHen.getGhiChu());
+            
+            soTiemChungRepository.save(stc);
+        }
+        
+        LichHen savedLichHen = lichHenRepository.save(lichHen);
+        return convertToResponse(savedLichHen);
+    }
+
     @Transactional
     public LichHenResponse cancelMyLichHen(String email, Integer id, String lyDoHuy) {
         LichHen lichHen = lichHenRepository.findById(id)
