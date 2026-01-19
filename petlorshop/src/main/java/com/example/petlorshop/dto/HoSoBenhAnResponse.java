@@ -19,8 +19,9 @@ public class HoSoBenhAnResponse {
     private String giongLoai;
     private LocalDate ngaySinh;
     private String gioiTinh;
-    private BigDecimal canNang; // Sửa Double thành BigDecimal
+    private BigDecimal canNang;
     private String ghiChuSucKhoe;
+    private String hinhAnh; // Thêm trường hình ảnh
     
     private List<LichSuKham> lichSuKham;
     private List<LichSuTiemChung> lichSuTiemChung;
@@ -33,7 +34,7 @@ public class HoSoBenhAnResponse {
         private LocalDateTime ngayKham;
         private String tenDichVu;
         private String bacSiPhuTrach;
-        private String chanDoan; // Lấy từ ghi chú của lịch hẹn hoặc trường riêng nếu có
+        private String chanDoan;
         private String ketLuan;
     }
 

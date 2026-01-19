@@ -64,17 +64,49 @@ const UserProfileSidebar = ({ user }) => {
           {/* --- [MỚI] LOGIC KIỂM TRA QUYỀN DOCTOR --- */}
           {user?.role === "DOCTOR" && (
             <Link
-              to="/doctor"
+              to="/staff/doctor"
               className={`${getLinkClass(
-                "/doctor"
+                "/staff/doctor",
               )} mb-2 border-l-4 border-red-500 bg-red-50 hover:bg-red-100`}
             >
-              <span className={`${getIconClass("/doctor")} text-red-500`}>
+              <span className={`${getIconClass("/staff")} text-red-500`}>
                 stethoscope
               </span>
               <span className="text-red-600 font-bold">Khu vực làm việc</span>
             </Link>
           )}
+          {/* 2. Nút cho Lễ tân (Màu Teal/Xanh ngọc) */}
+          {user?.role === "RECEPTIONIST" && (
+            <Link
+              to="/staff/receptionist"
+              className={`${getLinkClass(
+                "/staff/receptionist",
+              )} mb-2 border-l-4 border-teal-500 bg-teal-50 hover:bg-teal-100`}
+            >
+              <span className="material-symbols-outlined text-teal-600 text-[20px]">
+                desk
+              </span>
+              <span className="text-teal-700 font-bold">Khu vực Lễ tân</span>
+            </Link>
+          )}
+
+          {/* 3. Nút cho Spa (Màu Tím) */}
+          {user?.role === "SPA" && (
+            <Link
+              to="/staff/spa"
+              className={`${getLinkClass(
+                "/staff/spa",
+              )} mb-2 border-l-4 border-purple-500 bg-purple-50 hover:bg-purple-100`}
+            >
+              <span className="material-symbols-outlined text-purple-500 text-[20px]">
+                spa
+              </span>
+              <span className="text-purple-600 font-bold">
+                Khu vực làm việc
+              </span>
+            </Link>
+          )}
+
           {/* ----------------------------------------- */}
 
           <Link to="/profile" className={getLinkClass("/profile")}>

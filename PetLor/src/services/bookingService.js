@@ -45,6 +45,8 @@ const bookingService = {
 
   // Lấy danh sách lịch hẹn được phân công cho bác sĩ đang đăng nhập
   getDoctorAppointments: () => apiClient.get('/lich-hen/doctor/me'),
+
+  confirmDoctorAppointment: (id) => apiClient.put(`/lich-hen/doctor/${id}/confirm`),
 };
 
 export default bookingService;

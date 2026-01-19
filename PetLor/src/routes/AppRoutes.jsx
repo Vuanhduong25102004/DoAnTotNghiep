@@ -1,9 +1,9 @@
 import React from "react";
-import { Routes, Route } from "react-router-dom";
+import { Routes, Route, Navigate } from "react-router-dom"; // Thêm Navigate
 import MainLayout from "../components/MainLayout";
 import AdminRoute from "./AdminRoute";
 import ProtectedRoute from "./ProtectedRoute";
-import DoctorRoute from "./DoctorRoute";
+import StaffRoute from "./StaffRoute";
 
 // Pages
 import HomePage from "../pages/HomePage";
@@ -46,8 +46,23 @@ import ServiceDetailPage from "../pages/ServiceDetailPage";
 import Checkout from "../pages/Checkout";
 import Booking from "../pages/Booking";
 
-// Doctor pages
-import Doctor from "../pages/doctor/Doctor";
+// --- STAFF PAGES & LAYOUT (NEW) ---
+import StaffLayout from "../pages/staff/StaffLayout";
+// Import các component con của Staff (Bạn cần đảm bảo đường dẫn đúng)
+import DoctorDashboard from "../pages/staff/doctor/DoctorDashboard";
+import DoctorSchedule from "../pages/staff/doctor/DoctorSchedule";
+import PatientList from "../pages/staff/doctor/components/PatientList";
+import DoctorReport from "../pages/staff/doctor/DoctorReport";
+
+import ReceptionistDashboard from "../pages/staff/receptionist/ReceptionistDashboard";
+import ReceptionistAppointment from "../pages/staff/receptionist/ReceptionistAppointment";
+import ReceptionistPosts from "../pages/staff/receptionist/ReceptionistPosts";
+import ReceptionistPrescription from "../pages/staff/receptionist/ReceptionistPrescription";
+import CreatePost from "../pages/staff/receptionist/components/CreatePost";
+import CreatePrescription from "../pages/staff/receptionist/components/CreatePrescription";
+
+import SpaDashboard from "../pages/staff/spa/SpaDashboard";
+import SpaSchedule from "../pages/staff/spa/SpaSchedule";
 
 const AppRoutes = () => {
   return (
@@ -103,8 +118,48 @@ const AppRoutes = () => {
           <Route path="posts" element={<AdminPosts />} />
         </Route>
       </Route>
-      <Route element={<DoctorRoute />}>
-        <Route path="/doctor" element={<Doctor />} />
+
+      {/* --- STAFF ROUTES (UPDATED) --- */}
+      <Route element={<StaffRoute />}>
+        {/* Layout chung cho nhân viên */}
+        <Route path="/staff" element={<StaffLayout />}>
+          {/* Index: Nếu vào /staff thì chuyển hướng (tùy logic của bạn) */}
+          <Route
+            index
+            element={
+              <div className="p-4">
+                Chào mừng trở lại! Hãy chọn khu vực làm việc.
+              </div>
+            }
+          />
+
+          {/* Khu vực Bác sĩ -> /staff/doctor */}
+          <Route path="doctor" element={<DoctorDashboard />} />
+          <Route path="doctor/schedule" element={<DoctorSchedule />} />
+          <Route path="doctor/patients" element={<PatientList />} />
+          <Route path="doctor/reports" element={<DoctorReport />} />
+
+          {/* Khu vực Lễ tân -> /staff/reception */}
+          <Route path="receptionist" element={<ReceptionistDashboard />} />
+          <Route
+            path="receptionist/booking"
+            element={<ReceptionistAppointment />}
+          />
+          <Route path="receptionist/posts" element={<ReceptionistPosts />} />
+          <Route
+            path="receptionist/prescriptions"
+            element={<ReceptionistPrescription />}
+          />
+          <Route path="receptionist/posts/create" element={<CreatePost />} />
+          <Route
+            path="receptionist/prescriptions/create"
+            element={<CreatePrescription />}
+          />
+
+          {/* Khu vực Spa -> /staff/spa */}
+          <Route path="spa" element={<SpaDashboard />} />
+          <Route path="spa/schedule" element={<SpaSchedule />} />
+        </Route>
       </Route>
     </Routes>
   );

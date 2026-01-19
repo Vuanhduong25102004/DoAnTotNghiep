@@ -1,5 +1,6 @@
 package com.example.petlorshop.controllers;
 
+import com.example.petlorshop.dto.CompleteAppointmentRequest;
 import com.example.petlorshop.dto.GuestAppointmentRequest;
 import com.example.petlorshop.dto.LichHenRequest;
 import com.example.petlorshop.dto.LichHenResponse;
@@ -74,10 +75,10 @@ public class LichHenController {
 
     // API cho bác sĩ hoàn thành lịch hẹn
     @PutMapping("/doctor/{id}/complete")
-    public ResponseEntity<LichHenResponse> completeAppointment(@PathVariable Integer id) {
+    public ResponseEntity<LichHenResponse> completeAppointment(@PathVariable Integer id, @RequestBody(required = false) CompleteAppointmentRequest request) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         String userEmail = authentication.getName();
-        LichHenResponse completedLichHen = lichHenService.completeAppointment(userEmail, id);
+        LichHenResponse completedLichHen = lichHenService.completeAppointment(userEmail, id, request);
         return ResponseEntity.ok(completedLichHen);
     }
 

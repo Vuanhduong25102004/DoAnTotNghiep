@@ -1,5 +1,6 @@
 package com.example.petlorshop.controllers;
 
+import com.example.petlorshop.dto.DoctorDashboardStatsResponse;
 import com.example.petlorshop.dto.NhanVienRequest;
 import com.example.petlorshop.dto.NhanVienResponse;
 import com.example.petlorshop.services.NhanVienService;
@@ -79,5 +80,17 @@ public class NhanVienController {
             @RequestParam("end") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime end) {
         boolean isAvailable = nhanVienService.isTimeSlotAvailable(id, start, end);
         return ResponseEntity.ok(Map.of("available", isAvailable));
+    }
+
+    @GetMapping("/{id}/dashboard-stats")
+    public ResponseEntity<?> getDoctorDashboardStats(@PathVariable Integer id) {
+        try {
+            DoctorDashboardStatsResponse stats = nhanVienService.getDoctorDashboardStats(id);
+            return ResponseEntity.ok(stats);
+        } catch (Exception e) {
+            // Trả về thông báo lỗi chi tiết để debug
+            e.printStackTrace(); // In ra console server
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
     }
 }

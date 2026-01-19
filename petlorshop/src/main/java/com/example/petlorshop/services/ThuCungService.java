@@ -243,6 +243,7 @@ public class ThuCungService {
                 thuCung.getGioiTinh(),
                 thuCung.getCanNang(),
                 thuCung.getGhiChuSucKhoe(),
+                thuCung.getHinhAnh(), // Thêm hình ảnh vào response
                 lichSuKham,
                 lichSuTiemChung
         );

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Link, useOutletContext } from "react-router-dom";
 import petService from "../../services/petService";
+import bookingService from "../../services/bookingService";
 import orderService from "../../services/orderService";
 import EditProfileModal from "./modals/EditProfileModal";
 import PetFormModal from "./modals/PetFormModal";
@@ -60,7 +61,7 @@ const UserProfile = () => {
     try {
       const [petRes, appRes, orderRes] = await Promise.all([
         petService.getMyPets(),
-        petService.getMyAppointments(),
+        bookingService.getMyAppointments(),
         orderService.getMyOrders(),
       ]);
       setPets(Array.isArray(petRes) ? petRes : petRes.data || []);

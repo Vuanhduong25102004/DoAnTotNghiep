@@ -1,5 +1,6 @@
 package com.example.petlorshop.services;
 
+import com.example.petlorshop.dto.CompleteAppointmentRequest;
 import com.example.petlorshop.dto.GuestAppointmentRequest;
 import com.example.petlorshop.dto.LichHenRequest;
 import com.example.petlorshop.dto.LichHenResponse;
@@ -296,20 +297,6 @@ public class LichHenService {
         }
 
         if (request.getTrangThai() != null) {
-            // Logic tự động tạo sổ tiêm chủng khi hoàn thành lịch hẹn
-            if (request.getTrangThai() == LichHen.TrangThai.DA_HOAN_THANH && lichHen.getTrangThai() != LichHen.TrangThai.DA_HOAN_THANH) {
-                if (lichHen.getThuCung() != null) {
-                    SoTiemChung stc = new SoTiemChung();
-                    stc.setThuCung(lichHen.getThuCung());
-                    stc.setTenVacXin("Chưa cập nhật"); // Để placeholder để nhắc nhở cập nhật
-                    stc.setNgayTiem(LocalDateTime.now().toLocalDate());
-                    stc.setNhanVien(lichHen.getNhanVien());
-                    stc.setLichHen(lichHen);
-                    stc.setGhiChu(lichHen.getGhiChu()); // Lấy ghi chú từ lịch hẹn
-                    
-                    soTiemChungRepository.save(stc);
-                }
-            }
             lichHen.setTrangThai(request.getTrangThai());
         }
         
@@ -345,7 +332,7 @@ public class LichHenService {
 
     // API hoàn thành lịch hẹn cho bác sĩ
     @Transactional
-    public LichHenResponse completeAppointment(String email, Integer id) {
+    public LichHenResponse completeAppointment(String email, Integer id, CompleteAppointmentRequest request) {
         NguoiDung user = nguoiDungRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy người dùng với email: " + email));
         
@@ -367,15 +354,20 @@ public class LichHenService {
         
         lichHen.setTrangThai(LichHen.TrangThai.DA_HOAN_THANH);
         
-        // Logic tự động tạo sổ tiêm chủng khi hoàn thành lịch hẹn (nếu có thú cưng)
-        if (lichHen.getThuCung() != null) {
+        // Xử lý tạo sổ tiêm chủng nếu có yêu cầu
+        if (request != null && request.isCoTiemPhong()) {
+            if (lichHen.getThuCung() == null) {
+                throw new RuntimeException("Lịch hẹn này không có thông tin thú cưng để tạo sổ tiêm chủng.");
+            }
+            
             SoTiemChung stc = new SoTiemChung();
             stc.setThuCung(lichHen.getThuCung());
-            stc.setTenVacXin("Chưa cập nhật"); // Để placeholder
+            stc.setTenVacXin(request.getTenVacXin());
             stc.setNgayTiem(LocalDateTime.now().toLocalDate());
+            stc.setNgayTaiChung(request.getNgayTaiChung());
             stc.setNhanVien(lichHen.getNhanVien());
             stc.setLichHen(lichHen);
-            stc.setGhiChu(lichHen.getGhiChu());
+            stc.setGhiChu(request.getGhiChu());
             
             soTiemChungRepository.save(stc);
         }
@@ -488,7 +480,7 @@ public class LichHenService {
                 nguoiDung != null ? nguoiDung.getUserId() : null, 
                 tenKhachHang, // Tên hiển thị
                 sdtKhachHang, // SĐT hiển thị
-                thuCung != null ? thuCung.getThuCungId() : null, thuCung != null ? thuCung.getTenThuCung() : null,
+                thuCung != null ? thuCung.getThuCungId() : null, thuCung != null ? thuCung.getTenThuCung() : null, thuCung != null ? thuCung.getGiongLoai() : null,
                 dichVu != null ? dichVu.getDichVuId() : null, dichVu != null ? dichVu.getTenDichVu() : null, dichVu != null ? dichVu.getGiaDichVu() : null,
                 nhanVien != null ? nhanVien.getNhanVienId() : null, nhanVien != null ? nhanVien.getHoTen() : null
         );

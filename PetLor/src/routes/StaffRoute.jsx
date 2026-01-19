@@ -2,11 +2,13 @@ import React from "react";
 import { Navigate, Outlet } from "react-router-dom";
 import { jwtDecode } from "jwt-decode";
 
-const DoctorRoute = () => {
+const StaffRoute = () => {
   const token = localStorage.getItem("accessToken");
 
+  // 1. Định nghĩa danh sách các Role được phép truy cập trang Nhân viên
+  const ALLOWED_ROLES = ["DOCTOR", "RECEPTIONIST", "SPA", "ADMIN"];
+
   if (!token) {
-    // Chưa đăng nhập -> Chuyển về trang Login
     return <Navigate to="/login" replace />;
   }
 
@@ -20,20 +22,18 @@ const DoctorRoute = () => {
       return <Navigate to="/login" replace />;
     }
 
-    // --- KIỂM TRA QUYỀN DOCTOR ---
-    // Nếu bạn muốn ADMIN cũng vào được trang này thì dùng:
-    // if (user.role === "DOCTOR" || user.role === "ADMIN")
-    if (user.role === "DOCTOR") {
+    // --- KIỂM TRA QUYỀN (LOGIC MỚI) ---
+    // Nếu role của user nằm trong danh sách cho phép -> Cho vào
+    if (ALLOWED_ROLES.includes(user.role)) {
       return <Outlet />;
     } else {
-      // Đã đăng nhập nhưng không phải Doctor -> Về trang chủ
+      // Đã đăng nhập nhưng là khách hàng (CUSTOMER) -> Về trang chủ
       return <Navigate to="/" replace />;
     }
   } catch (error) {
-    // Token lỗi -> Xóa token và về Login
     localStorage.removeItem("accessToken");
     return <Navigate to="/login" replace />;
   }
 };
 
-export default DoctorRoute;
+export default StaffRoute;

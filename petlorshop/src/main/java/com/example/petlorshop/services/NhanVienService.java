@@ -1,5 +1,6 @@
 package com.example.petlorshop.services;
 
+import com.example.petlorshop.dto.DoctorDashboardStatsResponse;
 import com.example.petlorshop.dto.NhanVienRequest;
 import com.example.petlorshop.dto.NhanVienResponse;
 import com.example.petlorshop.models.LichHen;
@@ -18,7 +19,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
@@ -201,6 +204,22 @@ public class NhanVienService {
             throw new RuntimeException("Không tìm thấy nhân viên với ID: " + nhanVienId);
         }
         return lichHenRepository.findOverlappingAppointments(nhanVienId, start, end).isEmpty();
+    }
+
+    public DoctorDashboardStatsResponse getDoctorDashboardStats(Integer userId) {
+        NhanVien nhanVien = nhanVienRepository.findByNguoiDung_UserId(userId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy nhân viên với User ID: " + userId));
+        
+        Integer nhanVienId = nhanVien.getNhanVienId();
+        
+        LocalDateTime startOfDay = LocalDate.now().atStartOfDay();
+        LocalDateTime endOfDay = LocalDate.now().atTime(LocalTime.MAX);
+
+        long lichKhamHomNay = lichHenRepository.countLichHenByTimeRange(nhanVienId, startOfDay, endOfDay);
+        long soCaKhanCap = lichHenRepository.countCaKhanCapByTimeRange(nhanVienId, LichHen.LoaiLichHen.KHAN_CAP, startOfDay, endOfDay);
+        long benhNhanDaTiepNhan = lichHenRepository.countBenhNhanDaTiepNhan(nhanVienId, LichHen.TrangThai.DA_HOAN_THANH);
+        
+        return new DoctorDashboardStatsResponse(lichKhamHomNay, soCaKhanCap, benhNhanDaTiepNhan);
     }
 
     private void mapRequestToEntity(NhanVien nhanVien, NhanVienRequest request) {
