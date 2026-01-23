@@ -16,10 +16,11 @@ const petService = {
   // [MỚI] Lấy hồ sơ bệnh án (Chi tiết thú cưng + Lịch sử)
   getPetMedicalRecord: (id) => apiClient.get(`/thu-cung/${id}/ho-so-benh-an`),
 
+  // --- SỬA: Đặt Content-Type là multipart/form-data ---
   createMyPet: (data) => {
     const config = {};
     if (data instanceof FormData) {
-      config.headers = {'Content-Type': undefined};
+      config.headers = { 'Content-Type': 'multipart/form-data' };
     }
     return apiClient.post('/thu-cung/me', data, config);
   },
@@ -27,7 +28,7 @@ const petService = {
   updateMyPet: (id, data) => {
     const config = {};
     if (data instanceof FormData) {
-      config.headers = { 'Content-Type': undefined };
+      config.headers = { 'Content-Type': 'multipart/form-data' };
     }
     return apiClient.put(`/thu-cung/me/${id}`, data, config);
   },
@@ -37,7 +38,7 @@ const petService = {
   createPet: (data) => {
     const config = {};
     if (data instanceof FormData) {
-      config.headers = { 'Content-Type': undefined };
+      config.headers = { 'Content-Type': 'multipart/form-data' };
     }
     return apiClient.post('/thu-cung', data, config);
   },
@@ -45,7 +46,7 @@ const petService = {
   updatePet: (id, data) => {
     const config = {};
     if (data instanceof FormData) {
-      config.headers = { 'Content-Type': undefined };
+      config.headers = { 'Content-Type': 'multipart/form-data' };
     }
     return apiClient.put(`/thu-cung/${id}`, data, config);
   },
@@ -60,7 +61,7 @@ const petService = {
   createService: (data) => {
     const config = {};
     if (data instanceof FormData) {
-      config.headers = { 'Content-Type': undefined };
+      config.headers = { 'Content-Type': 'multipart/form-data' };
     }
     return apiClient.post('/dich-vu', data, config);
   },
@@ -68,7 +69,7 @@ const petService = {
   updateService: (id, data) => {
     const config = {};
     if (data instanceof FormData) {
-      config.headers = { 'Content-Type': undefined };
+      config.headers = { 'Content-Type': 'multipart/form-data' };
     }
     return apiClient.put(`/dich-vu/${id}`, data, config);
   },

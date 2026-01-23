@@ -1,13 +1,17 @@
 import React from "react";
 
 const AppointmentList = ({
+  title = "Danh sách lịch hẹn",
   appointments = [],
   selectedId,
   onSelect,
   activeTab,
   onTabChange,
   loading,
+  type = "DOCTOR",
 }) => {
+  const isSpa = type === "SPA";
+
   // --- HELPERS ---
   const formatTime = (isoString) =>
     isoString
@@ -28,7 +32,7 @@ const AppointmentList = ({
     return "bg-[#007A7A]/10 text-[#007A7A]";
   };
 
-  // --- FILTER ---
+  // --- FILTER LOGIC ---
   const displayedList = appointments.filter((apt) => {
     if (activeTab === "CHO_DUYET")
       return apt.trangThaiLichHen === "CHO_XAC_NHAN";
@@ -40,17 +44,18 @@ const AppointmentList = ({
     return true;
   });
 
-  const countPending = appointments.filter(
-    (a) => a.trangThaiLichHen === "CHO_XAC_NHAN",
-  ).length;
-
-  const countConfirmed = appointments.filter(
-    (a) => a.trangThaiLichHen === "DA_XAC_NHAN",
-  ).length;
-
-  const countUrgent = appointments.filter((a) =>
-    a.loaiLichHen?.includes("Khẩn"),
-  ).length;
+  // --- COUNTS LOGIC ---
+  const counts = {
+    pending: appointments.filter((a) => a.trangThaiLichHen === "CHO_XAC_NHAN")
+      .length,
+    confirmed: appointments.filter((a) => a.trangThaiLichHen === "DA_XAC_NHAN")
+      .length,
+    urgent: appointments.filter((a) => a.loaiLichHen?.includes("Khẩn")).length,
+    // THÊM: Đếm số lượng lịch sử (Đã hoàn thành hoặc đã hủy)
+    history: appointments.filter((a) =>
+      ["DA_HOAN_THANH", "DA_HUY"].includes(a.trangThaiLichHen),
+    ).length,
+  };
 
   return (
     <section className="w-[600px] border-r border-gray-100 flex flex-col bg-[#F9FAFB] shrink-0 font-sans h-full">
@@ -58,30 +63,33 @@ const AppointmentList = ({
       <div className="flex bg-white px-4 pt-2 shrink-0 border-b border-gray-100 overflow-x-auto no-scrollbar">
         <TabButton
           label="CHỜ DUYỆT"
-          count={countPending}
+          count={counts.pending}
           isActive={activeTab === "CHO_DUYET"}
           onClick={() => onTabChange("CHO_DUYET")}
         />
         <TabButton
           label="ĐÃ DUYỆT"
-          count={countConfirmed}
+          count={counts.confirmed}
           isActive={activeTab === "DA_XAC_NHAN"}
           onClick={() => onTabChange("DA_XAC_NHAN")}
         />
-        <TabButton
-          label="KHẨN CẤP"
-          count={countUrgent}
-          isActive={activeTab === "KHAN_CAP"}
-          onClick={() => onTabChange("KHAN_CAP")}
-        />
+        {!isSpa && (
+          <TabButton
+            label="KHẨN CẤP"
+            count={counts.urgent}
+            isActive={activeTab === "KHAN_CAP"}
+            onClick={() => onTabChange("KHAN_CAP")}
+          />
+        )}
         <TabButton
           label="LỊCH SỬ"
+          count={counts.history} // THÊM: Truyền count vào đây
           isActive={activeTab === "DA_XONG"}
           onClick={() => onTabChange("DA_XONG")}
         />
       </div>
 
-      {/* LIST ITEMS */}
+      {/* LIST ITEMS (Phần này giữ nguyên CSS cũ của bạn) */}
       <div className="flex-1 overflow-y-auto custom-scrollbar p-5 space-y-4">
         {loading ? (
           <div className="text-center py-10 text-gray-400 text-sm">
@@ -108,12 +116,9 @@ const AppointmentList = ({
                 onClick={() => onSelect(apt.lichHenId)}
                 className={containerClass}
               >
-                {/* Header: Badge + Time */}
                 <div className="flex justify-between items-start mb-4">
                   <span
-                    className={`px-3 py-1 text-[10px] font-black rounded-full uppercase tracking-widest ${getBadgeStyle(
-                      apt.loaiLichHen,
-                    )}`}
+                    className={`px-3 py-1 text-[10px] font-black rounded-full uppercase tracking-widest ${getBadgeStyle(apt.loaiLichHen)}`}
                   >
                     {apt.loaiLichHen || "THƯỜNG LỆ"}
                   </span>
@@ -122,7 +127,6 @@ const AppointmentList = ({
                   </span>
                 </div>
 
-                {/* Title: Tên + Giống loài */}
                 <h3 className="font-extrabold text-lg text-gray-900 group-hover:text-[#007A7A] transition-colors mb-2">
                   {apt.tenThuCung}{" "}
                   {apt.giongLoai && (
@@ -132,7 +136,6 @@ const AppointmentList = ({
                   )}
                 </h3>
 
-                {/* Description: Dịch vụ + Ghi chú */}
                 <div className="mb-5">
                   <p className="text-sm font-bold text-gray-700 mb-1">
                     {apt.tenDichVu}
@@ -142,7 +145,6 @@ const AppointmentList = ({
                   </p>
                 </div>
 
-                {/* Footer: Owner + Code */}
                 <div className="flex items-center justify-between border-t border-gray-50 pt-4 mt-2">
                   <div className="flex items-center gap-2">
                     <span className="material-symbols-outlined text-gray-300 text-lg">
@@ -174,7 +176,8 @@ const TabButton = ({ label, count, isActive, onClick }) => (
         : "border-transparent text-gray-400 hover:text-gray-600"
     }`}
   >
-    {label} {count !== undefined && `(${count})`}
+    {/* count > 0 để tránh hiện (0) nếu danh sách trống, bạn có thể xóa nếu muốn hiện (0) */}
+    {label} {count !== undefined && count > 0 && `(${count})`}
   </button>
 );
 

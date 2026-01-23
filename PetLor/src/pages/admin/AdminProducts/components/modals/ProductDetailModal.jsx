@@ -27,7 +27,6 @@ const ProductDetailModal = ({ isOpen, onClose, product }) => {
             exit={{ scale: 0.95, opacity: 0, y: 20 }}
             className="w-full max-w-4xl bg-white rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[95vh]"
           >
-            {/* --- HEADER --- */}
             <div className="px-8 py-6 border-b border-slate-100 flex justify-between items-center bg-white sticky top-0 z-10 shrink-0">
               <div className="flex items-center gap-4">
                 <div className="w-14 h-14 rounded-2xl bg-teal-50 flex items-center justify-center text-primary border border-teal-100/50">
@@ -58,7 +57,6 @@ const ProductDetailModal = ({ isOpen, onClose, product }) => {
             {/* --- BODY --- */}
             <div className="p-8 overflow-y-auto custom-scrollbar flex-1">
               <div className="flex flex-col md:flex-row gap-8">
-                {/* Cột Trái: Hình ảnh */}
                 <div className="w-full md:w-1/3 flex flex-col gap-4">
                   <div className="aspect-square w-full bg-slate-50 rounded-2xl border border-slate-100 overflow-hidden flex items-center justify-center shadow-sm">
                     <img
@@ -81,9 +79,7 @@ const ProductDetailModal = ({ isOpen, onClose, product }) => {
                   </div>
                 </div>
 
-                {/* Cột Phải: Thông tin chi tiết */}
                 <div className="w-full md:w-2/3 space-y-6">
-                  {/* Grid Thông tin cơ bản */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
                       <label className={labelClass}>Tên sản phẩm</label>
@@ -121,7 +117,6 @@ const ProductDetailModal = ({ isOpen, onClose, product }) => {
                     </div>
                   </div>
 
-                  {/* Mô tả */}
                   <div>
                     <label className={labelClass}>Mô tả chi tiết</label>
                     <div

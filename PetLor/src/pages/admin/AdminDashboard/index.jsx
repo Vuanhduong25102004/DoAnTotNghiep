@@ -3,9 +3,7 @@ import React from "react";
 const AdminDashboard = () => {
   return (
     <div className="mx-auto max-w-[1600px] space-y-8 p-8">
-      {/* --- SECTION 1: TOP STATS --- */}
       <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
-        {/* Card 1: Doanh thu */}
         <StatCard
           icon="payments"
           iconColor="text-emerald-600"
@@ -15,7 +13,6 @@ const AdminDashboard = () => {
           label="Doanh thu tháng"
           value="45.200.000đ"
         />
-        {/* Card 2: Đơn hàng */}
         <StatCard
           icon="shopping_cart"
           iconColor="text-blue-600"
@@ -25,7 +22,6 @@ const AdminDashboard = () => {
           label="Tổng đơn hàng"
           value="128"
         />
-        {/* Card 3: Khách hàng */}
         <StatCard
           icon="person_add"
           iconColor="text-orange-600"
@@ -35,7 +31,6 @@ const AdminDashboard = () => {
           label="Khách hàng mới"
           value="45"
         />
-        {/* Card 4: Dịch vụ */}
         <StatCard
           icon="content_cut"
           iconColor="text-purple-600"
@@ -47,9 +42,7 @@ const AdminDashboard = () => {
         />
       </div>
 
-      {/* --- SECTION 2: CHARTS AREA --- */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
-        {/* Column Left: Growth Chart (Chiếm 8 phần) */}
         <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm lg:col-span-8">
           <div className="mb-8 flex items-center justify-between">
             <div>
@@ -76,16 +69,12 @@ const AdminDashboard = () => {
             </div>
           </div>
 
-          {/* Chart Bars Visualization */}
           <div className="relative flex h-[300px] w-full items-end justify-between px-2">
-            {/* Grid Lines Background */}
             <div className="pointer-events-none absolute inset-0 flex flex-col justify-between py-2">
               {[...Array(5)].map((_, i) => (
                 <div key={i} className="w-full border-t border-slate-100"></div>
               ))}
             </div>
-
-            {/* Bars */}
             <ChartBar h1="40%" h2="30%" label="T.5" />
             <ChartBar h1="55%" h2="45%" label="T.6" />
             <ChartBar h1="50%" h2="65%" label="T.7" />

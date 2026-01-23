@@ -1,5 +1,9 @@
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+// --- THAY ĐỔI Ở ĐÂY ---
+import ReactQuill from "react-quill-new"; // Dùng thư viện mới
+import "react-quill-new/dist/quill.snow.css"; // CSS của thư viện mới
+// ----------------------
 import useEscapeKey from "../../../../../hooks/useEscapeKey";
 import {
   POST_STATUSES,
@@ -28,7 +32,18 @@ const PostFormModal = ({
   const [imageFile, setImageFile] = useState(null);
   const [previewUrl, setPreviewUrl] = useState("");
 
-  // --- LOGIC GIỮ NGUYÊN ---
+  // --- Rich Text Editor Configuration ---
+  const modules = {
+    toolbar: [
+      [{ header: [1, 2, 3, false] }],
+      ["bold", "italic", "underline", "strike"],
+      [{ list: "ordered" }, { list: "bullet" }],
+      ["link", "image"],
+      ["clean"],
+    ],
+  };
+
+  // --- LOGIC GIỮ NGUYÊN (Data Loading) ---
   useEffect(() => {
     if (isOpen) {
       if (initialData) {
@@ -42,12 +57,12 @@ const PostFormModal = ({
           let foundCat = null;
           if (rawId) {
             foundCat = categories.find(
-              (c) => (c.id || c.danhMucBvId || c.danhMucId) == rawId
+              (c) => (c.id || c.danhMucBvId || c.danhMucId) == rawId,
             );
           }
           if (!foundCat && initialData.tenDanhMuc) {
             foundCat = categories.find(
-              (c) => c.tenDanhMuc === initialData.tenDanhMuc
+              (c) => c.tenDanhMuc === initialData.tenDanhMuc,
             );
           }
           if (foundCat) {
@@ -62,7 +77,7 @@ const PostFormModal = ({
           tieuDe: initialData.tieuDe || "",
           slug: initialData.slug || "",
           danhMucId: targetId,
-          noiDung: initialData.noiDung || "",
+          noiDung: initialData.noiDung || "", // Load HTML content
           trangThai: initialData.trangThai || "NHAP",
         });
 
@@ -87,6 +102,11 @@ const PostFormModal = ({
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  // Handler specific for React Quill
+  const handleEditorChange = (content) => {
+    setFormData((prev) => ({ ...prev, noiDung: content }));
   };
 
   const handleFileChange = (e) => {
@@ -127,7 +147,7 @@ const PostFormModal = ({
             initial={{ scale: 0.95, opacity: 0, y: 20 }}
             animate={{ scale: 1, opacity: 1, y: 0 }}
             exit={{ scale: 0.95, opacity: 0, y: 20 }}
-            className="w-full max-w-4xl bg-white rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[95vh]"
+            className="w-full max-w-5xl bg-white rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[95vh]"
           >
             {/* --- HEADER --- */}
             <div className="px-8 py-6 border-b border-slate-100 flex justify-between items-center bg-white sticky top-0 z-10 shrink-0">
@@ -229,7 +249,7 @@ const PostFormModal = ({
                   </div>
                 </div>
 
-                {/* Ảnh bìa - Style mới */}
+                {/* Ảnh bìa */}
                 <div>
                   <label className={labelClass}>Ảnh bìa</label>
                   <div className="mt-2 p-4 bg-slate-50 border border-slate-100 rounded-2xl flex items-start gap-6">
@@ -278,16 +298,19 @@ const PostFormModal = ({
                   </div>
                 </div>
 
-                {/* Nội dung */}
-                <div>
+                {/* --- EDITOR (REPLACED TEXTAREA) --- */}
+                <div className="h-[450px]">
                   <label className={labelClass}>Nội dung bài viết</label>
-                  <textarea
-                    name="noiDung"
-                    value={formData.noiDung}
-                    onChange={handleChange}
-                    className={`${inputClass} min-h-[300px] font-mono text-sm leading-relaxed`}
-                    placeholder="Nhập nội dung bài viết (Hỗ trợ HTML cơ bản)..."
-                  ></textarea>
+                  <div className="h-[350px] bg-white rounded-xl">
+                    <ReactQuill
+                      theme="snow"
+                      value={formData.noiDung}
+                      onChange={handleEditorChange}
+                      modules={modules}
+                      className="h-full"
+                      placeholder="Nhập nội dung bài viết..."
+                    />
+                  </div>
                 </div>
               </div>
             </div>

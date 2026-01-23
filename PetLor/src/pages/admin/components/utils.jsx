@@ -13,13 +13,13 @@ const DEFAULT_AVATAR_URL = "https://placehold.co/40x40?text=A";
 // --- Trạng thái Đơn hàng (Order) ---
 export const ORDER_STATUSES = [
   "Chờ xử lý",
-  "Đã xác nhận", // Đã thêm theo yêu cầu để khớp với dropdown
+  "Đã xác nhận",
   "Đang giao",
   "Đã giao",
   "Đã hủy",
 ];
 
-// --- Trạng thái Thanh toán (Payment) - MỚI ---
+// --- Trạng thái Thanh toán (Payment) ---
 export const PAYMENT_STATUS_MAP = {
   CHUA_THANH_TOAN: "Chưa thanh toán",
   CHO_THANH_TOAN: "Chờ thanh toán",
@@ -94,6 +94,27 @@ export const formatAppointmentTime = (startTime, endTime) => {
   return `${datePart}, ${startTimePart} - ${endTimePart}`;
 };
 
+export const formatTimeRange = (start, end) => {
+  if (!start) return "---";
+
+  const startTime = new Date(start).toLocaleTimeString("vi-VN", {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+
+  // Tái sử dụng hàm formatDate đã có trong file này
+  const date = formatDate(start);
+
+  if (!end) return `${startTime} | ${date}`;
+
+  const endTime = new Date(end).toLocaleTimeString("vi-VN", {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+
+  return `${startTime} - ${endTime} | ${date}`;
+};
+
 export const calculateAge = (dateString) => {
   if (!dateString) return "Chưa rõ";
   const today = new Date();
@@ -110,24 +131,59 @@ export const calculateAge = (dateString) => {
 // PHẦN 3: HÀM HỖ TRỢ LOGIC (HELPERS)
 // ============================================================================
 
+// --- 1. Tạo Slug từ Tiêu đề (MỚI THÊM) ---
+export const generateSlug = (text) => {
+  if (!text) return "";
+  return text
+    .toString()
+    .toLowerCase()
+    .normalize("NFD") // Chuyển đổi ký tự có dấu thành không dấu
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/\s+/g, "-") // Thay khoảng trắng bằng dấu gạch ngang
+    .replace(/[^\w-]+/g, "") // Xóa ký tự đặc biệt
+    .replace(/--+/g, "-") // Xóa gạch ngang kép
+    .replace(/^-+/, "") // Xóa gạch ngang đầu
+    .replace(/-+$/, ""); // Xóa gạch ngang cuối
+};
+
+// --- 2. Lấy URL ảnh ---
 export const getImageUrl = (imagePath, fallbackText = "Image") => {
   if (!imagePath) return `https://placehold.co/100x100?text=${fallbackText}`;
   if (imagePath.startsWith("http") || imagePath.startsWith("blob:"))
     return imagePath;
   const cleanPath = imagePath.startsWith("/") ? imagePath : `/${imagePath}`;
+
+  // Tránh việc nối trùng /uploads/uploads
   if (cleanPath.startsWith("/uploads/")) {
     return `${API_BASE_URL}${cleanPath}`;
   }
   return `${API_BASE_URL}/uploads${cleanPath}`;
 };
 
-export const createPostFormData = (postData, imageFile) => {
+// --- 3. Tạo FormData cho Bài viết (ĐÃ SỬA CHO KHỚP BACKEND) ---
+// --- 3. Tạo FormData cho Bài viết (ĐÃ SỬA CHUẨN KEY BACKEND) ---
+export const createPostFormData = (data, imageFile) => {
   const formData = new FormData();
-  const postDataJson = JSON.stringify(postData);
-  formData.append("data", postDataJson);
+
+  const postData = {
+    tieuDe: data.tieuDe,
+    slug: data.slug || generateSlug(data.tieuDe),
+    noiDung: data.noiDung,
+    userId: Number(data.userId),
+    danhMucBvId: Number(data.danhMucBvId), // Đổi tên trường tại đây
+    trangThai: data.trangThai || "CONG_KHAI",
+  };
+
+  const jsonBlob = new Blob([JSON.stringify(postData)], {
+    type: "application/json",
+  });
+
+  formData.append("data", jsonBlob);
+
   if (imageFile) {
     formData.append("anhBia", imageFile);
   }
+
   return formData;
 };
 
@@ -230,42 +286,31 @@ export const OrderStatusBadge = ({ status }) => {
   );
 };
 
-// 3. Badge Trạng thái Thanh toán (MỚI)
+// 3. Badge Trạng thái Thanh toán
 export const PaymentStatusBadge = ({ status }) => {
   const safeStatus = status ? status.trim() : "DEFAULT";
 
   const statusMap = {
-    // Màu xám: Chưa có hành động gì
     CHUA_THANH_TOAN: {
       text: "Chưa thanh toán",
       styles: "bg-orange-100 text-orange-700 border-orange-200",
     },
-
-    // Màu vàng: Đang chờ xử lý (Ví dụ: Đang đợi cổng thanh toán)
     CHO_THANH_TOAN: {
       text: "Chờ thanh toán",
       styles: "bg-amber-100 text-amber-700 border-amber-200",
     },
-
-    // Màu xanh lá: Thành công
     DA_THANH_TOAN: {
       text: "Đã thanh toán",
       styles: "bg-emerald-100 text-emerald-700 border-emerald-200",
     },
-
-    // Màu đỏ: Lỗi
     THAT_BAI: {
       text: "Thất bại",
       styles: "bg-red-100 text-red-700 border-red-200",
     },
-
-    // Màu tím: Hoàn tiền
     HOAN_TIEN: {
       text: "Hoàn tiền",
       styles: "bg-purple-100 text-purple-700 border-purple-200",
     },
-
-    // Trường hợp mặc định
     DEFAULT: {
       text: status,
       styles: "bg-gray-100 text-gray-800 border-gray-200",
@@ -444,7 +489,6 @@ export const UserAvatar = ({ user, className = "h-8 w-8" }) => {
     const fetchAvatar = async () => {
       if (user?.anhDaiDien) {
         try {
-          // Xử lý nếu ảnh là link online sẵn
           if (user.anhDaiDien.startsWith("http")) {
             setAvatarUrl(user.anhDaiDien);
             return;
@@ -485,26 +529,7 @@ export const UserAvatar = ({ user, className = "h-8 w-8" }) => {
     />
   );
 };
-export const formatTimeRange = (start, end) => {
-  if (!start) return "---";
 
-  const startTime = new Date(start).toLocaleTimeString("vi-VN", {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-
-  // Tái sử dụng hàm formatDate đã có trong file này
-  const date = formatDate(start);
-
-  if (!end) return `${startTime} | ${date}`;
-
-  const endTime = new Date(end).toLocaleTimeString("vi-VN", {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-
-  return `${startTime} - ${endTime} | ${date}`;
-};
 // 12. Badge Giới tính
 export const GenderBadge = (gender) => {
   if (!gender) return <span className="text-gray-400 text-sm">-</span>;

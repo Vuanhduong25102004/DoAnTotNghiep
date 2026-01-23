@@ -2,47 +2,57 @@ import React, { useState, useEffect } from "react";
 import bookingService from "../../../services/bookingService";
 import petService from "../../../services/petService";
 
-// Tái sử dụng component hiển thị (hoặc tạo bản sao mới nếu giao diện Spa khác biệt quá nhiều)
 import AppointmentList from "../doctor/components/AppointmentList";
 import PatientDetail from "../doctor/components/PatientDetail";
 
 const SpaSchedule = () => {
-  // --- State quản lý dữ liệu ---
   const [appointments, setAppointments] = useState([]);
   const [selectedId, setSelectedId] = useState(null);
   const [activeTab, setActiveTab] = useState("DA_XAC_NHAN");
 
-  // --- State chi tiết thú cưng ---
   const [petDetail, setPetDetail] = useState(null);
   const [combinedHistory, setCombinedHistory] = useState([]);
-
-  // --- State loading ---
   const [loadingAppts, setLoadingAppts] = useState(true);
   const [loadingDetail, setLoadingDetail] = useState(false);
 
-  // 1. Fetch danh sách lịch hẹn SPA khi vào trang
+  // --- 1. HÀM FETCH DỮ LIỆU ---
+  const fetchAppointments = async () => {
+    setLoadingAppts(true);
+    try {
+      // Dùng endpoint chính xác cho Bác sĩ/Spa
+      const data = await bookingService.getDoctorAppointments();
+      setAppointments(Array.isArray(data) ? data : data.data || []);
+    } catch (error) {
+      console.error("Lỗi tải lịch Spa:", error);
+    } finally {
+      setLoadingAppts(false);
+    }
+  };
+
+  // --- 2. HÀM XỬ LÝ KHI UPDATE THÀNH CÔNG ---
+  // Hàm này được truyền xuống PatientDetail
+  const handleRefreshAfterAction = async (newTab) => {
+    // 1. Tải lại dữ liệu mới nhất
+    await fetchAppointments();
+
+    // 2. Bỏ chọn lịch hẹn hiện tại (để màn hình chi tiết reset)
+    setSelectedId(null);
+
+    // 3. Nếu có yêu cầu chuyển tab (ví dụ: Chấp nhận xong -> chuyển sang tab Đã duyệt)
+    if (newTab) {
+      setActiveTab(newTab);
+    }
+  };
+
   useEffect(() => {
-    const fetchAppointments = async () => {
-      setLoadingAppts(true);
-      try {
-        // THAY ĐỔI: Gọi API lấy lịch Spa thay vì lịch khám
-        const data = await bookingService.getSpaAppointments();
-        setAppointments(data);
-      } catch (error) {
-        console.error("Lỗi tải lịch Spa:", error);
-      } finally {
-        setLoadingAppts(false);
-      }
-    };
     fetchAppointments();
   }, []);
 
-  // Tìm object lịch hẹn hiện tại
+  // Logic tìm appointment và fetch chi tiết thú cưng (Giữ nguyên như cũ)
   const selectedAppointment = appointments.find(
     (p) => p.lichHenId === selectedId,
   );
 
-  // 2. Fetch chi tiết và lịch sử làm đẹp
   useEffect(() => {
     const fetchRecord = async () => {
       if (!selectedAppointment?.thuCungId) {
@@ -50,80 +60,65 @@ const SpaSchedule = () => {
         setCombinedHistory([]);
         return;
       }
-
       setLoadingDetail(true);
       try {
-        // Vẫn lấy thông tin thú cưng để xem dị ứng, tính cách...
         const data = await petService.getPetMedicalRecord(
           selectedAppointment.thuCungId,
         );
         setPetDetail(data);
 
-        // THAY ĐỔI: Xử lý lịch sử dành cho Spa
-        // Nhân viên Spa quan tâm: Kiểu cắt lông cũ, loại dầu gội đã dùng, phản ứng da...
-        // Giả sử API trả về mảng 'lichSuSuDungDichVu' (Service Usage History)
-
+        // Logic xử lý lịch sử (Rút gọn cho dễ nhìn)
         const spaHistory = (data.lichSuSuDungDichVu || [])
-          .filter((s) => s.loaiDichVu === "SPA" || s.loaiDichVu === "GROOMING") // Lọc chỉ lấy dịch vụ Spa
+          .filter((s) => ["SPA", "GROOMING"].includes(s.loaiDichVu))
           .map((s) => ({
             type: "SPA",
             date: s.ngaySuDung,
-            title: `Dịch vụ: ${s.tenDichVu}`,
-            // Hiển thị người thực hiện và ghi chú (vd: cắt ngắn 2cm, khách khó tính...)
-            note: `${s.ghiChu || ""} - NV: ${s.nhanVienThucHien}`,
+            title: s.tenDichVu,
+            note: s.ghiChu,
           }));
-
-        // Có thể vẫn cần hiển thị lưu ý Y tế quan trọng (Ví dụ: Dị ứng thuốc/dầu gội)
         const alerts = (data.luuYYTe || []).map((a) => ({
           type: "ALERT",
           date: a.ngayTao,
-          title: "CẢNH BÁO SỨC KHỎE",
-          note: a.noiDung, // VD: Dị ứng xà phòng, da nhạy cảm
+          title: "CẢNH BÁO",
+          note: a.noiDung,
         }));
 
-        // Sắp xếp theo thời gian mới nhất
-        const sortedHistory = [...spaHistory, ...alerts].sort(
-          (a, b) => new Date(b.date) - new Date(a.date),
+        setCombinedHistory(
+          [...spaHistory, ...alerts].sort(
+            (a, b) => new Date(b.date) - new Date(a.date),
+          ),
         );
-
-        setCombinedHistory(sortedHistory);
       } catch (err) {
-        console.error("Lỗi tải thông tin thú cưng:", err);
         setPetDetail(null);
         setCombinedHistory([]);
       } finally {
         setLoadingDetail(false);
       }
     };
-
     fetchRecord();
-  }, [selectedId, selectedAppointment]);
-
-  const handleSelect = (id) => {
-    setSelectedId(selectedId === id ? null : id);
-  };
+  }, [selectedId, selectedAppointment]); // Dependencies quan trọng
 
   return (
     <div className="flex h-full w-full overflow-hidden bg-[#F9FAFB]">
-      {/* Cột trái: Danh sách lịch Spa */}
       <AppointmentList
-        title="Lịch Spa & Grooming" // Có thể truyền props title để đổi tên header
+        title="Lịch Spa & Grooming"
         appointments={appointments}
         selectedId={selectedId}
-        onSelect={handleSelect}
+        onSelect={setSelectedId}
         activeTab={activeTab}
         onTabChange={setActiveTab}
         loading={loadingAppts}
-        type="SPA" // Truyền type để AppointmentList render icon/màu sắc phù hợp
+        type="SPA"
       />
 
-      {/* Cột phải: Chi tiết & Lịch sử làm đẹp */}
       <PatientDetail
         appointment={selectedAppointment}
         petDetail={petDetail}
         history={combinedHistory}
         loadingDetail={loadingDetail}
-        titleHistory="Lịch sử làm đẹp" // Đổi tiêu đề phần lịch sử
+        titleHistory="Lịch sử làm đẹp"
+        // TRUYỀN HÀM XỬ LÝ MỚI XUỐNG
+        onRefresh={handleRefreshAfterAction}
       />
     </div>
   );

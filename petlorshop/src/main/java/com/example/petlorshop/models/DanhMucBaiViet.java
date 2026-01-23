@@ -25,6 +25,9 @@ public class DanhMucBaiViet {
     @Column(name = "ten_danh_muc", nullable = false)
     private String tenDanhMuc;
 
+    @Column(name = "mo_ta", columnDefinition = "TEXT")
+    private String moTa;
+
     @Column(name = "da_xoa")
     private boolean daXoa = false;
 }

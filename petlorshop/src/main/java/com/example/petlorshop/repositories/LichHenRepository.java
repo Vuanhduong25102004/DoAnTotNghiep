@@ -17,9 +17,15 @@ public interface LichHenRepository extends JpaRepository<LichHen, Integer> {
                                             @Param("newStart") LocalDateTime newStart,
                                             @Param("newEnd") LocalDateTime newEnd);
 
-    @Query("SELECT lh FROM LichHen lh WHERE lh.nhanVien.nhanVienId = :nhanVienId AND FUNCTION('DATE', lh.thoiGianBatDau) = :date ORDER BY lh.thoiGianBatDau")
-    List<LichHen> findByNhanVienIdAndDate(@Param("nhanVienId") Integer nhanVienId,
-                                        @Param("date") java.time.LocalDate date);
+    // Sửa lại query này để dùng BETWEEN cho chuẩn JPA và tránh lỗi FUNCTION('DATE') trên một số DB
+    @Query("SELECT lh FROM LichHen lh WHERE lh.nhanVien.nhanVienId = :nhanVienId AND lh.thoiGianBatDau BETWEEN :start AND :end ORDER BY lh.thoiGianBatDau")
+    List<LichHen> findByNhanVienIdAndDateRange(@Param("nhanVienId") Integer nhanVienId,
+                                        @Param("start") LocalDateTime start,
+                                        @Param("end") LocalDateTime end);
+
+    // Tìm tất cả lịch hẹn trong khoảng thời gian (cho Lễ tân)
+    @Query("SELECT lh FROM LichHen lh WHERE lh.thoiGianBatDau BETWEEN :start AND :end ORDER BY lh.thoiGianBatDau")
+    List<LichHen> findAllByDateRange(@Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
 
     @Query("SELECT l FROM LichHen l WHERE LOWER(l.ghiChu) LIKE LOWER(CONCAT('%', :keyword, '%'))")
     List<LichHen> searchByKeyword(@Param("keyword") String keyword);
@@ -37,7 +43,7 @@ public interface LichHenRepository extends JpaRepository<LichHen, Integer> {
     @Query("SELECT COUNT(lh) FROM LichHen lh WHERE lh.nhanVien.nhanVienId = :nhanVienId AND lh.loaiLichHen = :loaiLichHen AND lh.thoiGianBatDau BETWEEN :start AND :end")
     long countCaKhanCapByTimeRange(@Param("nhanVienId") Integer nhanVienId, @Param("loaiLichHen") LichHen.LoaiLichHen loaiLichHen, @Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
 
-    // Đếm số bệnh nhân đã tiếp nhận (đã hoàn thành)
-    @Query("SELECT COUNT(DISTINCT lh.nguoiDung.userId) FROM LichHen lh WHERE lh.nhanVien.nhanVienId = :nhanVienId AND lh.trangThai = :trangThai")
+    // Đếm số ca khám đã hoàn thành (Bỏ DISTINCT để đếm tổng lượt khám)
+    @Query("SELECT COUNT(lh) FROM LichHen lh WHERE lh.nhanVien.nhanVienId = :nhanVienId AND lh.trangThai = :trangThai")
     long countBenhNhanDaTiepNhan(@Param("nhanVienId") Integer nhanVienId, @Param("trangThai") LichHen.TrangThai trangThai);
 }

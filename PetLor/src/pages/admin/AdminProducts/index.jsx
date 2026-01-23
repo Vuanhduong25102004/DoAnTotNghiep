@@ -66,31 +66,24 @@ const AdminProducts = () => {
       let totalP = 0;
       let totalE = 0;
 
-      // Trim để loại bỏ khoảng trắng thừa đầu/cuối
       const term = searchTerm ? searchTerm.trim() : "";
 
       if (term) {
-        // --- LOGIC MỚI: SỬ DỤNG SERVICE ---
         console.log(`Đang tìm kiếm qua Service: "${term}"`);
 
-        // 1. Gọi API qua productService (đã tách file)
         const data = await productService.searchGlobal(term);
 
-        // 2. Lấy danh sách sản phẩm từ kết quả trả về (sanPhams, dichVus, thuCungs)
         const allSearchResults = data.sanPhams || [];
 
-        // 3. Xử lý phân trang phía Client (Do API Search trả về all)
         totalE = allSearchResults.length;
         totalP = Math.ceil(totalE / ITEMS_PER_PAGE);
 
-        // Cắt mảng để lấy đúng trang hiện tại
         const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
         productsData = allSearchResults.slice(
           startIndex,
-          startIndex + ITEMS_PER_PAGE
+          startIndex + ITEMS_PER_PAGE,
         );
       } else {
-        // --- LOGIC CŨ: Lấy tất cả (Server-side Pagination) ---
         const page = currentPage - 1;
         const response = await productService.getAllProducts({
           page,
@@ -103,7 +96,6 @@ const AdminProducts = () => {
         totalE = response?.totalElements || 0;
       }
 
-      // Map dữ liệu để hiển thị
       const formattedProducts = productsData.map((p) => ({
         ...p,
         sanPhamId: p.sanPhamId,
@@ -142,27 +134,19 @@ const AdminProducts = () => {
     fetchProducts();
   }, [currentPage, searchTerm, filterCategory, filterStock]);
 
-  // Effect riêng để tính toán các chỉ số trên toàn bộ sản phẩm (không theo trang)
   useEffect(() => {
     const fetchInventoryStats = async () => {
-      // Để tính toán chính xác các chỉ số như "Giá trị tồn kho" và "Sắp hết hàng",
-      // chúng ta cần lấy TOÀN BỘ danh sách sản phẩm khớp với bộ lọc hiện tại,
-      // không chỉ giới hạn ở trang đang xem.
-      // Lưu ý: Cách làm này có thể không hiệu quả nếu có hàng nghìn sản phẩm.
-      // Giải pháp tối ưu hơn là tạo một API endpoint riêng để trả về các chỉ số này.
       try {
         const term = searchTerm ? searchTerm.trim() : "";
         let allProductsForStats = [];
 
         if (term) {
-          // Khi tìm kiếm, API searchGlobal đã trả về tất cả kết quả
           const data = await productService.searchGlobal(term);
           allProductsForStats = data.sanPhams || [];
         } else {
-          // Khi lọc, chúng ta gọi API với size lớn để lấy tất cả sản phẩm
           const response = await productService.getAllProducts({
             page: 0,
-            size: 100000, // Lấy tối đa 100,000 sản phẩm để tính toán
+            size: 100000,
             categoryId: filterCategory,
             stockStatus: filterStock,
           });
@@ -170,11 +154,11 @@ const AdminProducts = () => {
         }
 
         const lowStock = allProductsForStats.filter(
-          (p) => (p.soLuongTonKho || 0) < 10
+          (p) => (p.soLuongTonKho || 0) < 10,
         ).length;
         const totalValue = allProductsForStats.reduce(
           (total, p) => total + (p.gia || 0) * (p.soLuongTonKho || 0),
-          0
+          0,
         );
 
         setInventoryStats({
@@ -188,7 +172,7 @@ const AdminProducts = () => {
     };
 
     fetchInventoryStats();
-  }, [searchTerm, filterCategory, filterStock]); // Chạy lại khi bộ lọc thay đổi
+  }, [searchTerm, filterCategory, filterStock]);
 
   const handleCloseModals = () => {
     setIsModalOpen(false);
@@ -198,7 +182,7 @@ const AdminProducts = () => {
 
   useEscapeKey(
     handleCloseModals,
-    isModalOpen || isDetailModalOpen || isConfirmDeleteModalOpen
+    isModalOpen || isDetailModalOpen || isConfirmDeleteModalOpen,
   );
 
   // --- Handlers ---

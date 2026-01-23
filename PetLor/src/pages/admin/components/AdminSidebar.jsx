@@ -1,22 +1,35 @@
-import React from "react";
-import useEscapeKey from "../../../hooks/useEscapeKey";
+import React, { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 
-/**
- * Component AdminSidebar: Thanh điều hướng bên trái cho trang quản trị.
- * Đã cập nhật đầy đủ các module: Kho, Marketing, Y tế, Nội dung.
- */
 const AdminSidebar = ({ onLogout }) => {
   const location = useLocation();
 
+  // State để quản lý đóng/mở menu Danh mục
+  const [isCategoryMenuOpen, setIsCategoryMenuOpen] = useState(false);
+
   // --- HELPER FUNCTIONS ---
   const isActive = (path) => location.pathname.startsWith(path);
+
+  // Tự động mở menu nếu URL hiện tại nằm trong nhóm danh mục
+  useEffect(() => {
+    if (location.pathname.startsWith("/admin/categories")) {
+      setIsCategoryMenuOpen(true);
+    }
+  }, [location.pathname]);
 
   const linkClass = (path) =>
     `flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors ${
       isActive(path)
         ? "border border-primary/20 bg-primary/10 text-primary"
         : "text-gray-600 hover:bg-gray-50 hover:text-primary"
+    }`;
+
+  // Class riêng cho link con (thụt đầu dòng, font nhỏ hơn xíu)
+  const subLinkClass = (path) =>
+    `flex items-center pl-11 pr-3 py-2 text-sm font-medium rounded-md transition-colors ${
+      location.pathname === path // Dùng strict equality (===) cho link con để highlight chính xác
+        ? "text-primary font-bold bg-gray-50"
+        : "text-gray-500 hover:text-primary hover:bg-gray-50"
     }`;
 
   return (
@@ -39,7 +52,7 @@ const AdminSidebar = ({ onLogout }) => {
           Tổng quan
         </Link>
 
-        {/* --- NHÓM 1: BÁN HÀNG & MARKETING (Sales) --- */}
+        {/* --- NHÓM 1: BÁN HÀNG & MARKETING --- */}
         <div className="px-3 pt-4 pb-2 text-xs font-semibold uppercase tracking-wider text-gray-400">
           Bán hàng & Marketing
         </div>
@@ -49,40 +62,82 @@ const AdminSidebar = ({ onLogout }) => {
           Đơn hàng
         </Link>
 
-        {/* MỚI: Quản lý mã giảm giá */}
         <Link to="/admin/promotions" className={linkClass("/admin/promotions")}>
           <span className="material-symbols-outlined mr-3">local_offer</span>
           Khuyến mãi
         </Link>
 
-        {/* --- NHÓM 2: SẢN PHẨM & KHO (Inventory) --- */}
+        {/* --- NHÓM 2: SẢN PHẨM & KHO --- */}
         <div className="px-3 pt-4 pb-2 text-xs font-semibold uppercase tracking-wider text-gray-400">
           Sản phẩm & Kho
         </div>
 
-        <Link to="/admin/categories" className={linkClass("/admin/categories")}>
-          <span className="material-symbols-outlined mr-3">category</span>
-          Danh mục SP
-        </Link>
+        {/* === START: MENU ĐA CẤP DANH MỤC === */}
+        <div>
+          <button
+            onClick={() => setIsCategoryMenuOpen(!isCategoryMenuOpen)}
+            className={`flex w-full items-center justify-between px-3 py-2 text-sm font-medium rounded-md transition-colors ${
+              isActive("/admin/categories") // Highlight cha nếu đang ở con
+                ? "text-primary"
+                : "text-gray-600 hover:bg-gray-50 hover:text-primary"
+            }`}
+          >
+            <div className="flex items-center">
+              <span className="material-symbols-outlined mr-3">category</span>
+              Quản lý Danh mục
+            </div>
+            {/* Icon mũi tên xoay khi đóng mở */}
+            <span
+              className={`material-symbols-outlined text-lg transition-transform duration-200 ${
+                isCategoryMenuOpen ? "rotate-180" : ""
+              }`}
+            >
+              expand_more
+            </span>
+          </button>
+
+          {/* Sub-menu items */}
+          {isCategoryMenuOpen && (
+            <div className="mt-1 space-y-1 animate-fadeIn">
+              <Link
+                to="/admin/categories/products"
+                className={subLinkClass("/admin/categories/products")}
+              >
+                DM Sản phẩm
+              </Link>
+              <Link
+                to="/admin/categories/services"
+                className={subLinkClass("/admin/categories/services")}
+              >
+                DM Dịch vụ
+              </Link>
+              <Link
+                to="/admin/categories/posts"
+                className={subLinkClass("/admin/categories/posts")}
+              >
+                DM Bài viết
+              </Link>
+            </div>
+          )}
+        </div>
+        {/* === END: MENU ĐA CẤP DANH MỤC === */}
 
         <Link to="/admin/products" className={linkClass("/admin/products")}>
           <span className="material-symbols-outlined mr-3">inventory_2</span>
           Sản phẩm
         </Link>
 
-        {/* MỚI: Quản lý nhập hàng */}
         <Link to="/admin/imports" className={linkClass("/admin/imports")}>
           <span className="material-symbols-outlined mr-3">move_to_inbox</span>
           Nhập hàng
         </Link>
 
-        {/* MỚI: Quản lý nhà cung cấp */}
         <Link to="/admin/suppliers" className={linkClass("/admin/suppliers")}>
           <span className="material-symbols-outlined mr-3">store</span>
           Nhà cung cấp
         </Link>
 
-        {/* --- NHÓM 3: DỊCH VỤ & Y TẾ (Services & Care) --- */}
+        {/* --- NHÓM 3: DỊCH VỤ & Y TẾ --- */}
         <div className="px-3 pt-4 pb-2 text-xs font-semibold uppercase tracking-wider text-gray-400">
           Dịch vụ & Y Tế
         </div>
@@ -102,7 +157,6 @@ const AdminSidebar = ({ onLogout }) => {
           Dịch vụ Spa/Khám
         </Link>
 
-        {/* MỚI: Sổ tiêm chủng/Hồ sơ bệnh án */}
         <Link
           to="/admin/vaccinations"
           className={linkClass("/admin/vaccinations")}
@@ -111,7 +165,7 @@ const AdminSidebar = ({ onLogout }) => {
           Sổ tiêm chủng
         </Link>
 
-        {/* --- NHÓM 4: KHÁCH HÀNG & NHÂN SỰ (CRM/HRM) --- */}
+        {/* --- NHÓM 4: KHÁCH HÀNG & NHÂN SỰ --- */}
         <div className="px-3 pt-4 pb-2 text-xs font-semibold uppercase tracking-wider text-gray-400">
           Con người & Thú cưng
         </div>
@@ -126,7 +180,6 @@ const AdminSidebar = ({ onLogout }) => {
           Thú cưng
         </Link>
 
-        {/* MỚI: Quản lý đánh giá/Feedback */}
         <Link to="/admin/reviews" className={linkClass("/admin/reviews")}>
           <span className="material-symbols-outlined mr-3">star_rate</span>
           Đánh giá
@@ -137,12 +190,11 @@ const AdminSidebar = ({ onLogout }) => {
           Nhân Viên
         </Link>
 
-        {/* --- NHÓM 5: NỘI DUNG (Content) --- */}
+        {/* --- NHÓM 5: NỘI DUNG --- */}
         <div className="px-3 pt-4 pb-2 text-xs font-semibold uppercase tracking-wider text-gray-400">
           Nội dung & CMS
         </div>
 
-        {/* MỚI: Quản lý bài viết/Tin tức */}
         <Link to="/admin/posts" className={linkClass("/admin/posts")}>
           <span className="material-symbols-outlined mr-3">article</span>
           Bài viết / Blog

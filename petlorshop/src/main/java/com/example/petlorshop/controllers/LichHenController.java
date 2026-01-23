@@ -64,6 +64,22 @@ public class LichHenController {
         return ResponseEntity.ok(doctorAppointments);
     }
 
+    // API cho bác sĩ xem lịch trình hôm nay
+    @GetMapping("/doctor/schedule-today")
+    public ResponseEntity<List<LichHenResponse>> getDoctorScheduleToday() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String userEmail = authentication.getName();
+        List<LichHenResponse> schedule = lichHenService.getDoctorScheduleToday(userEmail);
+        return ResponseEntity.ok(schedule);
+    }
+
+    // API cho Lễ tân xem tất cả lịch hẹn hôm nay
+    @GetMapping("/today")
+    public ResponseEntity<List<LichHenResponse>> getAllAppointmentsToday() {
+        List<LichHenResponse> schedule = lichHenService.getAllAppointmentsToday();
+        return ResponseEntity.ok(schedule);
+    }
+
     // API cho bác sĩ xác nhận lịch hẹn
     @PutMapping("/doctor/{id}/confirm")
     public ResponseEntity<LichHenResponse> confirmAppointment(@PathVariable Integer id) {

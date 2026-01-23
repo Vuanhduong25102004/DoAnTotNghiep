@@ -1,14 +1,9 @@
 import React, { useState, useEffect } from "react";
-import useEscapeKey from "../../../../../hooks/useEscapeKey";
 import { motion, AnimatePresence } from "framer-motion";
 
-const EmployeeFormModal = ({
-  isOpen,
-  onClose,
-  initialData, // null = Create, object = Edit
-  onSubmit,
-}) => {
+const EmployeeFormModal = ({ isOpen, onClose, initialData, onSubmit }) => {
   const isEdit = !!initialData;
+  const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8080";
 
   const defaultFormState = {
     hoTen: "",
@@ -28,11 +23,10 @@ const EmployeeFormModal = ({
   useEffect(() => {
     if (isOpen) {
       if (initialData) {
-        // --- CHẾ ĐỘ EDIT ---
         setFormData({
           hoTen: initialData.hoTen || "",
           email: initialData.email || "",
-          password: "", // Luôn reset password khi edit
+          password: "",
           soDienThoai: initialData.soDienThoai || "",
           chucVu: initialData.chucVu || "",
           chuyenKhoa: initialData.chuyenKhoa || "",
@@ -40,18 +34,19 @@ const EmployeeFormModal = ({
           role: initialData.role || "STAFF",
         });
 
-        // Xử lý hiển thị ảnh cũ
-        setPreviewAvatar(
-          initialData.anhDaiDien
-            ? `http://localhost:8080/uploads/${initialData.anhDaiDien}`
-            : ""
-        );
+        if (initialData.anhDaiDien) {
+          const imgUrl = initialData.anhDaiDien.startsWith("http")
+            ? initialData.anhDaiDien
+            : `${API_URL}/uploads/${initialData.anhDaiDien}`;
+          setPreviewAvatar(imgUrl);
+        } else {
+          setPreviewAvatar("");
+        }
       } else {
-        // --- CHẾ ĐỘ CREATE ---
         setFormData(defaultFormState);
         setPreviewAvatar("");
       }
-      setAvatarFile(null); // Reset file upload
+      setAvatarFile(null);
     }
   }, [isOpen, initialData]);
 
@@ -68,16 +63,20 @@ const EmployeeFormModal = ({
     }
   };
 
+  // --- SỬA LẠI HÀM SUBMIT ---
   const handleSubmit = () => {
-    // Clone data để xử lý
-    let submitData = { ...formData };
+    const dataToSend = { ...formData };
 
-    // Nếu đang Edit và không nhập password thì xóa trường này để Backend không update
-    if (isEdit && (!submitData.password || submitData.password.trim() === "")) {
-      delete submitData.password;
+    // Nếu Edit và không nhập pass -> Gửi null để Backend biết không update
+    // (Lưu ý: Nếu Backend validate @NotNull trên password ngay cả khi update,
+    // bạn PHẢI sửa Backend hoặc nhập pass mới)
+    if (isEdit) {
+      if (!dataToSend.password || dataToSend.password.trim() === "") {
+        dataToSend.password = null; // Thử gửi null thay vì xóa key
+      }
     }
 
-    onSubmit(submitData, avatarFile);
+    onSubmit(dataToSend, avatarFile);
   };
 
   const inputClass =
@@ -130,7 +129,7 @@ const EmployeeFormModal = ({
             {/* BODY */}
             <div className="p-8 overflow-y-auto custom-scrollbar flex-1">
               <div className="space-y-8">
-                {/* Avatar Upload Section */}
+                {/* Avatar Upload */}
                 <div className="flex justify-center">
                   <div className="relative group">
                     <div className="w-28 h-28 rounded-full border-4 border-slate-50 shadow-md overflow-hidden bg-slate-100">
@@ -161,6 +160,7 @@ const EmployeeFormModal = ({
                   </div>
                 </div>
 
+                {/* Form Fields */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
                   <div>
                     <label className={labelClass}>

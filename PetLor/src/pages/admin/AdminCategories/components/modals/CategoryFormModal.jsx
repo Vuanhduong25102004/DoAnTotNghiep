@@ -1,22 +1,88 @@
-import React from "react";
-import useEscapeKey from "../../../../../hooks/useEscapeKey";
+import React, { useEffect, useState } from "react";
+import useEscapeKey from "../../../../../hooks/useEscapeKey"; // Kiểm tra lại đường dẫn hook này
 import { motion, AnimatePresence } from "framer-motion";
+import { toast } from "react-toastify";
+import categoryService from "../../../../../services/categoryService"; // Kiểm tra đường dẫn service
 
 const CategoryFormModal = ({
   isOpen,
   onClose,
-  formData,
-  setFormData,
-  isEditing,
-  onSave,
+  onSuccess,
+  initialData, // Dữ liệu để sửa (nếu có)
+  categoryType, // "PRODUCT", "SERVICE", "POST"
+  placeholder,
 }) => {
   useEscapeKey(onClose, isOpen);
 
-  // Style constants (Design System)
+  // State form nội bộ
+  const [formData, setFormData] = useState({
+    name: "",
+    description: "",
+  });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Style constants
   const inputClass =
     "w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-xl text-slate-700 font-medium focus:ring-0 transition-all focus:border-primary outline-none placeholder:text-slate-400";
   const labelClass =
     "text-[11px] font-bold text-slate-400 uppercase tracking-widest ml-1 mb-1.5 block";
+
+  // EFFECT: Load dữ liệu khi mở modal (nếu đang sửa)
+  useEffect(() => {
+    if (initialData) {
+      // Nếu có dữ liệu cũ (Sửa), fill vào form
+      setFormData({
+        name: initialData.name || "", // Dữ liệu đã chuẩn hóa từ index.jsx
+        description: initialData.description || "",
+      });
+    } else {
+      // Nếu không (Thêm mới), reset form
+      setFormData({ name: "", description: "" });
+    }
+  }, [initialData, isOpen]);
+
+  // HANDLE: Lưu dữ liệu
+  const handleSave = async () => {
+    // Validate cơ bản
+    if (!formData.name.trim()) {
+      toast.warning("Vui lòng nhập tên danh mục!");
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      // --- MAP DỮ LIỆU NGƯỢC LẠI CHO BACKEND ---
+      // Vì backend Spring Boot yêu cầu đúng tên trường (tenDanhMuc vs tenDanhMucDv)
+      let payload = {
+        type: categoryType, // Để service chọn đúng API URL
+      };
+
+      if (categoryType === "SERVICE") {
+        // Dịch vụ dùng 'tenDanhMucDv'
+        payload.tenDanhMucDv = formData.name;
+        payload.moTa = formData.description;
+      } else {
+        // Sản phẩm (và mặc định) dùng 'tenDanhMuc'
+        payload.tenDanhMuc = formData.name;
+        payload.moTa = formData.description;
+      }
+
+      // Gọi API
+      if (initialData && initialData.id) {
+        await categoryService.update(initialData.id, payload);
+      } else {
+        await categoryService.create(payload);
+      }
+
+      // Thành công
+      onSuccess();
+    } catch (error) {
+      console.error("Lỗi lưu danh mục:", error);
+      toast.error("Thao tác thất bại! Vui lòng thử lại.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   return (
     <AnimatePresence>
@@ -31,24 +97,26 @@ const CategoryFormModal = ({
             initial={{ scale: 0.95, opacity: 0, y: 20 }}
             animate={{ scale: 1, opacity: 1, y: 0 }}
             exit={{ scale: 0.95, opacity: 0, y: 20 }}
-            className="w-full max-w-3xl bg-white rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
+            className="w-full max-w-2xl bg-white rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
           >
             {/* --- HEADER --- */}
             <div className="px-8 py-6 border-b border-slate-100 flex justify-between items-center bg-white sticky top-0 z-10 shrink-0">
               <div className="flex items-center gap-4">
-                <div className="w-14 h-14 rounded-2xl bg-teal-50 flex items-center justify-center text-primary border border-teal-100/50">
-                  <span className="material-symbols-outlined text-3xl">
-                    {isEditing ? "edit_note" : "library_add"}
+                <div className="w-12 h-12 rounded-2xl bg-teal-50 flex items-center justify-center text-primary border border-teal-100/50">
+                  <span className="material-symbols-outlined text-2xl">
+                    {initialData ? "edit_note" : "library_add"}
                   </span>
                 </div>
                 <div>
-                  <h2 className="text-2xl font-extrabold text-slate-900 tracking-tight">
-                    {isEditing ? "Cập nhật Danh mục" : "Thêm Danh Mục Mới"}
+                  <h2 className="text-xl font-extrabold text-slate-900 tracking-tight">
+                    {initialData ? "Cập nhật Danh mục" : "Thêm Danh Mục Mới"}
                   </h2>
-                  <p className="text-sm text-slate-500">
-                    {isEditing
-                      ? "Chỉnh sửa thông tin và mô tả danh mục"
-                      : "Điền thông tin để tạo danh mục sản phẩm mới"}
+                  <p className="text-xs text-slate-500 font-medium">
+                    {categoryType === "PRODUCT"
+                      ? "Sản phẩm"
+                      : categoryType === "SERVICE"
+                        ? "Dịch vụ"
+                        : "Bài viết"}
                   </p>
                 </div>
               </div>
@@ -61,7 +129,7 @@ const CategoryFormModal = ({
             </div>
 
             {/* --- BODY --- */}
-            <div className="p-8 space-y-8 overflow-y-auto custom-scrollbar flex-1">
+            <div className="p-8 space-y-6 overflow-y-auto custom-scrollbar flex-1">
               {/* Tên danh mục */}
               <div>
                 <label className={labelClass}>
@@ -70,14 +138,13 @@ const CategoryFormModal = ({
                 <input
                   type="text"
                   className={inputClass}
-                  value={formData.tenDanhMuc}
+                  // Sử dụng state nội bộ của Modal (formData.name), không dùng props cũ
+                  value={formData.name}
                   onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      tenDanhMuc: e.target.value,
-                    })
+                    setFormData({ ...formData, name: e.target.value })
                   }
-                  placeholder="Ví dụ: Thức ăn cho mèo, Đồ chơi..."
+                  placeholder={placeholder || "Nhập tên danh mục..."}
+                  autoFocus
                 />
               </div>
 
@@ -86,10 +153,10 @@ const CategoryFormModal = ({
                 <label className={labelClass}>Mô tả</label>
                 <textarea
                   className={`${inputClass} resize-none`}
-                  rows="5"
-                  value={formData.moTa}
+                  rows="4"
+                  value={formData.description}
                   onChange={(e) =>
-                    setFormData({ ...formData, moTa: e.target.value })
+                    setFormData({ ...formData, description: e.target.value })
                   }
                   placeholder="Mô tả chi tiết về danh mục này..."
                 ></textarea>
@@ -101,26 +168,36 @@ const CategoryFormModal = ({
                   info
                 </span>
                 <p className="text-sm text-slate-600 leading-relaxed">
-                  Danh mục giúp phân loại sản phẩm để khách hàng dễ dàng tìm
-                  kiếm hơn. Hãy đặt tên ngắn gọn và mô tả đầy đủ.
+                  Đảm bảo tên danh mục ngắn gọn, dễ hiểu. Đối với Dịch vụ, hãy
+                  mô tả quy trình cơ bản trong phần mô tả.
                 </p>
               </div>
             </div>
 
             {/* --- FOOTER --- */}
-            <div className="p-8 border-t border-slate-100 flex justify-end items-center gap-6 bg-slate-50/30 shrink-0">
+            <div className="p-6 border-t border-slate-100 flex justify-end items-center gap-4 bg-slate-50/30 shrink-0">
               <button
                 onClick={onClose}
-                className="text-slate-500 hover:text-slate-700 font-semibold transition-colors"
+                className="text-slate-500 hover:text-slate-700 font-bold text-sm px-4 py-2 transition-colors"
+                disabled={isSubmitting}
               >
                 Hủy bỏ
               </button>
               <button
-                onClick={onSave}
-                className="flex items-center gap-2 px-10 py-3.5 bg-primary hover:bg-primary-dark text-white font-bold rounded-xl shadow-lg shadow-teal-500/25 transition-all transform hover:-translate-y-0.5 active:scale-95"
+                onClick={handleSave}
+                disabled={isSubmitting}
+                className="flex items-center gap-2 px-6 py-3 bg-primary hover:bg-primary-dark text-white font-bold rounded-xl shadow-lg shadow-teal-500/20 transition-all transform hover:-translate-y-0.5 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                <span className="material-symbols-outlined text-xl">save</span>
-                {isEditing ? "Lưu thay đổi" : "Tạo danh mục"}
+                {isSubmitting ? (
+                  <span className="material-symbols-outlined animate-spin text-xl">
+                    progress_activity
+                  </span>
+                ) : (
+                  <span className="material-symbols-outlined text-xl">
+                    save
+                  </span>
+                )}
+                {initialData ? "Lưu thay đổi" : "Tạo danh mục"}
               </button>
             </div>
           </motion.div>

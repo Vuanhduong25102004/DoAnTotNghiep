@@ -42,12 +42,12 @@ public class BaiVietController {
 
     @PostMapping("/danh-muc")
     public ResponseEntity<DanhMucBaiViet> createDanhMuc(@RequestBody DanhMucBaiViet danhMuc) {
-        return ResponseEntity.ok(baiVietService.createDanhMuc(danhMuc.getTenDanhMuc()));
+        return ResponseEntity.ok(baiVietService.createDanhMuc(danhMuc.getTenDanhMuc(), danhMuc.getMoTa()));
     }
 
     @PutMapping("/danh-muc/{id}")
     public ResponseEntity<DanhMucBaiViet> updateDanhMuc(@PathVariable Integer id, @RequestBody DanhMucBaiViet danhMuc) {
-        return ResponseEntity.ok(baiVietService.updateDanhMuc(id, danhMuc.getTenDanhMuc()));
+        return ResponseEntity.ok(baiVietService.updateDanhMuc(id, danhMuc.getTenDanhMuc(), danhMuc.getMoTa()));
     }
 
     @DeleteMapping("/danh-muc/{id}")
@@ -79,6 +79,11 @@ public class BaiVietController {
         return baiVietService.getBaiVietBySlug(slug)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
+    }
+
+    @GetMapping("/{id}/lien-quan")
+    public ResponseEntity<List<BaiVietResponse>> getBaiVietLienQuan(@PathVariable Integer id) {
+        return ResponseEntity.ok(baiVietService.getBaiVietLienQuan(id));
     }
 
     @PostMapping(consumes = { MediaType.MULTIPART_FORM_DATA_VALUE })

@@ -14,6 +14,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -42,16 +43,18 @@ public class BaiVietService {
         return danhMucBaiVietRepository.findById(id);
     }
 
-    public DanhMucBaiViet createDanhMuc(String tenDanhMuc) {
+    public DanhMucBaiViet createDanhMuc(String tenDanhMuc, String moTa) {
         DanhMucBaiViet dm = new DanhMucBaiViet();
         dm.setTenDanhMuc(tenDanhMuc);
+        dm.setMoTa(moTa);
         return danhMucBaiVietRepository.save(dm);
     }
 
-    public DanhMucBaiViet updateDanhMuc(Integer id, String tenDanhMuc) {
+    public DanhMucBaiViet updateDanhMuc(Integer id, String tenDanhMuc, String moTa) {
         DanhMucBaiViet dm = danhMucBaiVietRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Danh mục không tồn tại"));
         dm.setTenDanhMuc(tenDanhMuc);
+        dm.setMoTa(moTa);
         return danhMucBaiVietRepository.save(dm);
     }
 
@@ -88,9 +91,24 @@ public class BaiVietService {
         return baiVietRepository.findById(id).map(this::convertToResponse);
     }
 
+    public List<BaiVietResponse> getBaiVietLienQuan(Integer id) {
+        BaiViet currentPost = baiVietRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Bài viết không tồn tại"));
+        
+        if (currentPost.getDanhMucBaiViet() == null) {
+            return Collections.emptyList();
+        }
+
+        return baiVietRepository.findRelatedPosts(currentPost.getDanhMucBaiViet().getDanhMucBvId(), id)
+                .stream()
+                .map(this::convertToResponse)
+                .collect(Collectors.toList());
+    }
+
     public BaiVietResponse createBaiViet(BaiVietRequest request, MultipartFile anhBiaFile) {
-        NhanVien nv = nhanVienRepository.findById(request.getNhanVienId())
-                .orElseThrow(() -> new RuntimeException("Nhân viên không tồn tại"));
+        // Tìm nhân viên dựa trên userId
+        NhanVien nv = nhanVienRepository.findByNguoiDung_UserId(request.getUserId())
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy hồ sơ nhân viên cho User ID: " + request.getUserId()));
         
         BaiViet bv = new BaiViet();
         bv.setTieuDe(request.getTieuDe());

@@ -47,6 +47,14 @@ const bookingService = {
   getDoctorAppointments: () => apiClient.get('/lich-hen/doctor/me'),
 
   confirmDoctorAppointment: (id) => apiClient.put(`/lich-hen/doctor/${id}/confirm`),
+  
+  completeDoctorAppointment: (id, data) => {
+  return apiClient.put(`/lich-hen/doctor/${id}/complete`, data);
+  },
+
+  getTodayAppointments: () => {
+    return apiClient.get('/lich-hen/today');
+  },
 };
 
 export default bookingService;

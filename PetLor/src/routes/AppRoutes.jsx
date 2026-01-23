@@ -14,6 +14,7 @@ import ContactPage from "../pages/ContactPage";
 import LoginPage from "../pages/LoginPage";
 import RegisterPage from "../pages/RegisterPage";
 import ProductsPage from "../pages/ProductsPage";
+import BlogPostDetail from "../pages/BlogPostDetail";
 
 // Admin pages
 import AdminDashboard from "../pages/admin/AdminDashboard";
@@ -74,6 +75,7 @@ const AppRoutes = () => {
         <Route path="/services/:id" element={<ServiceDetailPage />} />
         <Route path="/aboutus" element={<AboutUsPage />} />
         <Route path="/blog" element={<BlogPage />} />
+        <Route path="/blog/:slug" element={<BlogPostDetail />} />
         <Route path="/contact" element={<ContactPage />} />
         <Route path="/products" element={<ProductsPage />} />
         <Route path="/products/:id" element={<ProductDetailPage />} />
@@ -109,7 +111,7 @@ const AppRoutes = () => {
           <Route path="employees" element={<AdminEmployees />} />
           <Route path="appointments" element={<AdminAppointments />} />
           <Route path="services" element={<AdminServices />} />
-          <Route path="categories" element={<AdminCategories />} />
+          <Route path="categories/:type" element={<AdminCategories />} />
           <Route path="imports" element={<AdminImports />} />
           <Route path="suppliers" element={<AdminSuppliers />} />
           <Route path="promotions" element={<AdminPromotions />} />

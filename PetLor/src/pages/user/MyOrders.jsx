@@ -51,7 +51,11 @@ const MyOrders = () => {
     try {
       const res = await orderService.getMyOrders();
       const data = res.data || res;
-      setOrders(Array.isArray(data) ? data : []);
+      let list = Array.isArray(data) ? data : [];
+
+      list.sort((a, b) => new Date(b.ngayDatHang) - new Date(a.ngayDatHang));
+
+      setOrders(list);
     } catch (error) {
       console.error("Lỗi khi lấy danh sách đơn hàng:", error);
     } finally {
@@ -167,7 +171,7 @@ const MyOrders = () => {
             const totalQuantity =
               order.chiTietDonHangs?.reduce(
                 (sum, item) => sum + item.soLuong,
-                0
+                0,
               ) || 0;
 
             return (
@@ -441,8 +445,8 @@ const StepItem = ({ icon, label, active, current }) => (
         current
           ? "bg-yellow-400 text-white shadow-[0_0_15px_rgba(250,204,21,0.5)] scale-110"
           : active
-          ? "bg-[#2a9d8f] text-white"
-          : "bg-white text-gray-300 border border-gray-100"
+            ? "bg-[#2a9d8f] text-white"
+            : "bg-white text-gray-300 border border-gray-100"
       }`}
     >
       <span className="material-icons-outlined text-sm">{icon}</span>

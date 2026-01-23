@@ -1,6 +1,6 @@
 import React from "react";
-import useEscapeKey from "../../../../hooks/useEscapeKey";
 
+// Skeleton Loading (Giữ nguyên)
 const SkeletonRow = () => (
   <tr className="animate-pulse border-b border-gray-100 last:border-0">
     <td className="px-6 py-4">
@@ -19,9 +19,9 @@ const SkeletonRow = () => (
 );
 
 const CategoryTable = ({
+  data, // Đổi tên props từ 'categories' thành 'data' cho tổng quát
   loading,
-  categories,
-  onViewDetail,
+  onViewDetail, // (Optional) Nếu bạn chưa cần xem chi tiết thì có thể bỏ qua
   onEdit,
   onDelete,
 }) => {
@@ -50,35 +50,30 @@ const CategoryTable = ({
               Array.from({ length: 5 }).map((_, idx) => (
                 <SkeletonRow key={idx} />
               ))
-            ) : categories.length > 0 ? (
-              categories.map((cat, index) => (
+            ) : data && data.length > 0 ? (
+              data.map((cat, index) => (
                 <tr
-                  key={cat.danhMucId || index}
+                  key={cat.id || index} // Sử dụng ID đã chuẩn hóa
                   className="hover:bg-gray-50 transition-colors"
                 >
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    #{cat.danhMucId}
+                    #{cat.id}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                    {cat.tenDanhMuc}
+                    {cat.name} {/* Sử dụng Name đã chuẩn hóa */}
                   </td>
                   <td
                     className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 max-w-[400px] truncate"
-                    title={cat.moTa}
+                    title={cat.description}
                   >
-                    {cat.moTa || "Không có mô tả"}
+                    {cat.description || "---"}{" "}
+                    {/* Sử dụng Description đã chuẩn hóa */}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                     <div className="flex items-center justify-end space-x-2">
-                      <button
-                        title="Xem chi tiết"
-                        className="text-gray-400 hover:text-green-600 transition-colors"
-                        onClick={() => onViewDetail(cat)}
-                      >
-                        <span className="material-symbols-outlined text-base">
-                          visibility
-                        </span>
-                      </button>
+                      {/* Nút Xem chi tiết (Tạm ẩn nếu chưa cần thiết) */}
+                      {/* <button onClick={() => onViewDetail(cat)} ... ><span ...>visibility</span></button> */}
+
                       <button
                         title="Chỉnh sửa"
                         className="text-gray-400 hover:text-blue-500 transition-colors"
@@ -88,10 +83,11 @@ const CategoryTable = ({
                           edit_note
                         </span>
                       </button>
+
                       <button
                         title="Xóa"
                         className="text-gray-400 hover:text-red-500 transition-colors"
-                        onClick={() => onDelete(cat.danhMucId)}
+                        onClick={() => onDelete(cat.id)}
                       >
                         <span className="material-symbols-outlined text-base">
                           cancel
@@ -103,8 +99,16 @@ const CategoryTable = ({
               ))
             ) : (
               <tr>
-                <td colSpan="5" className="px-6 py-4 text-center text-gray-500">
-                  Chưa có danh mục nào.
+                <td
+                  colSpan="4"
+                  className="px-6 py-10 text-center text-gray-500"
+                >
+                  <div className="flex flex-col items-center justify-center">
+                    <span className="material-symbols-outlined text-4xl mb-2 text-gray-300">
+                      inbox
+                    </span>
+                    <p>Chưa có danh mục nào.</p>
+                  </div>
                 </td>
               </tr>
             )}

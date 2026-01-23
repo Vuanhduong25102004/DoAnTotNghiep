@@ -1,21 +1,27 @@
 import React, { useEffect, useState } from "react";
 import doctorService from "../../../services/doctorService";
+// Import đầy đủ các hàm từ file utils
+import {
+  getStatusBadge,
+  formatTimeForSchedule,
+  getAppointmentTypeBadge, // <--- Hàm mới lấy màu cho Loại lịch hẹn
+} from "../../../utils/formatters";
+
+// --- CẤU HÌNH ĐƯỜNG DẪN SERVER ĐỂ LẤY ẢNH ---
+const BACKEND_URL = "http://localhost:8080";
 
 const DoctorDashboard = ({ user }) => {
-  // State lưu dữ liệu thống kê từ API
   const [stats, setStats] = useState({
     lichKhamHomNay: 0,
     soCaKhanCap: 0,
     benhNhanDaTiepNhan: 0,
   });
+  const [schedules, setSchedules] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // Gọi API lấy dữ liệu khi component được load
   useEffect(() => {
     const fetchData = async () => {
       const userId = localStorage.getItem("userId");
-
-      // Nếu không có userId (chưa đăng nhập), dừng lại
       if (!userId) {
         setLoading(false);
         return;
@@ -23,16 +29,21 @@ const DoctorDashboard = ({ user }) => {
 
       try {
         setLoading(true);
-        // Gọi service lấy data (Giả sử bạn đã cấu hình doctorService như các bước trước)
-        const data = await doctorService.getDashboardStats(userId);
+        const [statsData, scheduleData] = await Promise.all([
+          doctorService.getDashboardStats(userId),
+          doctorService.getTodaySchedule(userId),
+        ]);
 
-        console.log("Dữ liệu thống kê từ API:", data);
+        if (statsData) setStats(statsData);
 
-        if (data) {
-          setStats(data);
+        if (scheduleData) {
+          const listData = Array.isArray(scheduleData)
+            ? scheduleData
+            : [scheduleData];
+          setSchedules(listData);
         }
       } catch (error) {
-        console.error("Lỗi khi tải thống kê Dashboard:", error);
+        console.error("Lỗi khi tải dữ liệu Dashboard:", error);
       } finally {
         setLoading(false);
       }
@@ -43,13 +54,8 @@ const DoctorDashboard = ({ user }) => {
 
   return (
     <div className="w-full bg-gray-50 font-sans text-slate-600 pb-12">
-      {/* Container chính */}
       <div className="p-8 lg:p-12 max-w-[1600px] mx-auto space-y-8">
-        {/* ====================================================================================
-            PHẦN 1: THỐNG KÊ TỔNG QUAN (ĐÃ MAP DỮ LIỆU TỪ API)
-           ==================================================================================== */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          {/* Card 1: Lịch làm việc/Khám */}
           <div className="bg-gradient-to-br from-teal-500 to-emerald-700 p-8 rounded-[36px] text-white relative overflow-hidden group shadow-lg cursor-pointer transition-all hover:shadow-emerald-500/30">
             <div className="absolute -right-6 -bottom-6 opacity-60 group-hover:scale-110 transition-transform duration-500 pointer-events-none">
               <span className="material-symbols-outlined text-[160px] leading-none select-none">
@@ -61,7 +67,6 @@ const DoctorDashboard = ({ user }) => {
                 ? "Lịch đặt hôm nay"
                 : "Lịch khám hôm nay"}
             </p>
-            {/* Hiển thị số lượng từ API */}
             <h3 className="text-5xl font-extrabold mb-4 relative z-10">
               {loading ? "..." : stats.lichKhamHomNay}
             </h3>
@@ -73,7 +78,6 @@ const DoctorDashboard = ({ user }) => {
             </div>
           </div>
 
-          {/* Card 2: Trạng thái Khẩn cấp / Chờ xử lý */}
           <div className="bg-white p-8 rounded-[36px] border border-gray-100 shadow-xl shadow-gray-200/50 group hover:border-red-100 transition-colors">
             <div className="flex items-center justify-between mb-6">
               <div className="size-14 bg-red-50 text-red-500 rounded-2xl flex items-center justify-center">
@@ -85,9 +89,8 @@ const DoctorDashboard = ({ user }) => {
             <p className="text-sm font-bold text-gray-400 uppercase tracking-widest mb-1">
               Số ca khẩn cấp
             </p>
-            {/* Hiển thị số lượng từ API, thêm số 0 ở trước nếu < 10 */}
             <h3 className="text-5xl font-extrabold text-slate-800 mb-4">
-              {loading ? "..." : String(stats.soCaKhanCap).padStart(1, "0")}
+              {loading ? "..." : String(stats.soCaKhanCap).padStart(2, "0")}
             </h3>
             <p className="text-xs text-red-500 font-bold flex items-center gap-1">
               <span className="material-symbols-outlined text-sm">
@@ -97,18 +100,17 @@ const DoctorDashboard = ({ user }) => {
             </p>
           </div>
 
-          {/* Card 3: Tổng quan Bệnh nhân */}
+          {/* Card 3: Bệnh nhân đã tiếp nhận */}
           <div className="bg-white p-8 rounded-[36px] border border-gray-100 shadow-xl shadow-gray-200/50 flex flex-col justify-between">
             <div>
               <p className="text-sm font-bold text-gray-400 uppercase tracking-widest mb-1">
                 Bệnh nhân đã tiếp nhận
               </p>
-              {/* Hiển thị số lượng từ API */}
               <h3 className="text-5xl font-extrabold text-teal-600 tracking-tighter">
                 {loading ? "..." : stats.benhNhanDaTiepNhan.toLocaleString()}
               </h3>
             </div>
-            {/* Chart mini */}
+            {/* Chart mini trang trí */}
             <div className="flex items-end gap-1.5 h-12 mt-4">
               <div className="w-2 bg-teal-600/10 h-[40%] rounded-full"></div>
               <div className="w-2 bg-teal-600/10 h-[60%] rounded-full"></div>
@@ -127,7 +129,7 @@ const DoctorDashboard = ({ user }) => {
         <div className="grid grid-cols-12 gap-8">
           {/* --- CỘT TRÁI (Lịch trình & Biểu đồ) --- */}
           <div className="col-span-12 lg:col-span-8 space-y-8">
-            {/* 1. Danh sách công việc / Lịch trình */}
+            {/* 1. DANH SÁCH LỊCH TRÌNH */}
             <div className="bg-white rounded-[40px] p-10 border border-gray-100 shadow-xl shadow-gray-200/50">
               <div className="flex items-center justify-between mb-8">
                 <h3 className="text-2xl font-extrabold text-slate-800 flex items-center gap-3">
@@ -142,74 +144,150 @@ const DoctorDashboard = ({ user }) => {
               </div>
 
               <div className="space-y-4">
-                {/* Item 1 */}
-                <div className="flex items-center gap-6 p-6 bg-gray-50/50 rounded-3xl border border-transparent hover:border-teal-600/10 hover:bg-white transition-all group cursor-pointer">
-                  <div className="text-center min-w-[60px]">
-                    <p className="text-xs font-black text-teal-600">09:15</p>
-                    <p className="text-[10px] font-bold text-gray-400">AM</p>
-                  </div>
-                  <div className="size-14 rounded-2xl overflow-hidden shrink-0 border-2 border-white shadow-sm">
-                    <img
-                      alt="Lu"
-                      className="w-full h-full object-cover"
-                      src="https://images.unsplash.com/photo-1583337130417-3346a1be7dee?auto=format&fit=crop&w=100&q=80"
-                    />
-                  </div>
-                  <div className="flex-1">
-                    <h4 className="font-extrabold text-lg text-gray-900">
-                      Lu{" "}
-                      <span className="text-sm font-medium text-gray-400 ml-1">
-                        (Husky)
-                      </span>
-                    </h4>
-                    <p className="text-xs font-medium text-gray-500">
-                      Khám tổng quát & Tiêm phòng
-                    </p>
-                  </div>
-                  <div className="flex flex-col items-end gap-2">
-                    <span className="px-3 py-1 bg-red-50 text-red-500 text-[10px] font-black rounded-full uppercase tracking-widest">
-                      Khẩn cấp
-                    </span>
-                    <button className="text-teal-600 hover:text-teal-600/70">
-                      <span className="material-symbols-outlined">
-                        more_horiz
-                      </span>
-                    </button>
-                  </div>
-                </div>
+                {/* Loading State */}
+                {loading && (
+                  <p className="text-center text-gray-400 py-4 italic">
+                    Đang tải lịch trình...
+                  </p>
+                )}
 
-                {/* Item 2 */}
-                <div className="flex items-center gap-6 p-6 bg-gray-50/50 rounded-3xl border border-transparent hover:border-teal-600/10 hover:bg-white transition-all group cursor-pointer">
-                  <div className="text-center min-w-[60px]">
-                    <p className="text-xs font-black text-gray-700">10:00</p>
-                    <p className="text-[10px] font-bold text-gray-400">AM</p>
-                  </div>
-                  <div className="size-14 rounded-2xl overflow-hidden shrink-0 bg-gray-100 flex items-center justify-center text-gray-400">
-                    <span className="material-symbols-outlined text-2xl">
-                      pets
+                {/* Empty State */}
+                {!loading && schedules.length === 0 && (
+                  <div className="text-center py-8 bg-gray-50 rounded-3xl border border-dashed border-gray-200">
+                    <span className="material-symbols-outlined text-4xl text-gray-300 mb-2">
+                      event_busy
                     </span>
-                  </div>
-                  <div className="flex-1">
-                    <h4 className="font-extrabold text-lg text-gray-900">
-                      Milo{" "}
-                      <span className="text-sm font-medium text-gray-400 ml-1">
-                        (Poodle)
-                      </span>
-                    </h4>
-                    <p className="text-xs font-medium text-gray-500">
-                      Kiểm tra định kỳ quý 3
+                    <p className="text-gray-400 font-medium">
+                      Hôm nay chưa có lịch hẹn nào
                     </p>
                   </div>
-                  <div className="flex flex-col items-end gap-2">
-                    <span className="px-3 py-1 bg-blue-50 text-blue-500 text-[10px] font-black rounded-full uppercase tracking-widest">
-                      Thường lệ
-                    </span>
-                  </div>
-                </div>
+                )}
+
+                {/* Render List */}
+                {!loading &&
+                  schedules.length > 0 &&
+                  schedules.map((item) => {
+                    // 1. Format Giờ
+                    const { time, period } = formatTimeForSchedule(
+                      item.thoiGianBatDau,
+                    );
+
+                    // 2. Logic Trạng thái (Fix lỗi API trả về tên khác)
+                    const rawStatus = item.trangThaiLichHen || item.trangThai;
+                    const statusInfo = getStatusBadge(rawStatus);
+
+                    // 3. Logic Loại Lịch Hẹn (Mới thêm)
+                    const typeBadge = getAppointmentTypeBadge(item.loaiLichHen);
+
+                    // 4. Logic Ảnh thú cưng
+                    const imageUrl = item.anhThuCung
+                      ? `${BACKEND_URL}/uploads/${item.anhThuCung}`
+                      : null;
+
+                    return (
+                      <div
+                        key={item.lichHenId}
+                        className="flex items-center gap-6 p-6 bg-gray-50/50 rounded-3xl border border-transparent hover:border-teal-600/10 hover:bg-white transition-all group cursor-pointer"
+                      >
+                        {/* Cột 1: Thời gian */}
+                        <div className="text-center min-w-[60px]">
+                          <p className="text-xs font-black text-teal-600">
+                            {time}
+                          </p>
+                          <p className="text-[10px] font-bold text-gray-400">
+                            {period}
+                          </p>
+                        </div>
+
+                        {/* Cột 2: Avatar/Icon (Dùng kỹ thuật Overlay để fix lỗi ảnh) */}
+                        <div className="size-14 rounded-2xl overflow-hidden shrink-0 bg-gray-50 border-2 border-gray-100 shadow-sm flex items-center justify-center text-gray-300 relative">
+                          {/* Lớp dưới: Icon mặc định */}
+                          <span className="material-symbols-outlined text-2xl">
+                            pets
+                          </span>
+
+                          {/* Lớp trên: Ảnh thú cưng (nếu có) */}
+                          {imageUrl && (
+                            <img
+                              src={imageUrl}
+                              alt={item.tenThuCung}
+                              className="absolute inset-0 w-full h-full object-cover bg-white"
+                              onError={(e) => {
+                                // Nếu ảnh lỗi -> ẩn đi để lộ icon bên dưới
+                                e.target.style.display = "none";
+                              }}
+                            />
+                          )}
+                        </div>
+
+                        {/* Cột 3: Thông tin chính */}
+                        <div className="flex-1">
+                          <h4 className="font-extrabold text-lg text-gray-900 flex items-center gap-2">
+                            {item.tenThuCung}{" "}
+                            <span className="text-sm font-medium text-gray-400">
+                              ({item.giongLoai})
+                            </span>
+                            {/* --- BADGE LOẠI LỊCH HẸN (Đã dùng hàm mới) --- */}
+                            <span
+                              className={`text-[9px] px-2 py-0.5 rounded border uppercase font-bold tracking-wider ${typeBadge.color}`}
+                            >
+                              {typeBadge.label}
+                            </span>
+                          </h4>
+
+                          <p className="text-xs font-medium text-gray-500 mt-1">
+                            {item.tenDichVu}
+                          </p>
+
+                          {/* Tên chủ & Ghi chú */}
+                          <div className="flex items-center gap-2 mt-1">
+                            <span className="text-[10px] font-bold bg-teal-50 text-teal-700 px-2 py-0.5 rounded">
+                              Chủ: {item.tenKhachHang}
+                            </span>
+                            {item.ghiChu && (
+                              <span className="text-[10px] text-gray-400 italic truncate max-w-[200px] flex items-center gap-1">
+                                <span className="material-symbols-outlined text-[10px]">
+                                  sticky_note_2
+                                </span>
+                                {item.ghiChu}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Cột 4: Badge Trạng thái & Nút More */}
+                        <div className="flex flex-col items-end gap-2">
+                          {/* Badge Trạng thái (Đã xác nhận/Chờ duyệt...) */}
+                          <span
+                            className={`px-3 py-1 text-[10px] font-black rounded-full uppercase tracking-widest ${statusInfo.color}`}
+                          >
+                            {statusInfo.label}
+                          </span>
+
+                          {/* Cảnh báo Khẩn cấp */}
+                          {item.ghiChu &&
+                            item.ghiChu.toLowerCase().includes("khẩn") && (
+                              <span className="text-[9px] font-bold text-red-500 flex items-center animate-pulse">
+                                <span className="material-symbols-outlined text-[10px] mr-0.5">
+                                  warning
+                                </span>
+                                KHẨN CẤP
+                              </span>
+                            )}
+
+                          <button className="text-teal-600 hover:text-teal-600/70 mt-1">
+                            <span className="material-symbols-outlined">
+                              more_horiz
+                            </span>
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
               </div>
             </div>
 
-            {/* 2. Biểu đồ Mức độ công việc */}
+            {/* 2. BIỂU ĐỒ (Placeholder) */}
             <div className="bg-white rounded-[40px] p-10 border border-gray-100 shadow-xl shadow-gray-200/50">
               <div className="flex items-center justify-between mb-10">
                 <div>
@@ -226,54 +304,51 @@ const DoctorDashboard = ({ user }) => {
                 </select>
               </div>
 
+              {/* Chart tĩnh */}
               <div className="flex items-end justify-between h-48 px-4">
-                {/* Cột biểu đồ */}
                 <div className="flex flex-col items-center gap-4 group cursor-pointer">
-                  <div className="w-10 bg-teal-600/10 group-hover:bg-teal-600 transition-colors h-[40%] rounded-xl relative">
-                    <div className="absolute -top-8 left-1/2 -translate-x-1/2 text-[10px] font-black text-gray-400 hidden group-hover:block">
-                      12
-                    </div>
-                  </div>
+                  <div className="w-10 bg-teal-600/10 h-[40%] rounded-xl"></div>
                   <span className="text-[10px] font-bold text-gray-400">
-                    Thứ 2
+                    T2
+                  </span>
+                </div>
+                {/* ... Các cột khác ... */}
+                <div className="flex flex-col items-center gap-4 group cursor-pointer">
+                  <div className="w-10 bg-teal-600/10 h-[65%] rounded-xl"></div>
+                  <span className="text-[10px] font-bold text-gray-400">
+                    T3
                   </span>
                 </div>
                 <div className="flex flex-col items-center gap-4 group cursor-pointer">
-                  <div className="w-10 bg-teal-600/10 group-hover:bg-teal-600 transition-colors h-[65%] rounded-xl relative"></div>
+                  <div className="w-10 bg-teal-600/10 h-[85%] rounded-xl"></div>
                   <span className="text-[10px] font-bold text-gray-400">
-                    Thứ 3
+                    T4
                   </span>
                 </div>
                 <div className="flex flex-col items-center gap-4 group cursor-pointer">
-                  <div className="w-10 bg-teal-600/10 group-hover:bg-teal-600 transition-colors h-[85%] rounded-xl relative"></div>
-                  <span className="text-[10px] font-bold text-gray-400">
-                    Thứ 4
-                  </span>
-                </div>
-                <div className="flex flex-col items-center gap-4 group cursor-pointer">
-                  <div className="w-10 bg-teal-600 h-[95%] rounded-xl relative shadow-lg shadow-teal-600/20">
+                  <div className="w-10 bg-teal-600 h-[95%] rounded-xl shadow-lg shadow-teal-600/20 relative">
                     <div className="absolute -top-8 left-1/2 -translate-x-1/2 text-[10px] font-black text-teal-600">
                       28
                     </div>
                   </div>
                   <span className="text-[10px] font-bold text-teal-600">
-                    Thứ 5
+                    T5
                   </span>
                 </div>
                 <div className="flex flex-col items-center gap-4 group cursor-pointer">
-                  <div className="w-10 bg-teal-600/10 group-hover:bg-teal-600 transition-colors h-[60%] rounded-xl relative"></div>
+                  <div className="w-10 bg-teal-600/10 h-[60%] rounded-xl"></div>
                   <span className="text-[10px] font-bold text-gray-400">
-                    Thứ 6
+                    T6
                   </span>
                 </div>
                 <div className="flex flex-col items-center gap-4 group cursor-pointer">
-                  <div className="w-10 bg-teal-600/10 group-hover:bg-teal-600 transition-colors h-[30%] rounded-xl relative"></div>
+                  <div className="w-10 bg-teal-600/10 h-[30%] rounded-xl"></div>
                   <span className="text-[10px] font-bold text-gray-400">
-                    Thứ 7
+                    T7
                   </span>
                 </div>
                 <div className="flex flex-col items-center gap-4 group cursor-pointer">
-                  <div className="w-10 bg-teal-600/10 group-hover:bg-teal-600 transition-colors h-[15%] rounded-xl relative"></div>
+                  <div className="w-10 bg-teal-600/10 h-[15%] rounded-xl"></div>
                   <span className="text-[10px] font-bold text-gray-400">
                     CN
                   </span>
@@ -282,7 +357,7 @@ const DoctorDashboard = ({ user }) => {
             </div>
           </div>
 
-          {/* --- CỘT PHẢI (Thông báo & Cảnh báo) --- */}
+          {/* --- CỘT PHẢI (Thông báo) --- */}
           <div className="col-span-12 lg:col-span-4 space-y-8">
             {/* 1. Thông báo mới */}
             <div className="bg-white rounded-[40px] p-8 border border-gray-100 shadow-xl shadow-gray-200/50">
@@ -294,7 +369,7 @@ const DoctorDashboard = ({ user }) => {
                   Thông báo mới
                 </h4>
                 <span className="size-6 bg-red-500 text-white rounded-full flex items-center justify-center text-[10px] font-bold shadow-md shadow-red-500/20">
-                  4
+                  3
                 </span>
               </div>
 
@@ -346,7 +421,7 @@ const DoctorDashboard = ({ user }) => {
               </button>
             </div>
 
-            {/* 2. Cần theo dõi (Quan trọng với Bác sĩ & Spa) */}
+            {/* 2. Cần theo dõi */}
             <div className="bg-white rounded-[40px] p-8 border border-gray-100 shadow-xl shadow-gray-200/50">
               <div className="flex items-center justify-between mb-8">
                 <h4 className="text-xl font-extrabold text-slate-800 flex items-center gap-2">
@@ -380,32 +455,6 @@ const DoctorDashboard = ({ user }) => {
                     </div>
                     <p className="text-[10px] text-gray-400 mt-1 font-medium">
                       Nhịp tim không ổn định
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-4">
-                  <div className="size-14 rounded-[20px] bg-amber-50 p-1 border border-amber-100">
-                    <div className="w-full h-full bg-gray-100 rounded-[16px] flex items-center justify-center">
-                      <span className="material-symbols-outlined text-gray-400">
-                        pets
-                      </span>
-                    </div>
-                  </div>
-                  <div className="flex-1">
-                    <div className="flex justify-between">
-                      <h5 className="text-sm font-extrabold text-gray-900">
-                        Cookie
-                      </h5>
-                      <span className="text-[10px] font-bold text-amber-500">
-                        TÁI KHÁM
-                      </span>
-                    </div>
-                    <div className="w-full bg-gray-100 h-1.5 rounded-full mt-2 overflow-hidden">
-                      <div className="bg-amber-500 h-full w-[40%] rounded-full"></div>
-                    </div>
-                    <p className="text-[10px] text-gray-400 mt-1 font-medium">
-                      Hậu phẫu ngày thứ 2
                     </p>
                   </div>
                 </div>

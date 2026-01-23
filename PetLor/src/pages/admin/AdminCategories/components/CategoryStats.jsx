@@ -1,40 +1,20 @@
 import React from "react";
-import useEscapeKey from "../../../../hooks/useEscapeKey";
 
-const CategoryStats = ({ categories }) => {
-  // Tính toán dữ liệu thống kê
-  const maxProductCat =
-    categories.length > 0
-      ? categories.reduce((prev, current) =>
-          prev.soLuongSanPham > current.soLuongSanPham ? prev : current
-        )
-      : { tenDanhMuc: "N/A", soLuongSanPham: 0 };
+const CategoryStats = ({ total, typeTitle }) => {
+  // Vì mỗi loại danh mục có cấu trúc khác nhau, ta chỉ thống kê tổng số lượng
+  // để tránh lỗi truy cập vào các trường không tồn tại (như soLuongSanPham).
 
   const stats = [
     {
-      title: "Tổng danh mục",
-      value: categories.length,
+      title: `Tổng số ${typeTitle}`,
+      value: total || 0,
       icon: "category",
       color: "text-purple-600",
       bg: "bg-purple-100",
       border: "border-purple-600",
     },
-    {
-      title: "Nhiều SP nhất",
-      value: `${maxProductCat.tenDanhMuc} (${maxProductCat.soLuongSanPham})`,
-      icon: "trending_up",
-      color: "text-green-600",
-      bg: "bg-green-100",
-      border: "border-green-500",
-    },
-    {
-      title: "Đang hoạt động",
-      value: categories.length,
-      icon: "check_circle",
-      color: "text-blue-600",
-      bg: "bg-blue-100",
-      border: "border-blue-600",
-    },
+    // Bạn có thể thêm các thống kê khác nếu API trả về đủ dữ liệu
+    // Ví dụ: Số danh mục mới tạo trong tháng, v.v.
   ];
 
   return (

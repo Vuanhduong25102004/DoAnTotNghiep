@@ -15,6 +15,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.ArrayList;
@@ -67,6 +68,34 @@ public class LichHenService {
         
         Integer nhanVienId = user.getNhanVien().getNhanVienId();
         return lichHenRepository.findByNhanVien_NhanVienId(nhanVienId).stream()
+                .map(this::convertToResponse)
+                .collect(Collectors.toList());
+    }
+
+    // Lấy lịch trình hôm nay của bác sĩ
+    public List<LichHenResponse> getDoctorScheduleToday(String email) {
+        NguoiDung user = nguoiDungRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy người dùng với email: " + email));
+        
+        if (user.getNhanVien() == null) {
+            throw new RuntimeException("Tài khoản này không được liên kết với hồ sơ nhân viên.");
+        }
+        
+        Integer nhanVienId = user.getNhanVien().getNhanVienId();
+        LocalDateTime startOfDay = LocalDate.now().atStartOfDay();
+        LocalDateTime endOfDay = LocalDate.now().atTime(LocalTime.MAX);
+        
+        return lichHenRepository.findByNhanVienIdAndDateRange(nhanVienId, startOfDay, endOfDay).stream()
+                .map(this::convertToResponse)
+                .collect(Collectors.toList());
+    }
+
+    // Lấy tất cả lịch hẹn hôm nay (cho Lễ tân)
+    public List<LichHenResponse> getAllAppointmentsToday() {
+        LocalDateTime startOfDay = LocalDate.now().atStartOfDay();
+        LocalDateTime endOfDay = LocalDate.now().atTime(LocalTime.MAX);
+        
+        return lichHenRepository.findAllByDateRange(startOfDay, endOfDay).stream()
                 .map(this::convertToResponse)
                 .collect(Collectors.toList());
     }
@@ -480,7 +509,7 @@ public class LichHenService {
                 nguoiDung != null ? nguoiDung.getUserId() : null, 
                 tenKhachHang, // Tên hiển thị
                 sdtKhachHang, // SĐT hiển thị
-                thuCung != null ? thuCung.getThuCungId() : null, thuCung != null ? thuCung.getTenThuCung() : null, thuCung != null ? thuCung.getGiongLoai() : null,
+                thuCung != null ? thuCung.getThuCungId() : null, thuCung != null ? thuCung.getTenThuCung() : null, thuCung != null ? thuCung.getGiongLoai() : null, thuCung != null ? thuCung.getHinhAnh() : null, // Đã sửa thành getHinhAnh()
                 dichVu != null ? dichVu.getDichVuId() : null, dichVu != null ? dichVu.getTenDichVu() : null, dichVu != null ? dichVu.getGiaDichVu() : null,
                 nhanVien != null ? nhanVien.getNhanVienId() : null, nhanVien != null ? nhanVien.getHoTen() : null
         );

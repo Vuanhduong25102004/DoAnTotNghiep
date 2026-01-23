@@ -53,69 +53,77 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         String admin = "ROLE_" + Role.ADMIN.name();
         String doctor = "ROLE_" + Role.DOCTOR.name();
+        String receptionist = "ROLE_" + Role.RECEPTIONIST.name();
+        String spa = "ROLE_" + Role.SPA.name();
 
         http
                 .cors(Customizer.withDefaults())
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        // == PUBLIC ENDPOINTS ==
+                        // == 1. PUBLIC ENDPOINTS (Không cần đăng nhập) ==
                         .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers("/api/search/**").permitAll()
-                        .requestMatchers("/uploads/**").permitAll() // Cho phép truy cập ảnh
+                        .requestMatchers("/uploads/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/san-pham/**", "/api/dich-vu/**", "/api/danh-muc-san-pham/**", "/api/danh-muc-dich-vu/**").permitAll()
-                        
-                        // Public Order & Promotion APIs
-                        .requestMatchers(HttpMethod.POST, "/api/don-hang/guest").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/api/don-hang/tinh-phi-ship").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/don-hang/guest", "/api/don-hang/tinh-phi-ship").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/khuyen-mai/kiem-tra").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/don-hang/ly-do-huy").permitAll()
-                        
-                        // Public Appointment API
+                        .requestMatchers(HttpMethod.GET, "/api/don-hang/ly-do-huy", "/api/lich-hen/ly-do-huy").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/lich-hen/guest").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/lich-hen/ly-do-huy").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/bai-viet/cong-khai", "/api/bai-viet/danh-muc/**", "/api/bai-viet/{id}", "/api/bai-viet/slug/**", "/api/bai-viet/{id}/lien-quan").permitAll()
 
-                        // == SPECIFIC RULES FIRST ==
-                        .requestMatchers(HttpMethod.GET, "/api/nhan-vien/*/lich-trong").authenticated() // Cho phép xem lịch trống
-                        
-                        // == USER PROFILE (Authenticated Users) ==
-                        // Phải đặt trước rule ADMIN của /api/nguoi-dung/**
+                        // == 2. USER/ME ENDPOINTS (Ưu tiên cao nhất cho người dùng đã đăng nhập) ==
+                        // Đưa các rule /me lên trước để không bị dính vào các rule wildcard (**) của ADMIN phía dưới
                         .requestMatchers("/api/nguoi-dung/me/**").authenticated()
+                        .requestMatchers("/api/lich-hen/me/**").authenticated()
+                        .requestMatchers(HttpMethod.GET, "/api/lich-hen/me").authenticated()
+                        .requestMatchers("/api/thu-cung/me/**").authenticated()
+                        .requestMatchers(HttpMethod.GET, "/api/thu-cung/me").authenticated()
 
-                        // == DOCTOR ONLY ==
-                        // Đặt rule cho DOCTOR lên trước ADMIN nếu endpoint trùng nhau hoặc cụ thể hơn
-                        .requestMatchers("/api/lich-hen/doctor/**").hasAnyAuthority(doctor, admin)
+                        // == 3. DOCTOR, SPA & RECEPTIONIST SPECIFIC ==
+                        .requestMatchers("/api/lich-hen/doctor/**").hasAnyAuthority(doctor, spa, admin)
                         .requestMatchers("/api/so-tiem-chung/**").hasAnyAuthority(doctor, admin)
+                        .requestMatchers(HttpMethod.GET, "/api/nhan-vien/*/lich-trong").authenticated()
+                        
+                        // Cho phép DOCTOR xem dashboard stats của chính họ
+                        .requestMatchers(HttpMethod.GET, "/api/nhan-vien/*/dashboard-stats").hasAnyAuthority(doctor, spa, admin)
+                        .requestMatchers(HttpMethod.GET, "/api/nhan-vien/*/check-availability").authenticated()
 
-                        // == ADMIN ONLY ==
-                        .requestMatchers("/api/admin/**").hasAuthority(admin) // Rule for all admin endpoints
+                        // API cho Lễ tân xem lịch hẹn hôm nay
+                        .requestMatchers("/api/lich-hen/today").hasAnyAuthority(receptionist, admin)
+
+                        // Quản lý blog cho Admin và Lễ tân
+                        .requestMatchers(HttpMethod.POST, "/api/bai-viet/**").hasAnyAuthority(admin, receptionist)
+                        .requestMatchers(HttpMethod.PUT, "/api/bai-viet/**").hasAnyAuthority(admin, receptionist)
+                        .requestMatchers(HttpMethod.DELETE, "/api/bai-viet/**").hasAnyAuthority(admin, receptionist)
+
+                        // == 4. ADMIN ONLY (Các quy tắc quản trị toàn cục) ==
+                        .requestMatchers("/api/admin/**").hasAuthority(admin)
                         .requestMatchers("/api/nguoi-dung/**").hasAuthority(admin)
-                        .requestMatchers(HttpMethod.POST, "/api/nhan-vien/**").hasAuthority(admin)
-                        .requestMatchers(HttpMethod.PUT, "/api/nhan-vien/**").hasAuthority(admin)
-                        .requestMatchers(HttpMethod.DELETE, "/api/nhan-vien/**").hasAuthority(admin)
+                        .requestMatchers("/api/nhan-vien/**").hasAuthority(admin)
+                        .requestMatchers("/api/nha-cung-cap/**").hasAuthority(admin)
+                        .requestMatchers("/api/cua-hang/**").hasAuthority(admin)
+
+                        // Quản lý sản phẩm/dịch vụ (POST/PUT/DELETE)
                         .requestMatchers(HttpMethod.POST, "/api/san-pham", "/api/dich-vu", "/api/danh-muc-san-pham", "/api/danh-muc-dich-vu").hasAuthority(admin)
                         .requestMatchers(HttpMethod.PUT, "/api/san-pham/**", "/api/dich-vu/**", "/api/danh-muc-san-pham/**", "/api/danh-muc-dich-vu/**").hasAuthority(admin)
                         .requestMatchers(HttpMethod.DELETE, "/api/san-pham/**", "/api/dich-vu/**", "/api/danh-muc-san-pham/**", "/api/danh-muc-dich-vu/**").hasAuthority(admin)
+
+                        // Quản lý đơn hàng và lịch hẹn tổng quát
                         .requestMatchers(HttpMethod.PUT, "/api/don-hang/**").hasAuthority(admin)
                         .requestMatchers(HttpMethod.GET, "/api/lich-hen/**").hasAuthority(admin)
                         .requestMatchers(HttpMethod.PUT, "/api/lich-hen/**").hasAuthority(admin)
-                        .requestMatchers("/api/nha-cung-cap/**").hasAuthority(admin) // Nhà cung cấp chỉ admin được quản lý
-                        .requestMatchers("/api/cua-hang/**").hasAuthority(admin) // Cấu hình cửa hàng
 
-                        // == ANY AUTHENTICATED USER ==
+                        // == 5. ANY AUTHENTICATED USER (Các quyền chung khác) ==
                         .requestMatchers(HttpMethod.GET, "/api/nhan-vien/**").authenticated()
                         .requestMatchers("/api/thu-cung/**").authenticated()
                         .requestMatchers(HttpMethod.POST, "/api/don-hang").authenticated()
                         .requestMatchers(HttpMethod.POST, "/api/lich-hen").authenticated()
                         .requestMatchers(HttpMethod.GET, "/api/don-hang/user/**").authenticated()
-
-                        // Authenticated: Các tính năng mới
-                        .requestMatchers("/api/chat/**").authenticated()
-                        .requestMatchers("/api/thong-bao/**").authenticated()
-                        .requestMatchers("/api/giao-dich/**").authenticated()
+                        .requestMatchers("/api/chat/**", "/api/thong-bao/**", "/api/giao-dich/**").authenticated()
                         .requestMatchers(HttpMethod.POST, "/api/danh-gia").authenticated()
 
-                        // Deny all other requests by default
+                        // Mặc định tất cả các request khác phải đăng nhập
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);

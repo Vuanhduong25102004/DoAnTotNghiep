@@ -1,42 +1,43 @@
 import React, { useState } from "react";
 import bookingService from "../../../../services/bookingService";
 
-// Thêm prop onRefresh để gọi lại dữ liệu sau khi thao tác xong
 const PatientDetail = ({
   appointment,
   petDetail,
   history,
   loadingDetail,
   onRefresh,
+  titleHistory = "Lịch sử điều trị",
 }) => {
   const API_URL = "http://localhost:8080/uploads/";
-
-  // State để quản lý trạng thái loading khi đang gọi API
   const [isProcessing, setIsProcessing] = useState(false);
 
-  // Trong file PatientDetail.js
+  // --- LOGIC PHÂN BIỆT TRANG ---
+  const isSpa = titleHistory === "Lịch sử làm đẹp";
 
-  // ...
+  // State cho Modal Tiêm chủng (Chỉ dùng cho Bác sĩ)
+  const [showVaccineModal, setShowVaccineModal] = useState(false);
+  const [vaccineData, setVaccineData] = useState({
+    coTiemPhong: false,
+    tenVacXin: "",
+    ngayTaiChung: "",
+    ghiChu: "",
+  });
+
+  // --- XỬ LÝ CHẤP NHẬN LỊCH HẸN ---
   const handleConfirmAppointment = async () => {
-    // SỬA LẠI: Đổi id -> lichHenId
-    if (!appointment?.lichHenId) {
-      return;
-    }
+    if (!appointment?.lichHenId) return;
 
     const isConfirmed = window.confirm(
-      `Bác sĩ xác nhận tiếp nhận lịch hẹn #${appointment.lichHenId}?`,
+      `Xác nhận tiếp nhận lịch hẹn #${appointment.lichHenId}?`,
     );
     if (!isConfirmed) return;
 
     setIsProcessing(true);
     try {
       await bookingService.confirmDoctorAppointment(appointment.lichHenId);
-
       alert("Đã tiếp nhận lịch hẹn thành công!");
-
-      if (onRefresh) {
-        onRefresh();
-      }
+      if (onRefresh) onRefresh();
     } catch (error) {
       console.error("Lỗi xác nhận lịch hẹn:", error);
       alert("Có lỗi xảy ra khi xác nhận.");
@@ -44,13 +45,73 @@ const PatientDetail = ({
       setIsProcessing(false);
     }
   };
-  // Hàm xử lý lấy URL ảnh
+
+  // --- XỬ LÝ KHI NHẤN NÚT HOÀN THÀNH ---
+  const handleCompleteClick = async () => {
+    if (!appointment?.lichHenId) return;
+
+    // Nếu là SPA: Hoàn thành luôn, không hiện Modal
+    if (isSpa) {
+      const isConfirmed = window.confirm(
+        `Xác nhận hoàn thành dịch vụ Spa cho #${appointment.tenThuCung}?`,
+      );
+      if (!isConfirmed) return;
+
+      setIsProcessing(true);
+      try {
+        await bookingService.completeDoctorAppointment(appointment.lichHenId, {
+          coTiemPhong: false,
+        });
+        alert("Dịch vụ Spa đã hoàn thành!");
+        if (onRefresh) onRefresh("DA_XONG");
+      } catch (error) {
+        alert("Lỗi khi hoàn thành dịch vụ.");
+      } finally {
+        setIsProcessing(false);
+      }
+    }
+    // Nếu là BÁC SĨ: Hiện Modal tiêm chủng
+    else {
+      setShowVaccineModal(true);
+    }
+  };
+
+  // --- XỬ LÝ LƯU HOÀN THÀNH TRÊN MODAL (CHỈ BÁC SĨ) ---
+  const handleFinalCompleteDoctor = async () => {
+    if (vaccineData.coTiemPhong && !vaccineData.tenVacXin) {
+      alert("Vui lòng nhập tên vắc xin!");
+      return;
+    }
+
+    setIsProcessing(true);
+    try {
+      await bookingService.completeDoctorAppointment(
+        appointment.lichHenId,
+        vaccineData,
+      );
+      alert("Lịch hẹn đã được hoàn thành!");
+      setShowVaccineModal(false);
+      setVaccineData({
+        coTiemPhong: false,
+        tenVacXin: "",
+        ngayTaiChung: "",
+        ghiChu: "",
+      });
+      if (onRefresh) onRefresh("DA_XONG");
+    } catch (error) {
+      alert("Có lỗi xảy ra khi hoàn thành.");
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  // --- HELPERS (Giữ nguyên) ---
   const getPetImage = () => {
     if (petDetail?.hinhAnh) {
-      // Nếu có ảnh thật từ DB -> Ghép với domain server
-      return `${API_URL}${petDetail.hinhAnh}`;
+      return petDetail.hinhAnh.startsWith("http")
+        ? petDetail.hinhAnh
+        : `${API_URL}${petDetail.hinhAnh}`;
     }
-    // Nếu không có -> Dùng Avatar tạo tự động theo tên
     return `https://ui-avatars.com/api/?name=${appointment.tenThuCung}&background=random&size=300`;
   };
 
@@ -95,25 +156,18 @@ const PatientDetail = ({
             </div>
           </div>
           <h3 className="text-2xl font-extrabold text-gray-900 mb-3 tracking-tight">
-            Sẵn sàng để tư vấn
+            Sẵn sàng làm việc
           </h3>
           <p className="text-gray-500 text-sm leading-relaxed mb-8 px-4 font-medium">
-            Chọn một lịch hẹn để xem chi tiết hồ sơ bệnh án và lịch sử điều trị.
+            Chọn một lịch hẹn để xem chi tiết hồ sơ và lịch sử.
           </p>
-          <div className="group flex items-center gap-2 px-6 h-12 bg-white border border-gray-300 rounded-full text-gray-600 font-bold text-sm hover:bg-[#2a9d8f] hover:text-white hover:border-[#007A7A] transition-all premium-shadow cursor-default">
-            <span className="material-symbols-outlined text-lg transition-transform group-hover:-translate-x-1">
-              west
-            </span>
-            Chọn từ danh sách bên trái
-          </div>
         </div>
       </section>
     );
   }
 
-  // --- DETAIL VIEW ---
   return (
-    <section className="flex-1 bg-white flex flex-col overflow-hidden min-w-0 font-sans">
+    <section className="flex-1 bg-white flex flex-col overflow-hidden min-w-0 font-sans relative">
       <div className="flex-1 overflow-y-auto custom-scrollbar">
         <div className="max-w-4xl mx-auto p-8 py-10 space-y-8">
           {/* 1. HEADER INFO */}
@@ -148,7 +202,6 @@ const PatientDetail = ({
                       </span>
                     )}
                   </div>
-
                   <div className="flex items-center gap-6 text-xs font-bold text-gray-400 mt-3">
                     {petDetail ? (
                       <>
@@ -172,11 +225,12 @@ const PatientDetail = ({
                         </div>
                       </>
                     ) : (
-                      <span className="text-gray-400 italic">Đang tải...</span>
+                      <span className="text-gray-400 italic">
+                        Đang tải thông tin...
+                      </span>
                     )}
                   </div>
                 </div>
-
                 <div className="bg-gray-50/80 p-4 px-6 rounded-2xl border border-gray-100 text-right">
                   <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">
                     CHỦ NUÔI
@@ -188,22 +242,6 @@ const PatientDetail = ({
                     {appointment.soDienThoaiKhachHang}
                   </p>
                 </div>
-              </div>
-
-              <div className="mt-5 flex gap-2 flex-wrap">
-                <div className="px-4 py-2 bg-gray-50 text-gray-600 text-[11px] font-bold rounded-3xl border border-gray-100">
-                  Dịch vụ: {appointment.tenDichVu}
-                </div>
-                {appointment.ghiChuKhachHang && (
-                  <div className="px-4 py-2 bg-amber-50 text-amber-700 text-[11px] font-bold rounded-3xl border border-amber-100/50">
-                    KH: "{appointment.ghiChuKhachHang}"
-                  </div>
-                )}
-                {petDetail?.ghiChuSucKhoe && (
-                  <div className="px-4 py-2 bg-red-50 text-red-600 text-[11px] font-bold rounded-3xl border border-red-100/50">
-                    {petDetail.ghiChuSucKhoe}
-                  </div>
-                )}
               </div>
             </div>
           </div>
@@ -217,11 +255,8 @@ const PatientDetail = ({
                 <span className="material-symbols-outlined text-[#007A7A] text-2xl">
                   history
                 </span>{" "}
-                Lịch sử điều trị
+                {titleHistory}
               </h3>
-              <button className="text-[10px] font-bold text-[#007A7A] hover:underline tracking-widest">
-                XEM TOÀN BỘ
-              </button>
             </div>
             <div className="space-y-0 px-1">
               {loadingDetail ? (
@@ -233,11 +268,7 @@ const PatientDetail = ({
                   <div key={i} className="flex gap-6 group">
                     <div className="flex flex-col items-center">
                       <div
-                        className={`size-3 rounded-full border-[2px] bg-white z-10 shadow-sm ${
-                          rec.type === "VACCINE"
-                            ? "border-[#007A7A]"
-                            : "border-gray-300"
-                        }`}
+                        className={`size-3 rounded-full border-[2px] bg-white z-10 shadow-sm ${rec.type === "VACCINE" ? "border-[#007A7A]" : "border-gray-300"}`}
                       ></div>
                       <div className="w-[1px] h-full bg-gray-100 group-last:hidden"></div>
                     </div>
@@ -260,25 +291,10 @@ const PatientDetail = ({
                 ))
               ) : (
                 <p className="text-xs text-gray-400 italic">
-                  Chưa có lịch sử điều trị.
+                  Chưa có lịch sử nào được ghi nhận.
                 </p>
               )}
             </div>
-          </div>
-
-          {/* 3. DOCTOR NOTES */}
-          <div className="bg-[#007A7A]/[0.03] rounded-3xl p-6 border border-[#007A7A]/5">
-            <h3 className="text-base font-extrabold mb-4 flex items-center gap-2 text-[#0c1d1d]">
-              <span className="material-symbols-outlined text-[#007A7A] text-xl">
-                edit_square
-              </span>{" "}
-              Ghi chú sơ bộ từ Bác sĩ
-            </h3>
-            <textarea
-              className="w-full bg-white border border-gray-100 rounded-2xl p-4 text-sm font-medium focus:ring-4 focus:ring-[#007A7A]/5 focus:border-[#007A7A]/20 placeholder:text-gray-300 shadow-sm transition-all outline-none resize-none"
-              placeholder="Viết chẩn đoán dự kiến hoặc lưu ý quan trọng tại đây..."
-              rows="4"
-            ></textarea>
           </div>
         </div>
       </div>
@@ -290,13 +306,17 @@ const PatientDetail = ({
             <button
               onClick={handleConfirmAppointment}
               disabled={isProcessing}
-              className={`px-6 h-11 bg-[#2a9d8f] text-white rounded-full font-bold text-xs tracking-wider shadow-lg shadow-[#007A7A]/20 hover:bg-[#007A7A]/90 hover:scale-[1.02] active:scale-95 transition-all ${isProcessing ? "opacity-70 cursor-wait" : ""}`}
+              className={`px-6 h-11 bg-[#2a9d8f] text-white rounded-full font-bold text-xs tracking-wider shadow-lg hover:bg-[#007A7A]/90 transition-all ${isProcessing ? "opacity-70 cursor-wait" : ""}`}
             >
               {isProcessing ? "ĐANG XỬ LÝ..." : "CHẤP NHẬN"}
             </button>
           )}
           {appointment.trangThaiLichHen === "DA_XAC_NHAN" && (
-            <button className="px-6 h-11 bg-[#2a9d8f] text-white rounded-full font-bold text-xs tracking-wider shadow-lg shadow-green-600/20 hover:scale-[1.02] active:scale-95 transition-all">
+            <button
+              onClick={handleCompleteClick}
+              disabled={isProcessing}
+              className={`px-6 h-11 bg-[#2a9d8f] text-white rounded-full font-bold text-xs tracking-wider shadow-lg shadow-green-600/20 transition-all ${isProcessing ? "opacity-70 cursor-wait" : ""}`}
+            >
               HOÀN THÀNH
             </button>
           )}
@@ -304,11 +324,91 @@ const PatientDetail = ({
             THÊM TT
           </button>
         </div>
-        <button className="px-5 h-11 text-gray-400 hover:text-[#ef5350] rounded-full font-bold text-xs flex items-center gap-2 transition-all">
-          <span className="material-symbols-outlined text-lg">redo</span> CHUYỂN
-          KHOA
-        </button>
       </div>
+
+      {/* --- VACCINE MODAL (Chỉ dành cho Bác sĩ) --- */}
+      {!isSpa && showVaccineModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+          <div className="bg-white w-full max-w-md rounded-[32px] p-8 shadow-2xl relative">
+            <h3 className="text-xl font-black text-gray-900 mb-6 flex items-center gap-2">
+              <span className="material-symbols-outlined text-[#007A7A]">
+                verified
+              </span>
+              Xác nhận hoàn thành (Bác sĩ)
+            </h3>
+            <div className="space-y-5">
+              <label className="flex items-center gap-3 p-4 bg-gray-50 rounded-2xl border border-gray-100 cursor-pointer transition-all hover:bg-white hover:border-teal-200">
+                <input
+                  type="checkbox"
+                  className="w-5 h-5 accent-[#007A7A]"
+                  checked={vaccineData.coTiemPhong}
+                  onChange={(e) =>
+                    setVaccineData({
+                      ...vaccineData,
+                      coTiemPhong: e.target.checked,
+                    })
+                  }
+                />
+                <span className="text-sm font-bold text-gray-700 uppercase">
+                  Có tiêm phòng cho thú cưng?
+                </span>
+              </label>
+
+              {vaccineData.coTiemPhong && (
+                <div className="space-y-4 pt-2">
+                  <input
+                    type="text"
+                    className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-sm focus:border-[#007A7A] outline-none transition-all"
+                    placeholder="Tên vắc xin..."
+                    value={vaccineData.tenVacXin}
+                    onChange={(e) =>
+                      setVaccineData({
+                        ...vaccineData,
+                        tenVacXin: e.target.value,
+                      })
+                    }
+                  />
+                  <input
+                    type="date"
+                    className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-sm focus:border-[#007A7A] outline-none transition-all"
+                    value={vaccineData.ngayTaiChung}
+                    onChange={(e) =>
+                      setVaccineData({
+                        ...vaccineData,
+                        ngayTaiChung: e.target.value,
+                      })
+                    }
+                  />
+                  <textarea
+                    className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-sm focus:border-[#007A7A] outline-none transition-all resize-none"
+                    placeholder="Ghi chú tiêm..."
+                    rows="2"
+                    value={vaccineData.ghiChu}
+                    onChange={(e) =>
+                      setVaccineData({ ...vaccineData, ghiChu: e.target.value })
+                    }
+                  />
+                </div>
+              )}
+            </div>
+            <div className="flex gap-3 mt-8">
+              <button
+                onClick={() => setShowVaccineModal(false)}
+                className="flex-1 h-12 rounded-2xl font-bold text-gray-400 hover:bg-gray-100"
+              >
+                HỦY
+              </button>
+              <button
+                onClick={handleFinalCompleteDoctor}
+                disabled={isProcessing}
+                className="flex-1 h-12 bg-[#007A7A] text-white rounded-2xl font-bold shadow-lg shadow-teal-500/20 hover:bg-[#0c1d1d]"
+              >
+                XÁC NHẬN
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </section>
   );
 };

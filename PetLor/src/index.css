@@ -148,4 +148,86 @@ aside nav a.bg-white {
   background: #059669; /* Màu khi di chuột qua */
 }
 
+/* --- BẮT BUỘC: Style cho nội dung bài viết (React Quill) --- */
+
+/* 1. Xử lý khung bao quanh */
+.article-content {
+  color: #374151; /* Màu chữ xám đậm dễ đọc */
+  line-height: 1.8; /* Giãn dòng thoáng */
+  font-size: 1.125rem; /* Cỡ chữ 18px */
+  
+  /* QUAN TRỌNG: Bắt buộc xuống dòng nếu chữ quá dài không có dấu cách */
+  overflow-wrap: break-word;
+  word-wrap: break-word;
+  word-break: break-word;
+  hyphens: auto;
+}
+
+/* 2. Xử lý ảnh: Không bao giờ được to hơn khung bài viết */
+.article-content img {
+  max-width: 100% !important; /* Quan trọng nhất */
+  height: auto !important;    /* Giữ tỷ lệ ảnh */
+  display: block;
+  margin: 20px auto;          /* Canh giữa ảnh */
+  border-radius: 12px;        /* Bo góc ảnh */
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+/* 3. Khôi phục tiêu đề (H1, H2...) vì Tailwind đã xóa style mặc định */
+.article-content h1 { font-size: 2.25em; font-weight: 800; margin: 32px 0 16px; line-height: 1.2; }
+.article-content h2 { font-size: 1.75em; font-weight: 700; margin: 28px 0 14px; color: #111827; }
+.article-content h3 { font-size: 1.5em; font-weight: 600; margin: 24px 0 12px; }
+
+/* 4. Khôi phục danh sách (Gạch đầu dòng, số thứ tự) */
+.article-content ul {
+  list-style-type: disc; /* Dấu chấm tròn */
+  padding-left: 1.5em;   /* Thụt đầu dòng */
+  margin-bottom: 1.5em;
+}
+.article-content ol {
+  list-style-type: decimal; /* Số 1, 2, 3 */
+  padding-left: 1.5em;
+  margin-bottom: 1.5em;
+}
+.article-content li {
+  margin-bottom: 0.5em; /* Khoảng cách giữa các dòng */
+  padding-left: 0.5em;
+}
+
+/* 5. Style cho trích dẫn */
+.article-content blockquote {
+  border-left: 4px solid #0FB478; /* Màu xanh PetLor */
+  background-color: #F3F4F6;
+  padding: 1rem;
+  font-style: italic;
+  margin: 1.5rem 0;
+  border-radius: 0 8px 8px 0;
+}
+
+/* 6. Style cho đường link */
+.article-content a {
+  color: #0FB478;
+  text-decoration: underline;
+  font-weight: 600;
+  transition: color 0.2s;
+}
+.article-content a:hover {
+  color: #059669;
+}
+
+/* 7. Style cho bảng (Table) nếu có */
+.article-content table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1.5rem 0;
+}
+.article-content th, .article-content td {
+  border: 1px solid #E5E7EB;
+  padding: 0.75rem;
+  text-align: left;
+}
+.article-content th {
+  background-color: #F9FAFB;
+  font-weight: 600;
+}
 

@@ -50,11 +50,23 @@ const MyPets = () => {
     setIsFormOpen(true);
   };
 
+  // Logic xử lý Edit: Chặn nổi bọt sự kiện để không mở Detail Modal
+  const handleEditPet = (e, pet) => {
+    if (e && e.stopPropagation) e.stopPropagation();
+
+    // Nếu đang mở detail thì đóng lại trước
+    setIsDetailOpen(false);
+
+    setSelectedPet(pet);
+    // Timeout nhỏ để UI mượt hơn nếu cần
+    setTimeout(() => setIsFormOpen(true), 50);
+  };
+
   // Logic lọc thú cưng
   const filteredPets = pets.filter(
     (p) =>
       p.tenThuCung?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      p.giongLoai?.toLowerCase().includes(searchTerm.toLowerCase())
+      p.giongLoai?.toLowerCase().includes(searchTerm.toLowerCase()),
   );
 
   // --- Helpers ---
@@ -151,7 +163,7 @@ const MyPets = () => {
           <div
             key={pet.thuCungId}
             onClick={() => handleViewDetail(pet)}
-            className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-xl transition-all duration-300 group flex flex-col h-full cursor-pointer"
+            className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-xl transition-all duration-300 group flex flex-col h-full cursor-pointer relative"
           >
             <div className="relative h-48 overflow-hidden bg-gray-50">
               <img
@@ -159,8 +171,8 @@ const MyPets = () => {
                 className="w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-500"
                 src={getPetAvatarUrl(pet)}
               />
-              <div className="absolute top-3 right-3">
-                <span className="px-2.5 py-1 rounded-md bg-green-100 text-green-700 text-xs font-semibold backdrop-blur-sm shadow-sm flex items-center gap-1">
+              <div className="absolute top-3 right-3 flex gap-2">
+                <span className="px-2.5 py-1 rounded-md bg-green-100 text-green-700 text-xs font-semibold backdrop-blur-sm shadow-sm flex items-center gap-1 h-fit">
                   <span className="w-1.5 h-1.5 rounded-full bg-green-500"></span>
                   Khỏe mạnh
                 </span>
@@ -241,6 +253,7 @@ const MyPets = () => {
       </div>
 
       {/* MODALS */}
+      {/* Đảo thứ tự hoặc dùng z-index trong CSS để đảm bảo Form luôn đè lên Detail nếu cần */}
       <PetFormModal
         isOpen={isFormOpen}
         onClose={() => setIsFormOpen(false)}
@@ -251,6 +264,7 @@ const MyPets = () => {
         isOpen={isDetailOpen}
         onClose={() => setIsDetailOpen(false)}
         pet={selectedPet}
+        onEdit={(pet) => handleEditPet(null, pet)} // Truyền hàm edit vào Modal Chi tiết
       />
     </main>
   );

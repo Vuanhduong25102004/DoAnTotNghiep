@@ -72,7 +72,6 @@ const UserProfile = () => {
       console.error("Lỗi khi lấy dữ liệu:", error);
     } finally {
       setLoading(false);
-      // Kiểm tra trạng thái nút sau khi dữ liệu đã tải xong
       setTimeout(checkScroll, 500);
     }
   };
@@ -82,6 +81,13 @@ const UserProfile = () => {
     const newPets = Array.isArray(res) ? res : res.data || [];
     setPets(newPets);
     setTimeout(checkScroll, 300);
+  };
+
+  // --- XỬ LÝ KHI UPDATE PROFILE THÀNH CÔNG ---
+  const handleUpdateSuccess = () => {
+    // Cách đơn giản nhất để cập nhật lại thông tin User trên Header/Context
+    // là reload lại trang (vì user nằm trong Outlet Context)
+    window.location.reload();
   };
 
   const handleViewDetail = (pet) => {
@@ -98,7 +104,6 @@ const UserProfile = () => {
     fetchData();
     AOS.init({ duration: 800, once: true });
 
-    // Kiểm tra lại nút khi thay đổi kích thước màn hình
     window.addEventListener("resize", checkScroll);
     return () => window.removeEventListener("resize", checkScroll);
   }, []);
@@ -182,7 +187,7 @@ const UserProfile = () => {
         </div>
       </section>
 
-      {/* 2. THÚ CƯNG - CÓ HAI NÚT MŨI TÊN NỔI */}
+      {/* 2. THÚ CƯNG */}
       <section
         data-aos="fade-up"
         data-aos-delay="100"
@@ -418,10 +423,12 @@ const UserProfile = () => {
       </section>
 
       {/* MODALS */}
+      {/* SỬA LỖI Ở ĐÂY: Truyền hàm handleUpdateSuccess vào */}
       <EditProfileModal
         isOpen={isEditModalOpen}
         onClose={() => setIsEditModalOpen(false)}
         currentUser={user}
+        onUpdateSuccess={handleUpdateSuccess}
       />
       <PetFormModal
         isOpen={isPetFormOpen}

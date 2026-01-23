@@ -15,7 +15,7 @@ public class BaiVietRequest {
     private String slug;
     private String noiDung;
     private String anhBia;
-    private Integer nhanVienId;
-    private Integer danhMucBvId; // Đổi tên cho rõ ràng
+    private Integer userId; // Thay nhanVienId bằng userId
+    private Integer danhMucBvId;
     private BaiViet.TrangThaiBaiViet trangThai;
 }

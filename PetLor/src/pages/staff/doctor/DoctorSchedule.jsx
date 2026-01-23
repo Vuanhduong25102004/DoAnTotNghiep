@@ -6,20 +6,14 @@ import AppointmentList from "./components/AppointmentList";
 import PatientDetail from "./components/PatientDetail";
 
 const DoctorSchedule = () => {
-  // --- State quản lý dữ liệu ---
   const [appointments, setAppointments] = useState([]);
   const [selectedId, setSelectedId] = useState(null);
   const [activeTab, setActiveTab] = useState("CHO_DUYET");
-
-  // --- State chi tiết bệnh án ---
   const [petDetail, setPetDetail] = useState(null);
   const [combinedHistory, setCombinedHistory] = useState([]);
-
-  // --- State loading ---
   const [loadingAppts, setLoadingAppts] = useState(true);
   const [loadingDetail, setLoadingDetail] = useState(false);
 
-  // --- 1. KHAI BÁO HÀM FETCH DATA RA NGOÀI (Để có thể gọi lại) ---
   const fetchAppointments = async () => {
     setLoadingAppts(true);
     try {
@@ -32,17 +26,14 @@ const DoctorSchedule = () => {
     }
   };
 
-  // --- 2. GỌI FETCH KHI VÀO TRANG ---
   useEffect(() => {
     fetchAppointments();
   }, []);
 
-  // Tìm object lịch hẹn hiện tại
   const selectedAppointment = appointments.find(
     (p) => p.lichHenId === selectedId,
   );
 
-  // 3. Fetch chi tiết hồ sơ bệnh án khi selectedId thay đổi
   useEffect(() => {
     const fetchRecord = async () => {
       if (!selectedAppointment?.thuCungId) {
@@ -58,22 +49,17 @@ const DoctorSchedule = () => {
         );
         setPetDetail(data);
 
-        // Xử lý gộp lịch sử
+        // --- CHỈ LẤY LỊCH SỬ TIÊM CHỦNG ---
         const vaccines = (data.lichSuTiemChung || []).map((v) => ({
           type: "VACCINE",
           date: v.ngayTiem,
           title: `Tiêm: ${v.tenVacXin}`,
-          note: `${v.ghiChu || ""} - BS: ${v.bacSiThucHien}`,
+          // Sử dụng bacSiThucHien theo đúng log dữ liệu của bạn
+          note: `${v.ghiChu || ""} - BS: ${v.bacSiThucHien || "Hệ thống"}`,
         }));
 
-        const exams = (data.lichSuKham || []).map((e) => ({
-          type: "EXAM",
-          date: e.ngayKham,
-          title: e.chanDoan,
-          note: `BS: ${e.bacSiKham}`,
-        }));
-
-        const sortedHistory = [...vaccines, ...exams].sort(
+        // Sắp xếp theo ngày mới nhất
+        const sortedHistory = [...vaccines].sort(
           (a, b) => new Date(b.date) - new Date(a.date),
         );
 
@@ -88,7 +74,7 @@ const DoctorSchedule = () => {
     };
 
     fetchRecord();
-  }, [selectedId, selectedAppointment]); // Lưu ý: selectedAppointment thay đổi khi fetchAppointments chạy lại
+  }, [selectedId, selectedAppointment]);
 
   const handleSelect = (id) => {
     setSelectedId(selectedId === id ? null : id);
@@ -96,7 +82,6 @@ const DoctorSchedule = () => {
 
   return (
     <div className="flex h-full w-full overflow-hidden bg-[#F9FAFB]">
-      {/* Cột trái */}
       <AppointmentList
         appointments={appointments}
         selectedId={selectedId}
@@ -105,8 +90,6 @@ const DoctorSchedule = () => {
         onTabChange={setActiveTab}
         loading={loadingAppts}
       />
-
-      {/* Cột phải: QUAN TRỌNG - THÊM onRefresh */}
       <PatientDetail
         appointment={selectedAppointment}
         petDetail={petDetail}
@@ -114,7 +97,6 @@ const DoctorSchedule = () => {
         loadingDetail={loadingDetail}
         onRefresh={fetchAppointments}
       />
-      {/* ^^^ Dòng trên: Truyền hàm fetchAppointments xuống để nút Confirm gọi lại */}
     </div>
   );
 };

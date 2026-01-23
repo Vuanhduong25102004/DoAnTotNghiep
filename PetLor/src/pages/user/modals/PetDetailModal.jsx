@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 
-const PetDetailModal = ({ isOpen, onClose, pet }) => {
+const PetDetailModal = ({ isOpen, onClose, onEdit, pet }) => {
   // Không dùng conditional return null ở đây để giữ animation
   const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8080";
 
@@ -38,15 +38,32 @@ const PetDetailModal = ({ isOpen, onClose, pet }) => {
             isOpen ? "translate-x-0" : "translate-x-full"
           }`}
         >
-          {/* Nút Close cố định góc phải (Luôn nổi lên trên) */}
-          <button
-            onClick={onClose}
-            className="absolute top-4 right-4 z-20 bg-white/20 hover:bg-white/40 text-gray-800 p-2 rounded-full transition-all cursor-pointer backdrop-blur-md border border-white/30 shadow-sm"
-          >
-            <span className="material-symbols-outlined text-xl font-bold">
-              close
-            </span>
-          </button>
+          {/* Action Buttons (Close & Edit) */}
+          {/* Action Buttons (Close & Edit) */}
+          <div className="absolute top-4 right-4 z-20 flex items-center gap-2">
+            {/* Nút Edit - Mới thêm */}
+            <button
+              onClick={() => {
+                onEdit(pet);
+              }}
+              className="bg-white/20 hover:bg-white/40 text-gray-800 p-2 rounded-full transition-all cursor-pointer backdrop-blur-md border border-white/30 shadow-sm flex items-center justify-center"
+              title="Chỉnh sửa thông tin"
+            >
+              <span className="material-symbols-outlined text-xl font-bold">
+                edit
+              </span>
+            </button>
+
+            {/* Nút Close */}
+            <button
+              onClick={onClose}
+              className="bg-white/20 hover:bg-white/40 text-gray-800 p-2 rounded-full transition-all cursor-pointer backdrop-blur-md border border-white/30 shadow-sm flex items-center justify-center"
+            >
+              <span className="material-symbols-outlined text-xl font-bold">
+                close
+              </span>
+            </button>
+          </div>
 
           {/* Vùng cuộn chứa cả Header và Body (Fix lỗi cắt ảnh) */}
           <div className="h-full overflow-y-auto custom-scrollbar bg-white">
