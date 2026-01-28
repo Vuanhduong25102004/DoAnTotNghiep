@@ -40,7 +40,9 @@ const AdminSidebar = ({ onLogout }) => {
           <span className="material-symbols-outlined text-3xl text-primary">
             pets
           </span>
-          <span className="text-xl font-bold text-text-main">PetLor Admin</span>
+          <span className="text-xl font-bold text-text-main">
+            Quản trị viên PetLor
+          </span>
         </Link>
       </div>
 

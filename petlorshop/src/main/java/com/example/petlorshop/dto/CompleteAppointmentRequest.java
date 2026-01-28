@@ -11,11 +11,14 @@ import java.util.List;
 @AllArgsConstructor
 @NoArgsConstructor
 public class CompleteAppointmentRequest {
+    // Ghi chú chung của bác sĩ cho buổi khám
+    private String ghiChuBacSi;
+
     // Phần tiêm chủng
     private boolean coTiemPhong; 
     private String tenVacXin;
     private LocalDate ngayTaiChung; 
-    private String ghiChu; 
+    private String ghiChu; // Ghi chú riêng cho mũi tiêm (nếu cần)
 
     // Phần kê đơn thuốc
     private boolean coKeDon;

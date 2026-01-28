@@ -8,7 +8,7 @@ const AdminHeader = ({ user, title }) => {
       {/* Phần tiêu đề */}
       <div className="flex items-center gap-4">
         <h2 className="text-sm font-medium text-slate-500">
-          {title || "Pet Lor Dashboard"}
+          {title || "Bảng điều khiển PetLor"}
         </h2>
       </div>
 
@@ -20,7 +20,7 @@ const AdminHeader = ({ user, title }) => {
             search
           </span>
           <input
-            className="w-64 rounded-full border border-slate-200 bg-slate-50 py-1.5 pl-10 pr-4 text-sm focus:border-primary focus:ring-primary"
+            className="w-64 rounded-full border bordder-slate-200 bg-slate-50 py-1.5 pl-10 pr-4 text-sm focus:border-primary focus:ring-primary"
             placeholder="Tìm kiếm..."
             type="text"
           />

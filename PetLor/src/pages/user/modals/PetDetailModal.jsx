@@ -1,7 +1,6 @@
-import React, { useState, useEffect } from "react";
+import React from "react";
 
-const PetDetailModal = ({ isOpen, onClose, onEdit, pet }) => {
-  // Không dùng conditional return null ở đây để giữ animation
+const PetDetailModal = ({ isOpen, onClose, onEdit, onDelete, pet }) => {
   const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8080";
 
   const getPetAvatarUrl = (petData) => {
@@ -23,7 +22,7 @@ const PetDetailModal = ({ isOpen, onClose, onEdit, pet }) => {
       role="dialog"
       aria-modal="true"
     >
-      {/* Backdrop (Mờ dần) */}
+      {/* Backdrop */}
       <div
         className={`absolute inset-0 bg-gray-900/60 backdrop-blur-sm transition-opacity duration-500 ease-in-out ${
           isOpen ? "opacity-100" : "opacity-0"
@@ -31,21 +30,29 @@ const PetDetailModal = ({ isOpen, onClose, onEdit, pet }) => {
         onClick={onClose}
       ></div>
 
-      {/* Slide-over Panel (Trượt từ phải sang) */}
+      {/* Slide-over Panel */}
       <div className="fixed inset-y-0 right-0 flex max-w-full pl-0 sm:pl-10 pointer-events-none">
         <div
           className={`pointer-events-auto w-screen max-w-md transform transition-transform duration-500 ease-in-out flex flex-col h-full bg-white shadow-2xl relative ${
             isOpen ? "translate-x-0" : "translate-x-full"
           }`}
         >
-          {/* Action Buttons (Close & Edit) */}
-          {/* Action Buttons (Close & Edit) */}
+          {/* --- CÁC NÚT HÀNH ĐỘNG (XÓA, SỬA, ĐÓNG) --- */}
           <div className="absolute top-4 right-4 z-20 flex items-center gap-2">
-            {/* Nút Edit - Mới thêm */}
+            {/* Nút Xóa - Có tooltip */}
             <button
-              onClick={() => {
-                onEdit(pet);
-              }}
+              onClick={() => onDelete && onDelete(pet.thuCungId)}
+              className="bg-white/20 hover:bg-red-500 text-gray-800 hover:text-white p-2 rounded-full transition-all cursor-pointer backdrop-blur-md border border-white/30 shadow-sm flex items-center justify-center group"
+              title="Xóa hồ sơ thú cưng"
+            >
+              <span className="material-symbols-outlined text-xl font-bold">
+                delete
+              </span>
+            </button>
+
+            {/* Nút Sửa */}
+            <button
+              onClick={() => onEdit(pet)}
               className="bg-white/20 hover:bg-white/40 text-gray-800 p-2 rounded-full transition-all cursor-pointer backdrop-blur-md border border-white/30 shadow-sm flex items-center justify-center"
               title="Chỉnh sửa thông tin"
             >
@@ -54,7 +61,7 @@ const PetDetailModal = ({ isOpen, onClose, onEdit, pet }) => {
               </span>
             </button>
 
-            {/* Nút Close */}
+            {/* Nút Đóng */}
             <button
               onClick={onClose}
               className="bg-white/20 hover:bg-white/40 text-gray-800 p-2 rounded-full transition-all cursor-pointer backdrop-blur-md border border-white/30 shadow-sm flex items-center justify-center"
@@ -65,11 +72,10 @@ const PetDetailModal = ({ isOpen, onClose, onEdit, pet }) => {
             </button>
           </div>
 
-          {/* Vùng cuộn chứa cả Header và Body (Fix lỗi cắt ảnh) */}
+          {/* Vùng cuộn chứa cả Header và Body */}
           <div className="h-full overflow-y-auto custom-scrollbar bg-white">
             {/* Header Image Background */}
             <div className="h-48 bg-[#e7f3e7] relative shrink-0 overflow-hidden">
-              {/* Họa tiết trang trí */}
               <div className="absolute inset-0 opacity-30 bg-[radial-gradient(#4C9A4C_1.5px,transparent_1.5px)] [background-size:20px_20px]"></div>
               <div className="absolute -bottom-10 -left-10 w-40 h-40 bg-green-300/20 rounded-full blur-3xl"></div>
               <div className="absolute top-10 right-10 w-32 h-32 bg-yellow-300/20 rounded-full blur-3xl"></div>
@@ -77,7 +83,7 @@ const PetDetailModal = ({ isOpen, onClose, onEdit, pet }) => {
 
             {/* Body Content */}
             <div className="px-6 pb-10 relative">
-              {/* Avatar - Nổi lên trên Header nhờ margin âm */}
+              {/* Avatar */}
               <div className="-mt-20 mb-4 flex justify-center relative z-10">
                 <div className="p-1.5 bg-white rounded-full shadow-lg">
                   <div

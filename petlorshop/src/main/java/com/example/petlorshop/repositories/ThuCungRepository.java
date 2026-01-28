@@ -9,7 +9,6 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
-import java.util.Optional;
 
 @Repository
 public interface ThuCungRepository extends JpaRepository<ThuCung, Integer> {
@@ -23,7 +22,7 @@ public interface ThuCungRepository extends JpaRepository<ThuCung, Integer> {
 
     List<ThuCung> findByNguoiDung_Email(String email);
 
-    // Tìm thú cưng theo chủ sở hữu và tên (để tránh trùng lặp) - Trả về List để tránh lỗi NonUniqueResultException
+    // Tìm thú cưng theo chủ sở hữu và tên (để tránh trùng lặp)
     List<ThuCung> findByNguoiDung_UserIdAndTenThuCungIgnoreCase(Integer userId, String tenThuCung);
 
     // Tìm thú cưng theo SĐT chủ sở hữu

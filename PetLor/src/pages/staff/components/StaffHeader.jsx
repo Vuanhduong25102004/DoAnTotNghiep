@@ -8,8 +8,8 @@ const StaffHeader = ({ user, countConfirmed }) => {
         return "Bác sĩ";
       case "RECEPTIONIST":
         return "Lễ tân";
-      case "SPA_STAFF":
-        return "KTV Spa";
+      case "SPA":
+        return "Spa";
       case "ADMIN":
         return "Quản trị viên";
       default:

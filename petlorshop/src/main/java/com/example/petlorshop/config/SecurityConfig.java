@@ -36,6 +36,7 @@ public class SecurityConfig {
     @Bean
     public UserDetailsService userDetailsService() {
         return username -> nguoiDungRepository.findByEmail(username)
+                .or(() -> nguoiDungRepository.findBySoDienThoai(username))
                 .orElseThrow(() -> new UsernameNotFoundException("User not found"));
     }
 
@@ -71,6 +72,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/don-hang/ly-do-huy", "/api/lich-hen/ly-do-huy").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/lich-hen/guest").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/bai-viet/cong-khai", "/api/bai-viet/danh-muc/**", "/api/bai-viet/{id}", "/api/bai-viet/slug/**", "/api/bai-viet/{id}/lien-quan").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/danh-gia/san-pham/**").permitAll() // Xem đánh giá sản phẩm là public
 
                         // == 2. USER/ME ENDPOINTS (Ưu tiên cao nhất cho người dùng đã đăng nhập) ==
                         // Đưa các rule /me lên trước để không bị dính vào các rule wildcard (**) của ADMIN phía dưới
@@ -109,6 +111,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/nhan-vien/**").hasAuthority(admin)
                         .requestMatchers("/api/nha-cung-cap/**").hasAuthority(admin)
                         .requestMatchers("/api/cua-hang/**").hasAuthority(admin)
+                        .requestMatchers(HttpMethod.GET, "/api/danh-gia").hasAuthority(admin) // Admin xem tất cả đánh giá
 
                         // Quản lý sản phẩm/dịch vụ (POST/PUT/DELETE)
                         .requestMatchers(HttpMethod.POST, "/api/san-pham", "/api/dich-vu", "/api/danh-muc-san-pham", "/api/danh-muc-dich-vu").hasAuthority(admin)
@@ -116,7 +119,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.DELETE, "/api/san-pham/**", "/api/dich-vu/**", "/api/danh-muc-san-pham/**", "/api/danh-muc-dich-vu/**").hasAuthority(admin)
 
                         // Quản lý đơn hàng và lịch hẹn tổng quát
-                        .requestMatchers(HttpMethod.PUT, "/api/don-hang/**").hasAuthority(admin)
+                        .requestMatchers(HttpMethod.PUT, "/api/don-hang/**").hasAnyAuthority(admin,receptionist)
                         .requestMatchers(HttpMethod.GET, "/api/lich-hen/**").hasAuthority(admin)
                         .requestMatchers(HttpMethod.PUT, "/api/lich-hen/**").hasAuthority(admin)
 

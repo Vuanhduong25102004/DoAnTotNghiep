@@ -11,12 +11,12 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
-
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -38,6 +38,8 @@ public class DonHangService {
     private OrderCalculationService orderCalculationService;
     @Autowired
     private DonThuocRepository donThuocRepository;
+    @Autowired
+    private DanhGiaRepository danhGiaRepository;
 
     public Page<DonHangResponse> getAllDonHang(Pageable pageable, String keyword) {
         if (StringUtils.hasText(keyword)) {
@@ -199,7 +201,7 @@ public class DonHangService {
         donHang.setTrangThai(DonHang.TrangThaiDonHang.CHO_XU_LY);
         
         // Set trạng thái thanh toán mặc định (Guest luôn là Online)
-        donHang.setTrangThaiThanhToan(DonHang.TrangThaiThanhToan.CHO_THANH_TOAN);
+        donHang.setTrangThaiThanhToan(DonHang.TrangThaiThanhToan.CHUA_THANH_TOAN);
 
         donHang.setTongTienHang(calculationResult.getTongTienHang());
         donHang.setSoTienGiam(calculationResult.getSoTienGiam());
@@ -360,14 +362,26 @@ public class DonHangService {
     }
 
     private DonHangResponse convertToResponse(DonHang donHang) {
+        // Lấy danh sách đánh giá của đơn hàng này
+        List<DanhGia> reviews = danhGiaRepository.findByDonHang_DonHangId(donHang.getDonHangId());
+        
+        boolean daDanhGiaChung = reviews.stream().anyMatch(r -> r.getSanPham() == null);
+        
+        Set<Integer> reviewedProductIds = reviews.stream()
+                .filter(r -> r.getSanPham() != null)
+                .map(r -> r.getSanPham().getSanPhamId())
+                .collect(Collectors.toSet());
+
         List<ChiTietDonHangResponse> chiTietResponses = donHang.getChiTietDonHangs().stream()
-                .map(this::convertChiTietToResponse)
+                .map(ct -> convertChiTietToResponse(ct, reviewedProductIds))
                 .collect(Collectors.toList());
         
         // Logic lấy tên người dùng: Nếu có User thì lấy tên User, nếu không thì lấy tên người nhận (Guest)
         String tenNguoiDung = null;
+        String anhNguoiNhan = null; // Thêm biến ảnh
         if (donHang.getNguoiDung() != null) {
             tenNguoiDung = donHang.getNguoiDung().getHoTen();
+            anhNguoiNhan = donHang.getNguoiDung().getAnhDaiDien(); // Lấy ảnh đại diện
         } else {
             tenNguoiDung = donHang.getHoTenNguoiNhan();
         }
@@ -387,20 +401,35 @@ public class DonHangService {
                 donHang.getLyDoHuy(),
                 donHang.getNguoiDung() != null ? donHang.getNguoiDung().getUserId() : null,
                 tenNguoiDung, // Sử dụng tên đã xử lý logic
+                anhNguoiNhan, // Truyền ảnh đại diện vào response
                 donHang.getKhuyenMai() != null ? donHang.getKhuyenMai().getMaCode() : null,
-                chiTietResponses
+                chiTietResponses,
+                daDanhGiaChung
         );
     }
 
-    private ChiTietDonHangResponse convertChiTietToResponse(ChiTietDonHang chiTiet) {
+    private ChiTietDonHangResponse convertChiTietToResponse(ChiTietDonHang chiTiet, Set<Integer> reviewedProductIds) {
         SanPham sanPham = chiTiet.getSanPham();
+        boolean daDanhGia = false;
+        String tenDanhMuc = null;
+        if (sanPham != null) {
+             if (reviewedProductIds != null) {
+                 daDanhGia = reviewedProductIds.contains(sanPham.getSanPhamId());
+             }
+             if (sanPham.getDanhMucSanPham() != null) {
+                 tenDanhMuc = sanPham.getDanhMucSanPham().getTenDanhMuc();
+             }
+        }
+        
         return new ChiTietDonHangResponse(
                 chiTiet.getId(),
                 chiTiet.getSoLuong(),
                 chiTiet.getDonGia(),
                 sanPham != null ? sanPham.getSanPhamId() : null,
                 sanPham != null ? sanPham.getTenSanPham() : null,
-                sanPham != null ? sanPham.getHinhAnh() : null
+                tenDanhMuc, // Thêm tên danh mục
+                sanPham != null ? sanPham.getHinhAnh() : null,
+                daDanhGia
         );
     }
 }

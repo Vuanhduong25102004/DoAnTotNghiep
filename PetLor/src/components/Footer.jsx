@@ -3,6 +3,7 @@ import React from "react";
 const Footer = () => {
   return (
     <footer className="bg-white border-t border-[#dbe6df]">
+      {/* --- PHẦN FOOTER CHÍNH --- */}
       <div className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           <div>
@@ -59,10 +60,12 @@ const Footer = () => {
           <div>
             <h3 className="font-bold mb-4">Liên hệ</h3>
             <p className="text-sm text-[#61896f]">
-              123 Đường ABC, Quận 1, TP. HCM
+              28A Đ. Lê Trọng Tấn, Hà Cầu, Hà Đông, Hà Nội.
             </p>
-            <p className="text-sm text-[#61896f]">email@example.com</p>
-            <p className="text-sm text-[#61896f]">(123) 456-7890</p>
+            <p className="text-sm text-[#61896f]">
+              vuanhduong251020042@gmail.com
+            </p>
+            <p className="text-sm text-[#61896f]">(+84) 972471680</p>
           </div>
           <div>
             <h3 className="font-bold mb-4">Đăng ký nhận tin</h3>
@@ -82,6 +85,45 @@ const Footer = () => {
                 Gửi
               </button>
             </form>
+          </div>
+        </div>
+      </div>
+
+      {/* --- PHẦN THÔNG TIN TÁC GIẢ (UPDATED) --- */}
+      <div className="border-t border-[#dbe6df] bg-[#f8faf9]">
+        <div className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+          <div className="flex flex-col md:flex-row justify-between items-center gap-3">
+            {/* Bản quyền */}
+            <p className="text-xs text-[#61896f] opacity-80">
+              © {new Date().getFullYear()} PetLor. All rights reserved.
+            </p>
+
+            {/* Signature của Tác giả */}
+            <div className="flex items-center gap-4 text-sm text-[#3a5a45]">
+              <span className="opacity-70 font-normal">Developed by</span>
+
+              <div className="flex items-center gap-2 font-bold">
+                <span className="material-symbols-outlined text-[18px] text-primary">
+                  code
+                </span>
+                <span>Vũ Anh Dương</span>
+              </div>
+
+              <span className="text-[#dbe6df]">|</span>
+
+              <div className="flex items-center gap-1.5 font-medium">
+                <span className="material-symbols-outlined text-[16px] opacity-70">
+                  school
+                </span>
+                <span>Công nghệ thông tin (IT)</span>
+              </div>
+              <div className="flex items-center gap-1.5 font-medium">
+                <span className="material-symbols-outlined text-[16px] opacity-70">
+                  apartment
+                </span>
+                <span>Đại học Nguyễn Trãi</span>
+              </div>
+            </div>
           </div>
         </div>
       </div>

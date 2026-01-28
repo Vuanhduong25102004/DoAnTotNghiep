@@ -3,12 +3,10 @@
  * @description Các hàm định dạng dữ liệu (Tiền tệ, Ngày tháng, Badge)
  */
 
-import React from "react"; // Đảm bảo import React vì có trả về JSX
+import React from "react";
 
 /**
  * 1. Định dạng tiền tệ VNĐ
- * @param {number|string} amount - Số tiền
- * @returns {string} - "50.000 ₫"
  */
 export const formatCurrency = (amount) => {
   if (amount === undefined || amount === null || amount === "") return "0 ₫";
@@ -23,8 +21,6 @@ export const formatCurrency = (amount) => {
 
 /**
  * 2. Định dạng ngày giờ đầy đủ
- * @param {string} dateString - "2025-12-21T10:30:00"
- * @returns {string} - "10:30 21/12/2025"
  */
 export const formatDate = (dateString) => {
   if (!dateString) return "N/A";
@@ -42,7 +38,6 @@ export const formatDate = (dateString) => {
 
 /**
  * 3. Chỉ lấy ngày tháng năm
- * @returns {string} - "21/12/2025"
  */
 export const formatJustDate = (dateString) => {
   if (!dateString) return "";
@@ -57,8 +52,7 @@ export const formatJustDate = (dateString) => {
 };
 
 /**
- * 4. Định dạng cho input type="datetime-local" (Cần thiết cho Edit Form)
- * @returns {string} - "2025-12-21T10:30"
+ * 4. Định dạng cho input type="datetime-local"
  */
 export const formatDateTimeForInput = (dateString) => {
   if (!dateString) return "";
@@ -77,7 +71,6 @@ export const formatDateTimeForInput = (dateString) => {
 
 /**
  * 5. Định dạng hiển thị khoảng thời gian lịch hẹn
- * @returns {string} - "21/12/2025 | 10:30 - 11:30"
  */
 export const formatAppointmentTime = (startTime, endTime) => {
   if (!startTime) return "N/A";
@@ -100,9 +93,7 @@ export const formatAppointmentTime = (startTime, endTime) => {
 };
 
 /**
- * 6. Render Badge trạng thái Lịch hẹn (Trả về JSX Component)
- * Dùng cho hiển thị đơn giản trong bảng
- * @param {string} status - "DA_HOAN_THANH", "CHO_XAC_NHAN"...
+ * 6. Render Badge trạng thái Lịch hẹn
  */
 export const renderStatusBadge = (status) => {
   const statusConfig = {
@@ -138,90 +129,135 @@ export const renderStatusBadge = (status) => {
   );
 };
 
+// Hàm render badge đơn hàng sử dụng config bên dưới
 export const renderOrderStatusBadge = (status) => {
-  const { color } = getOrderStatusConfig(status);
+  const { bgColor, textColor, borderColor, label, topBarColor } =
+    getOrderStatusConfig(status);
+
+  // Lấy màu chủ đạo từ class bg (ví dụ bg-blue-50 -> blue) để set cho dot
+  let dotColor = "bg-gray-500";
+  if (topBarColor.includes("bg-orange")) dotColor = "bg-orange-500";
+  else if (topBarColor.includes("bg-blue")) dotColor = "bg-blue-500";
+  else if (topBarColor.includes("bg-purple")) dotColor = "bg-purple-500";
+  else if (topBarColor.includes("bg-green")) dotColor = "bg-green-500";
+  else if (topBarColor.includes("bg-red")) dotColor = "bg-red-500";
 
   return (
     <div
-      className={`flex items-center gap-2 bg-${color}-50 px-4 py-2 rounded-xl border border-${color}-100`}
+      className={`flex items-center gap-2 ${bgColor} px-4 py-2 rounded-xl border ${borderColor}`}
     >
       <div
-        className={`h-2 w-2 rounded-full bg-${color}-500 ${
+        className={`h-2 w-2 rounded-full ${dotColor} ${
           status !== "Đã giao" && status !== "Đã hủy" ? "animate-pulse" : ""
         }`}
       ></div>
       <span
-        className={`text-sm font-bold text-${color}-700 uppercase tracking-wide`}
+        className={`text-sm font-bold ${textColor} uppercase tracking-wide`}
       >
-        {status}
+        {label}
       </span>
     </div>
   );
 };
 
+/**
+ * --- CẬP NHẬT QUAN TRỌNG: Cấu hình trạng thái đơn hàng ---
+ * Đã sửa logic percent cho stepper và thêm case Đã xác nhận
+ */
 export const getOrderStatusConfig = (status) => {
-  const configs = {
-    "Chờ xử lý": {
-      topBarColor: "bg-yellow-400",
-      bgColor: "bg-yellow-50",
-      textColor: "text-yellow-600",
-      borderColor: "border-yellow-100",
-      step: 3,
-      percent: 0.5,
-      label: "Đang xử lý",
-      icon: "inventory_2",
-    },
-    "Đang giao": {
-      topBarColor: "bg-blue-400",
-      bgColor: "bg-blue-50",
-      textColor: "text-blue-600",
-      borderColor: "border-blue-100",
-      step: 4,
-      percent: 0.75,
-      label: "Vận chuyển",
-      icon: "local_shipping",
-    },
-    "Đã giao": {
-      topBarColor: "bg-emerald-400",
-      bgColor: "bg-emerald-50",
-      textColor: "text-emerald-600",
-      borderColor: "border-emerald-100",
-      step: 5,
-      percent: 1,
-      label: "Thành công",
-      icon: "home",
-    },
-    "Đã hủy": {
-      topBarColor: "bg-red-400",
-      bgColor: "bg-red-50",
-      textColor: "text-red-600",
-      borderColor: "border-red-100",
-      step: 0,
-      percent: 0,
-      label: "Đã hủy",
-      icon: "close",
-    },
-  };
+  // Chuẩn hóa input để tránh lỗi hoa thường
+  const normalizedStatus = status ? status.toLowerCase() : "";
 
-  return (
-    configs[status] || {
-      topBarColor: "bg-gray-400",
-      bgColor: "bg-gray-50",
-      textColor: "text-gray-600",
-      borderColor: "border-gray-100",
-      step: 1,
-      percent: 0.2,
-      label: status,
-      icon: "help_outline",
-    }
-  );
+  switch (normalizedStatus) {
+    // 1. CHỜ XỬ LÝ (Mới đặt)
+    case "chờ xử lý":
+    case "cho_xu_ly":
+      return {
+        icon: "hourglass_empty",
+        bgColor: "bg-orange-50",
+        textColor: "text-orange-600",
+        borderColor: "border-orange-100",
+        topBarColor: "bg-orange-500",
+        label: "Đang xử lý",
+        step: 1,
+        percent: 0, // 0% - Bắt đầu line
+      };
+
+    // 2. ĐÃ XÁC NHẬN (Cửa hàng đã nhận đơn) - [MỚI THÊM]
+    case "đã xác nhận":
+    case "da_xac_nhan":
+      return {
+        icon: "thumb_up",
+        bgColor: "bg-blue-50", // Màu xanh dương nhạt
+        textColor: "text-blue-600", // Chữ xanh dương
+        borderColor: "border-blue-100",
+        topBarColor: "bg-blue-500", // Thanh line trên đầu card
+        label: "Đã xác nhận",
+        step: 2,
+        percent: 0.25, // 25% - Kéo line đến icon thứ 2 (Thumb Up)
+      };
+
+    // 3. ĐANG GIAO (Vận chuyển)
+    case "đang giao":
+    case "dang_giao":
+      return {
+        icon: "local_shipping",
+        bgColor: "bg-purple-50", // Màu tím cho vận chuyển
+        textColor: "text-purple-600",
+        borderColor: "border-purple-100",
+        topBarColor: "bg-purple-500",
+        label: "Vận chuyển",
+        step: 4,
+        percent: 0.75, // 75% - Kéo line đến icon thứ 4 (Xe tải)
+      };
+
+    // 4. ĐÃ GIAO / HOÀN THÀNH
+    case "đã giao":
+    case "da_giao":
+    case "hoàn thành":
+    case "da_thanh_toan":
+      return {
+        icon: "check_circle", // Đổi icon thành check tròn
+        bgColor: "bg-green-50",
+        textColor: "text-green-600",
+        borderColor: "border-green-100",
+        topBarColor: "bg-green-500",
+        label: "Thành công",
+        step: 5,
+        percent: 1, // 100% - Full line
+      };
+
+    // 5. ĐÃ HỦY
+    case "đã hủy":
+    case "da_huy":
+      return {
+        icon: "cancel",
+        bgColor: "bg-red-50",
+        textColor: "text-red-600",
+        borderColor: "border-red-100",
+        topBarColor: "bg-red-500",
+        label: "Đã hủy",
+        step: 0,
+        percent: 0,
+      };
+
+    // DEFAULT
+    default:
+      return {
+        icon: "help_outline",
+        bgColor: "bg-gray-50",
+        textColor: "text-gray-500",
+        borderColor: "border-gray-200",
+        topBarColor: "bg-gray-400",
+        label: status || "Không rõ",
+        step: 0,
+        percent: 0,
+      };
+  }
 };
 
 /**
- * 7. Lấy cấu hình Text & Color cho trạng thái (Trả về Object Data)
- * Dùng cho các component cần custom giao diện (VD: DoctorDashboard)
- * @param {string} status
- * @returns {object} { label, color }
+ * 7. Lấy cấu hình Text & Color cho trạng thái (Dùng cho bảng quản lý)
  */
 export const getStatusBadge = (status) => {
   switch (status) {
@@ -236,43 +272,31 @@ export const getStatusBadge = (status) => {
       return { label: "Chờ xác nhận", color: "bg-yellow-50 text-yellow-700" };
   }
 };
+
 /**
- * 8. Format giờ cho Lịch trình (Tách giờ và AM/PM)
- * @param {string} isoString - "2024-05-20T08:30:00"
- * @returns {object} { time: "08:30", period: "AM" }
+ * 8. Format giờ cho Lịch trình
  */
 export const formatTimeForSchedule = (isoString) => {
   if (!isoString) return { time: "--:--", period: "--" };
   const date = new Date(isoString);
-
-  // Lấy chuỗi giờ dạng "08:30 AM"
   const timeStr = date.toLocaleTimeString("en-US", {
     hour: "2-digit",
     minute: "2-digit",
     hour12: true,
   });
-
-  // Tách ra thành mảng ["08:30", "AM"]
   const parts = timeStr.split(" ");
-
-  // Xử lý phòng trường hợp format khác
   if (parts.length >= 2) {
     return { time: parts[0], period: parts[1] };
   }
-
   return { time: timeStr, period: "" };
 };
+
 /**
  * 9. Lấy cấu hình Text & Color cho LOẠI LỊCH HẸN
- * @param {string} type - "KHAN_CAP", "THUONG_LE"... hoặc Tiếng Việt
  */
 export const getAppointmentTypeBadge = (type) => {
-  // Chuẩn hóa input
   const normalizedType = type ? type.toUpperCase() : "";
-
-  // Xử lý mapping dựa trên Enum key hoặc Text tiếng Việt
   switch (normalizedType) {
-    // 1. KHẨN CẤP
     case "KHAN_CAP":
     case "KHẨN CẤP":
     case "KHẨN CẤP (CẤP CỨU)":
@@ -280,47 +304,36 @@ export const getAppointmentTypeBadge = (type) => {
         label: "Khẩn cấp",
         color: "bg-red-50 text-red-700 border border-red-200",
       };
-
-    // 2. THƯỜNG LỆ
     case "THUONG_LE":
     case "THƯỜNG LỆ":
       return {
         label: "Thường lệ",
         color: "bg-blue-50 text-blue-700 border border-blue-200",
       };
-
-    // 3. TÁI KHÁM
     case "TAI_KHAM":
     case "TÁI KHÁM":
       return {
         label: "Tái khám",
         color: "bg-amber-50 text-amber-700 border border-amber-200",
       };
-
-    // 4. TƯ VẤN
     case "TU_VAN":
     case "TƯ VẤN":
       return {
         label: "Tư vấn",
         color: "bg-purple-50 text-purple-700 border border-purple-200",
       };
-
-    // 5. TIÊM PHÒNG
     case "TIEM_PHONG":
     case "TIÊM PHÒNG":
       return {
         label: "Tiêm phòng",
         color: "bg-teal-50 text-teal-700 border border-teal-200",
       };
-
-    // 6. PHẪU THUẬT
     case "PHAU_THUAT":
     case "PHẪU THUẬT":
       return {
         label: "Phẫu thuật",
         color: "bg-rose-50 text-rose-700 border border-rose-200",
       };
-
     default:
       return {
         label: type || "Khác",
@@ -330,8 +343,7 @@ export const getAppointmentTypeBadge = (type) => {
 };
 
 /**
- * 10. Render Badge cho LOẠI LỊCH HẸN (JSX Component)
- * Dùng nhanh trong bảng
+ * 10. Render Badge cho LOẠI LỊCH HẸN
  */
 export const renderAppointmentTypeBadge = (type) => {
   const { label, color } = getAppointmentTypeBadge(type);

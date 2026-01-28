@@ -108,7 +108,7 @@ const LoginPage = () => {
               {/* Email Input */}
               <label className="flex flex-col w-full group">
                 <p className="text-text-main text-sm font-bold leading-normal pb-2">
-                  Email hoặc Tên đăng nhập
+                  Email hoặc số điện thoại
                 </p>
                 <div className="flex w-full items-center rounded-lg border border-border-color bg-background-light group-focus-within:border-primary group-focus-within:ring-1 group-focus-within:ring-primary transition-all overflow-hidden h-12">
                   <div className="pl-4 flex items-center justify-center text-text-secondary">
@@ -121,8 +121,8 @@ const LoginPage = () => {
                     name="email"
                     value={credentials.email}
                     onChange={handleChange}
-                    placeholder="nhap_email@example.com"
-                    type="email"
+                    placeholder="Email hoặc SĐT của bạn"
+                    type="text"
                     required
                   />
                 </div>

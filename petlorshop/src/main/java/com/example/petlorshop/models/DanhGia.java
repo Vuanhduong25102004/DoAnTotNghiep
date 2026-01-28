@@ -1,5 +1,6 @@
 package com.example.petlorshop.models;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -16,41 +17,40 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 public class DanhGia {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "danh_gia_id")
     private Integer danhGiaId;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
+    @JsonIgnore
     private NguoiDung nguoiDung;
 
-    @ManyToOne
-    @JoinColumn(name = "san_pham_id")
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "san_pham_id") // Cho phép null
+    @JsonIgnore
     private SanPham sanPham;
 
-    @ManyToOne
-    @JoinColumn(name = "dich_vu_id")
-    private DichVu dichVu;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "don_hang_id", nullable = false)
+    @JsonIgnore
+    private DonHang donHang;
 
     @Column(name = "so_sao", nullable = false)
-    private Integer soSao;
+    private Integer soSao; // 1-5
 
     @Column(name = "noi_dung", columnDefinition = "TEXT")
     private String noiDung;
 
-    @Column(name = "hinh_anh", columnDefinition = "TEXT")
-    private String hinhAnh;
-
     @CreationTimestamp
-    @Column(name = "ngay_tao")
-    private LocalDateTime ngayTao;
-
-    // --- Các trường mới cho Admin ---
-
-    @Column(name = "trang_thai")
-    private Boolean trangThai = true; // true: Hiện, false: Ẩn
+    @Column(name = "ngay_danh_gia")
+    private LocalDateTime ngayDanhGia;
 
     @Column(name = "phan_hoi", columnDefinition = "TEXT")
-    private String phanHoi; // Admin trả lời
+    private String phanHoi;
+
+    @Column(name = "ngay_phan_hoi")
+    private LocalDateTime ngayPhanHoi;
 }

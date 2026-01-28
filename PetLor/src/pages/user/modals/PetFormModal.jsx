@@ -66,6 +66,7 @@ const PetFormModal = ({ isOpen, onClose, onSuccess, initialData }) => {
   // --- 2. Xử lý Submit ---
   const handleSubmit = async () => {
     if (!formData.tenThuCung) {
+      // Dùng alert cho validate đơn giản
       alert("Vui lòng nhập tên thú cưng!");
       return;
     }
@@ -94,16 +95,16 @@ const PetFormModal = ({ isOpen, onClose, onSuccess, initialData }) => {
 
       if (isEditMode) {
         await petService.updateMyPet(initialData.thuCungId, dataToSend);
-        alert("Cập nhật thú cưng thành công!");
       } else {
         await petService.createMyPet(dataToSend);
-        alert("Thêm thú cưng thành công!");
       }
 
+      // Không hiện Toast ở đây nữa, để cha lo
       onSuccess();
       onClose();
     } catch (error) {
       console.error("Lỗi thao tác thú cưng:", error);
+      // Dùng alert để báo lỗi hệ thống nếu có
       alert("Thao tác thất bại. Vui lòng kiểm tra lại.");
     } finally {
       setLoading(false);
@@ -111,13 +112,11 @@ const PetFormModal = ({ isOpen, onClose, onSuccess, initialData }) => {
   };
 
   return (
-    // SỬA ĐỔI: Sử dụng relative z-[100] làm container gốc để tránh lỗi chồng chéo
     <div
       className={`relative z-[100] ${isOpen ? "visible" : "invisible"}`}
       role="dialog"
       aria-modal="true"
     >
-      {/* SỬA ĐỔI: Backdrop dùng FIXED inset-0 để đảm bảo full màn hình bất kể scroll */}
       <div
         className={`fixed inset-0 bg-gray-900/60 backdrop-blur-sm transition-opacity duration-500 ease-in-out ${
           isOpen ? "opacity-100" : "opacity-0"
@@ -125,7 +124,6 @@ const PetFormModal = ({ isOpen, onClose, onSuccess, initialData }) => {
         onClick={onClose}
       ></div>
 
-      {/* SỬA ĐỔI: Wrapper cố định full màn hình để chứa panel trượt */}
       <div className="fixed inset-0 overflow-hidden">
         <div className="absolute inset-0 overflow-hidden">
           <div className="pointer-events-none fixed inset-y-0 right-0 flex max-w-full pl-0 sm:pl-10">

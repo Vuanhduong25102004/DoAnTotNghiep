@@ -47,7 +47,7 @@ public class DonHang {
 
     @Enumerated(EnumType.STRING)
     @Column(name = "phuong_thuc_thanh_toan")
-    private PhuongThucThanhToan phuongThucThanhToan = PhuongThucThanhToan.COD;
+    private PhuongThucThanhToan phuongThucThanhToan; // Bỏ mặc định COD
     
     @Enumerated(EnumType.STRING)
     @Column(name = "trang_thai_thanh_toan")

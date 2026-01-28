@@ -2,7 +2,10 @@ import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import AOS from "aos";
 import "aos/dist/aos.css";
-// Import Services
+
+import { ToastContainer, toast, Slide } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
+
 import productService from "../services/productService";
 import searchService from "../services/searchService";
 import { useCart } from "../context/CartContext";
@@ -24,12 +27,55 @@ const ProductsPage = () => {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // --- STATE LỌC & TÌM KIẾM ---
-  const [categories, setCategories] = useState([]); // Danh sách danh mục lấy từ API
+  // --- STATE LỌC & TÌM KIẾM & PHÂN TRANG ---
+  const [categories, setCategories] = useState([]);
   const [keyword, setKeyword] = useState("");
-  const [selectedCategoryId, setSelectedCategoryId] = useState(null); // ID danh mục đang chọn
+  const [selectedCategoryId, setSelectedCategoryId] = useState(null);
+  const [sortOrder, setSortOrder] = useState("");
+
+  // State phân trang mới
+  const [currentPage, setCurrentPage] = useState(0); // API Spring Boot thường bắt đầu từ 0
+  const [totalPages, setTotalPages] = useState(0);
+  const pageSize = 20; // 20 sản phẩm / trang
 
   const { addToCart } = useCart();
+
+  // --- HÀM XỬ LÝ THÊM GIỎ HÀNG ---
+  const handleAddToCart = (product) => {
+    addToCart(product, 1);
+
+    const Msg = () => (
+      <div className="flex items-center gap-3">
+        <div className="w-12 h-12 flex-shrink-0 bg-gray-100 rounded-lg overflow-hidden border border-gray-200">
+          <img
+            src={product.image}
+            alt={product.name}
+            className="w-full h-full object-cover"
+            onError={(e) =>
+              (e.target.src = "https://placehold.co/100?text=Pet")
+            }
+          />
+        </div>
+        <div className="flex-1 min-w-0">
+          <h4 className="font-bold text-gray-800 text-sm">Đã thêm vào giỏ!</h4>
+          <p className="text-xs text-gray-500 truncate">{product.name}</p>
+        </div>
+      </div>
+    );
+
+    toast.success(<Msg />, {
+      position: "top-right",
+      autoClose: 3000,
+      hideProgressBar: false,
+      closeOnClick: true,
+      pauseOnHover: true,
+      draggable: true,
+      progress: undefined,
+      theme: "light",
+      transition: Slide,
+      className: "rounded-xl shadow-xl border border-gray-100 font-display",
+    });
+  };
 
   // --- 1. LẤY DANH MỤC SẢN PHẨM TỪ API ---
   useEffect(() => {
@@ -37,8 +83,6 @@ const ProductsPage = () => {
       try {
         const response = await productService.getAllCategories();
         let data = [];
-
-        // Xử lý các định dạng dữ liệu trả về khác nhau của API (Mảng, Pageable, Wrapper)
         if (Array.isArray(response)) {
           data = response;
         } else if (response?.data && Array.isArray(response.data)) {
@@ -46,7 +90,6 @@ const ProductsPage = () => {
         } else if (response?.content && Array.isArray(response.content)) {
           data = response.content;
         }
-
         setCategories(data);
       } catch (error) {
         console.error("Lỗi tải danh mục sản phẩm:", error);
@@ -55,32 +98,63 @@ const ProductsPage = () => {
     fetchCategories();
   }, []);
 
-  // --- 2. HÀM TẢI SẢN PHẨM (KẾT HỢP TÌM KIẾM & LỌC) ---
-  const fetchProducts = async (searchQuery = "", catId = null) => {
+  // --- 2. HÀM TẢI SẢN PHẨM (CẬP NHẬT PHÂN TRANG) ---
+  const fetchProducts = async (
+    page = 0, // Mặc định trang 0
+    searchQuery = "",
+    catId = null,
+    sortValue = "",
+  ) => {
     setLoading(true);
     try {
       let response;
 
-      // LOGIC: Nếu có keyword HOẶC có categoryId -> Gọi API Search
-      if (searchQuery.trim() || catId !== null) {
-        // Gọi searchProducts với cả 2 tham số
-        response = await searchService.searchProducts(searchQuery, catId);
-      } else {
-        // Mặc định lấy tất cả sản phẩm
-        response = await productService.getAllProducts();
+      // Cấu hình params gửi lên API
+      const params = {
+        page: page,
+        size: pageSize,
+      };
+
+      if (sortValue) {
+        params.sort = sortValue;
       }
 
-      // Xử lý dữ liệu trả về
-      let data = [];
-      if (Array.isArray(response)) data = response;
-      else if (response?.data && Array.isArray(response.data))
-        data = response.data;
-      else if (response?.content && Array.isArray(response.content))
-        data = response.content;
-      else if (response?.data?.content && Array.isArray(response.data.content))
-        data = response.data.content;
+      // Gọi API Search hoặc GetAll
+      if (searchQuery.trim() || catId !== null) {
+        // Lưu ý: searchService cần hỗ trợ truyền params page/size
+        response = await searchService.searchProducts(
+          searchQuery,
+          catId,
+          params,
+        );
+      } else {
+        response = await productService.getAllProducts(params);
+      }
 
-      // Map dữ liệu về dạng chuẩn để hiển thị
+      // Xử lý dữ liệu trả về từ Spring Boot Pageable
+      let data = [];
+      let total = 0;
+
+      // Kiểm tra cấu trúc response để lấy content và totalPages
+      if (response?.content && Array.isArray(response.content)) {
+        // Trường hợp trả về trực tiếp Page object
+        data = response.content;
+        total = response.totalPages;
+      } else if (
+        response?.data?.content &&
+        Array.isArray(response.data.content)
+      ) {
+        // Trường hợp bọc trong axios data
+        data = response.data.content;
+        total = response.data.totalPages;
+      } else if (Array.isArray(response)) {
+        // Trường hợp trả về List thuần (không phân trang)
+        data = response;
+        total = 1;
+      }
+
+      setTotalPages(total);
+
       const mappedProducts = data.map((product) => ({
         ...product,
         id: product.sanPhamId || product.id,
@@ -103,38 +177,51 @@ const ProductsPage = () => {
     }
   };
 
-  // Gọi lần đầu khi vào trang
+  // Gọi API khi thay đổi page, keyword, category, sort
   useEffect(() => {
-    fetchProducts();
-  }, []);
+    fetchProducts(currentPage, keyword, selectedCategoryId, sortOrder);
+  }, [currentPage, selectedCategoryId, sortOrder]); // Keyword thường xử lý riêng ở nút search
 
-  // --- HANDLERS XỬ LÝ SỰ KIỆN ---
-
-  // 1. Tìm kiếm
+  // --- HANDLERS ---
   const handleSearch = () => {
-    fetchProducts(keyword, selectedCategoryId);
+    setCurrentPage(0); // Reset về trang đầu khi tìm kiếm
+    fetchProducts(0, keyword, selectedCategoryId, sortOrder);
   };
 
   const handleKeyDown = (e) => {
     if (e.key === "Enter") {
-      fetchProducts(keyword, selectedCategoryId);
+      handleSearch();
     }
   };
 
-  // 2. Click chọn danh mục
   const handleCategoryClick = (catId) => {
     setSelectedCategoryId(catId);
-    fetchProducts(keyword, catId); // Gọi lọc ngay lập tức
+    setCurrentPage(0); // Reset về trang đầu khi lọc danh mục
+    // useEffect sẽ tự gọi fetchProducts
   };
 
-  // 3. Reset (Nút Tất cả)
   const handleReset = () => {
     setKeyword("");
     setSelectedCategoryId(null);
-    fetchProducts("", null);
+    setSortOrder("");
+    setCurrentPage(0);
+    // useEffect sẽ tự gọi fetchProducts
   };
 
-  // Init AOS
+  const handleSortChange = (e) => {
+    const newSortOrder = e.target.value;
+    setSortOrder(newSortOrder);
+    setCurrentPage(0); // Reset về trang đầu khi sort
+  };
+
+  // Hàm chuyển trang
+  const handlePageChange = (newPage) => {
+    if (newPage >= 0 && newPage < totalPages) {
+      setCurrentPage(newPage);
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  };
+
   useEffect(() => {
     window.scrollTo(0, 0);
     const aosInit = setTimeout(() => {
@@ -150,7 +237,6 @@ const ProductsPage = () => {
     return () => clearTimeout(aosInit);
   }, []);
 
-  // Style Background
   const heroPatternStyle = {
     backgroundImage: "radial-gradient(#0FB478 0.5px, transparent 0.5px)",
     backgroundSize: "24px 24px",
@@ -159,6 +245,8 @@ const ProductsPage = () => {
 
   return (
     <div className="w-full min-h-screen font-display bg-gray-50 text-gray-900 overflow-x-hidden transition-colors duration-300">
+      <ToastContainer style={{ marginTop: "50px", zIndex: 9999 }} />
+
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 mt-16">
         {/* --- HERO SECTION --- */}
         <section
@@ -174,7 +262,7 @@ const ProductsPage = () => {
           <div className="relative z-10 w-full lg:w-1/2 p-8 lg:p-16 flex flex-col justify-center">
             <div className="inline-flex items-center gap-2 px-4 py-2 bg-primary/10 text-primary rounded-full text-sm font-bold w-fit mb-6">
               <span className="material-symbols-outlined text-lg">stars</span>
-              BST Mới Nhất 2024
+              BST Mới Nhất 2026
             </div>
             <h1 className="text-gray-900 text-4xl lg:text-6xl font-extrabold mb-6 leading-tight">
               Sản phẩm của <br />
@@ -200,7 +288,7 @@ const ProductsPage = () => {
               className="w-full h-full object-cover"
               src="https://lh3.googleusercontent.com/aida-public/AB6AXuDsKA4bJQUp5mRHcMG9sYxHfPgEanH1R4WKbtETtGYSeII2bdl1KnUKZS5jLhumrTVcYaoFA9g30YR9WSoI0eEuJKFEwIYrHKPgP_PIsd-BjRV3taTMu40R5eaMe23-aseCmnOH32d-vjQ0Z350lTKAWKUWZmxxAUctnJZYBeUQrVDK-kGFZjT84yoJCczSy_UgCqUbbwcBPtia6SWvX-kHTZtlC3h36Vl5otzc9NJJuWDDoZOcoWqRzPTNsIHhcVcARru4tZYf9fw"
             />
-            {/* Floating Badge 1 */}
+            {/* Badge floating */}
             <div
               className="absolute top-8 right-8 bg-white/90 backdrop-blur-sm p-4 rounded-2xl shadow-xl flex items-center gap-4 border border-white/20"
               data-aos="zoom-in"
@@ -222,7 +310,6 @@ const ProductsPage = () => {
                 </div>
               </div>
             </div>
-            {/* Floating Badge 2 */}
             <div
               className="absolute bottom-8 left-8 bg-white/90 backdrop-blur-sm p-4 rounded-2xl shadow-xl flex items-center gap-4 border border-white/20"
               data-aos="zoom-in"
@@ -244,7 +331,6 @@ const ProductsPage = () => {
         {/* --- FILTER & SEARCH SECTION --- */}
         <section className="mb-12" data-aos="fade-up">
           <div className="bg-white p-4 rounded-full border border-gray-100 shadow-sm flex flex-col lg:flex-row gap-6 items-center justify-between">
-            {/* INPUT TÌM KIẾM */}
             <div className="relative w-full lg:w-96">
               <span
                 className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 cursor-pointer hover:text-primary transition-colors"
@@ -262,9 +348,7 @@ const ProductsPage = () => {
               />
             </div>
 
-            {/* DANH SÁCH DANH MỤC (ĐỘNG TỪ API) */}
             <div className="flex items-center gap-2 overflow-x-auto pb-2 lg:pb-0 no-scrollbar w-full lg:w-auto">
-              {/* Nút Tất cả */}
               <button
                 onClick={handleReset}
                 className={`px-6 py-2.5 rounded-full font-bold whitespace-nowrap transition-all ${
@@ -276,9 +360,7 @@ const ProductsPage = () => {
                 Tất cả
               </button>
 
-              {/* Render danh sách danh mục từ API */}
               {categories.map((cat) => {
-                // Xử lý lấy ID và Tên tùy theo dữ liệu trả về từ API (danhMucId/id, tenDanhMuc/name)
                 const catId = cat.danhMucId || cat.id;
                 const catName = cat.tenDanhMuc || cat.name;
 
@@ -298,12 +380,15 @@ const ProductsPage = () => {
               })}
             </div>
 
-            {/* Sort Dropdown */}
             <div className="w-full lg:w-48">
-              <select className="w-full py-3 px-4 bg-gray-50 border-none rounded-full focus:ring-2 focus:ring-primary outline-none text-sm font-medium cursor-pointer">
-                <option>Mới nhất</option>
-                <option>Giá thấp đến cao</option>
-                <option>Giá cao đến thấp</option>
+              <select
+                value={sortOrder}
+                onChange={handleSortChange}
+                className="w-full py-3 px-4 bg-gray-50 border-none rounded-full focus:ring-2 focus:ring-primary outline-none text-sm font-medium cursor-pointer"
+              >
+                <option value="">Mới nhất</option>
+                <option value="gia,asc">Giá thấp đến cao</option>
+                <option value="gia,desc">Giá cao đến thấp</option>
               </select>
             </div>
           </div>
@@ -317,62 +402,82 @@ const ProductsPage = () => {
                 Đang tải sản phẩm...
               </p>
             ) : products.length > 0 ? (
-              products.map((product, index) => (
-                <div
-                  key={product.id}
-                  className="group bg-white rounded-3xl overflow-hidden border border-gray-100 hover:shadow-2xl transition-all duration-300 flex flex-col"
-                  data-aos="fade-up"
-                  data-aos-delay={index * 50}
-                >
-                  {/* Image Area */}
-                  <div className="relative h-72 overflow-hidden bg-gray-50">
-                    <Link
-                      to={`/products/${product.id}`}
-                      className="block h-full w-full"
-                    >
-                      <img
-                        alt={product.name}
-                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                        src={product.image}
-                        onError={(e) => {
-                          e.target.onerror = null;
-                          e.target.src =
-                            "https://placehold.co/400x400?text=No+Image";
-                        }}
-                      />
-                    </Link>
-                    {/* Badge mẫu */}
-                    <div className="absolute top-4 left-4 bg-primary text-white px-3 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider shadow-sm">
-                      NEW
+              products.map((product, index) => {
+                const isOutOfStock = product.soLuongTonKho <= 0;
+
+                return (
+                  <div
+                    key={product.id}
+                    className="group bg-white rounded-3xl overflow-hidden border border-gray-100 hover:shadow-2xl transition-all duration-300 flex flex-col"
+                    data-aos="fade-up"
+                    data-aos-delay={index * 50}
+                  >
+                    <div className="relative h-72 overflow-hidden bg-gray-50">
+                      <Link
+                        to={`/products/${product.id}`}
+                        className="block h-full w-full"
+                      >
+                        <img
+                          alt={product.name}
+                          className={`w-full h-full object-cover group-hover:scale-110 transition-transform duration-500 ${
+                            isOutOfStock ? "grayscale opacity-80" : ""
+                          }`}
+                          src={product.image}
+                          onError={(e) => {
+                            e.target.onerror = null;
+                            e.target.src =
+                              "https://placehold.co/400x400?text=No+Image";
+                          }}
+                        />
+                      </Link>
+
+                      {!isOutOfStock && (
+                        <div className="absolute top-4 left-4 bg-primary text-white px-3 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider shadow-sm">
+                          NEW
+                        </div>
+                      )}
+
+                      {isOutOfStock && (
+                        <div className="absolute inset-0 flex items-center justify-center bg-black/40 pointer-events-none">
+                          <div className="bg-gray-800 text-white px-4 py-2 rounded-lg font-bold uppercase tracking-wider shadow-lg transform -rotate-12 border-2 border-white">
+                            Hết hàng
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="p-6 flex flex-col flex-grow">
+                      <Link to={`/products/${product.id}`}>
+                        <h3 className="font-bold text-lg mb-2 text-gray-900 group-hover:text-primary transition-colors line-clamp-2">
+                          {product.name}
+                        </h3>
+                      </Link>
+
+                      <div className="text-primary font-extrabold text-xl mb-4">
+                        {formatPrice(product.price)}
+                      </div>
+
+                      <button
+                        disabled={isOutOfStock}
+                        onClick={() =>
+                          !isOutOfStock && handleAddToCart(product)
+                        }
+                        className={`mt-auto w-full flex items-center justify-center gap-2 font-bold py-3.5 rounded-xl transition-all ${
+                          isOutOfStock
+                            ? "bg-gray-200 text-gray-400 cursor-not-allowed"
+                            : "bg-gray-100 hover:bg-primary hover:text-white text-gray-700 active:scale-95"
+                        }`}
+                      >
+                        <span className="material-symbols-outlined text-xl">
+                          {isOutOfStock ? "block" : "shopping_cart"}
+                        </span>
+                        {isOutOfStock ? "Hết hàng" : "Thêm vào giỏ"}
+                      </button>
                     </div>
                   </div>
-
-                  {/* Content Area */}
-                  <div className="p-6 flex flex-col flex-grow">
-                    <Link to={`/products/${product.id}`}>
-                      <h3 className="font-bold text-lg mb-2 text-gray-900 group-hover:text-primary transition-colors line-clamp-2">
-                        {product.name}
-                      </h3>
-                    </Link>
-
-                    <div className="text-primary font-extrabold text-xl mb-4">
-                      {formatPrice(product.price)}
-                    </div>
-
-                    <button
-                      onClick={() => addToCart(product, 1)}
-                      className="mt-auto w-full flex items-center justify-center gap-2 bg-gray-100 hover:bg-primary hover:text-white text-gray-700 font-bold py-3.5 rounded-xl transition-all active:scale-95"
-                    >
-                      <span className="material-symbols-outlined text-xl">
-                        shopping_cart
-                      </span>
-                      Thêm vào giỏ
-                    </button>
-                  </div>
-                </div>
-              ))
+                );
+              })
             ) : (
-              // XỬ LÝ KHI KHÔNG CÓ KẾT QUẢ TÌM KIẾM
               <div className="col-span-full text-center py-12 flex flex-col items-center justify-center">
                 <span className="material-symbols-outlined text-6xl text-gray-300 mb-4">
                   search_off
@@ -390,22 +495,45 @@ const ProductsPage = () => {
             )}
           </div>
 
-          {/* Pagination - Chỉ hiện khi có sản phẩm */}
-          {products.length > 0 && (
+          {/* --- PAGINATION SECTION (DYNAMIC) --- */}
+          {totalPages > 1 && (
             <div className="mt-16 flex justify-center gap-2" data-aos="fade-up">
-              <button className="w-12 h-12 flex items-center justify-center rounded-xl border border-gray-200 text-gray-400 hover:border-primary hover:text-primary transition-all">
+              <button
+                onClick={() => handlePageChange(currentPage - 1)}
+                disabled={currentPage === 0}
+                className={`w-12 h-12 flex items-center justify-center rounded-xl border border-gray-200 transition-all ${
+                  currentPage === 0
+                    ? "text-gray-300 cursor-not-allowed"
+                    : "text-gray-400 hover:border-primary hover:text-primary"
+                }`}
+              >
                 <span className="material-symbols-outlined">chevron_left</span>
               </button>
-              <button className="w-12 h-12 flex items-center justify-center rounded-xl bg-primary text-white font-bold shadow-lg shadow-primary/30">
-                1
-              </button>
-              <button className="w-12 h-12 flex items-center justify-center rounded-xl border border-gray-200 text-gray-600 hover:border-primary hover:text-primary transition-all font-bold">
-                2
-              </button>
-              <button className="w-12 h-12 flex items-center justify-center rounded-xl border border-gray-200 text-gray-600 hover:border-primary hover:text-primary transition-all font-bold">
-                3
-              </button>
-              <button className="w-12 h-12 flex items-center justify-center rounded-xl border border-gray-200 text-gray-400 hover:border-primary hover:text-primary transition-all">
+
+              {/* Render danh sách các trang */}
+              {Array.from({ length: totalPages }, (_, i) => i).map((page) => (
+                <button
+                  key={page}
+                  onClick={() => handlePageChange(page)}
+                  className={`w-12 h-12 flex items-center justify-center rounded-xl font-bold transition-all ${
+                    currentPage === page
+                      ? "bg-primary text-white shadow-lg shadow-primary/30"
+                      : "border border-gray-200 text-gray-600 hover:border-primary hover:text-primary"
+                  }`}
+                >
+                  {page + 1}
+                </button>
+              ))}
+
+              <button
+                onClick={() => handlePageChange(currentPage + 1)}
+                disabled={currentPage === totalPages - 1}
+                className={`w-12 h-12 flex items-center justify-center rounded-xl border border-gray-200 transition-all ${
+                  currentPage === totalPages - 1
+                    ? "text-gray-300 cursor-not-allowed"
+                    : "text-gray-400 hover:border-primary hover:text-primary"
+                }`}
+              >
                 <span className="material-symbols-outlined">chevron_right</span>
               </button>
             </div>

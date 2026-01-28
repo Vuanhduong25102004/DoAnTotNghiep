@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from "react";
 import userService from "../../../services/userService";
+// 1. Import toast
+import { toast } from "react-toastify";
 
 const EditProfileModal = ({
   isOpen,
@@ -91,26 +93,28 @@ const EditProfileModal = ({
       }
 
       await userService.updateMe(dataToSend);
-      alert("Cập nhật thành công!");
+
+      // 2. Thay alert bằng toast success
+      toast.success("Cập nhật hồ sơ thành công!");
+
       onUpdateSuccess();
       onClose();
     } catch (error) {
       console.error("Lỗi cập nhật:", error);
-      alert("Có lỗi xảy ra khi cập nhật.");
+      // 3. Thay alert bằng toast error
+      toast.error("Có lỗi xảy ra khi cập nhật. Vui lòng thử lại.");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    // FIX: Sử dụng relative z-[100] làm container gốc
     <div
       className="relative z-[100]"
       aria-labelledby="slide-over-title"
       role="dialog"
       aria-modal="true"
     >
-      {/* FIX: Backdrop dùng FIXED inset-0 để đảm bảo full màn hình */}
       <div
         className={`fixed inset-0 bg-gray-900/60 backdrop-blur-sm transition-opacity duration-300 ease-in-out ${
           isOpen ? "opacity-100 visible" : "opacity-0 invisible delay-300"
@@ -118,13 +122,11 @@ const EditProfileModal = ({
         onClick={onClose}
       ></div>
 
-      {/* FIX: Wrapper cố định full màn hình để chứa panel trượt */}
       <div
         className={`fixed inset-0 overflow-hidden ${isOpen ? "pointer-events-auto" : "pointer-events-none"}`}
       >
         <div className="absolute inset-0 overflow-hidden">
           <div className="pointer-events-none fixed inset-y-0 right-0 flex max-w-full pl-0 sm:pl-10">
-            {/* Panel chính: CSS giữ nguyên như cũ */}
             <div
               className={`pointer-events-auto w-screen max-w-md transform transition-transform duration-300 ease-in-out bg-white shadow-2xl flex flex-col h-full ${
                 isOpen ? "translate-x-0" : "translate-x-full"

@@ -220,6 +220,17 @@ public class ThuCungService {
         thuCungRepository.deleteById(id);
     }
     
+    public void deleteMyPet(String email, Integer id) {
+        ThuCung thuCung = thuCungRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy thú cưng với ID: " + id));
+
+        if (!thuCung.getNguoiDung().getEmail().equals(email)) {
+            throw new RuntimeException("Bạn không có quyền xóa thú cưng này.");
+        }
+        
+        thuCungRepository.deleteById(id);
+    }
+    
     public HoSoBenhAnResponse getHoSoBenhAn(Integer thuCungId) {
         ThuCung thuCung = thuCungRepository.findById(thuCungId)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy thú cưng với ID: " + thuCungId));

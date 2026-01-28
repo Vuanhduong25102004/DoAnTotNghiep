@@ -28,7 +28,7 @@ export const CartProvider = ({ children }) => {
     const tongSoLuong = items.reduce((acc, item) => acc + item.soLuong, 0);
     const tongTien = items.reduce(
       (acc, item) => acc + item.donGia * item.soLuong,
-      0
+      0,
     );
     return { items, tongSoLuong, tongTien };
   };
@@ -108,12 +108,12 @@ export const CartProvider = ({ children }) => {
     // Common logic for UI update (Optimistic)
     const oldCartData = { ...cartData };
     const newItems = cartData.items.map((item) =>
-      item.sanPhamId === productId ? { ...item, soLuong: newQuantity } : item
+      item.sanPhamId === productId ? { ...item, soLuong: newQuantity } : item,
     );
     // Tạm tính tổng tiền UI
     const newTotalPrice = newItems.reduce(
       (total, item) => total + item.donGia * item.soLuong,
-      0
+      0,
     );
 
     // A. NẾU LÀ GUEST
@@ -131,19 +131,21 @@ export const CartProvider = ({ children }) => {
       await fetchCart(false);
     } catch (error) {
       setCartData(oldCartData);
-      alert("Lỗi cập nhật số lượng");
+      // alert("Lỗi cập nhật số lượng"); // Đã tắt alert
+      console.error("Lỗi cập nhật số lượng:", error);
     }
   };
+
   // 4. Logic Xóa
   const removeFromCart = async (cartDetailId, productId) => {
     const userId = localStorage.getItem("userId");
     const oldCartData = { ...cartData };
     const newItems = cartData.items.filter(
-      (item) => item.sanPhamId !== productId
+      (item) => item.sanPhamId !== productId,
     );
 
     // Xử lý UI chung (để mượt)
-    const tempCartForUI = calculateGuestCartTotals(newItems); // Hàm này dùng tạm tính cũng được
+    const tempCartForUI = calculateGuestCartTotals(newItems);
     setCartData(tempCartForUI);
     setSelectedItemIds((prev) => prev.filter((id) => id !== cartDetailId));
 
@@ -160,7 +162,7 @@ export const CartProvider = ({ children }) => {
     } catch (error) {
       console.error("Lỗi xóa sản phẩm:", error);
       setCartData(oldCartData);
-      alert("Xóa thất bại!");
+      // alert("Xóa thất bại!"); // Đã tắt alert
     }
   };
 
@@ -168,16 +170,16 @@ export const CartProvider = ({ children }) => {
   const selectedStat = useMemo(() => {
     // Lọc ra các item đang nằm trong mảng selectedItemIds
     const selectedItems = cartData.items.filter((item) =>
-      selectedItemIds.includes(item.id)
+      selectedItemIds.includes(item.id),
     );
 
     const totalSelectedPrice = selectedItems.reduce(
       (total, item) => total + item.donGia * item.soLuong,
-      0
+      0,
     );
     const totalSelectedCount = selectedItems.reduce(
       (total, item) => total + item.soLuong,
-      0
+      0,
     );
 
     return {
@@ -193,33 +195,30 @@ export const CartProvider = ({ children }) => {
     // A. NẾU LÀ GUEST (Lưu LocalStorage)
     if (!userId) {
       const currentItems = [...cartData.items];
-      // Tìm xem sản phẩm đã có trong giỏ chưa (so sánh sanPhamId)
       const existingItemIndex = currentItems.findIndex(
-        (item) => item.sanPhamId === productInfo.id
+        (item) => item.sanPhamId === productInfo.id,
       );
 
       if (existingItemIndex > -1) {
-        // Đã có -> Tăng số lượng
         currentItems[existingItemIndex].soLuong += quantity;
       } else {
-        // Chưa có -> Thêm mới
-        // Map field cho giống API trả về để CartPage không bị lỗi
         const newItem = {
-          id: `guest_${productInfo.id}_${Date.now()}`, // Fake ID cho dòng cart detail
+          id: `guest_${productInfo.id}_${Date.now()}`,
           sanPhamId: productInfo.id,
           tenSanPham: productInfo.name,
           donGia: productInfo.price,
-          hinhAnh: productInfo.image, // Lưu đường dẫn ảnh đầy đủ
+          hinhAnh: productInfo.image,
           soLuong: quantity,
         };
         currentItems.push(newItem);
       }
 
-      // Tính toán lại tổng và lưu
       const newCartData = calculateGuestCartTotals(currentItems);
       setCartData(newCartData);
       localStorage.setItem(GUEST_CART_KEY, JSON.stringify(newCartData));
-      alert("Đã thêm vào giỏ hàng (Guest)!");
+
+      // --- ĐÃ TẮT ALERT GUEST ---
+      // alert("Đã thêm vào giỏ hàng (Guest)!");
       return;
     }
 
@@ -227,14 +226,17 @@ export const CartProvider = ({ children }) => {
     try {
       await orderService.addToCart({
         userId: userId,
-        sanPhamId: productInfo.id, // API chỉ cần ID
+        sanPhamId: productInfo.id,
         soLuong: quantity,
       });
-      alert("Đã thêm sản phẩm vào giỏ hàng!");
+
+      // --- ĐÃ TẮT ALERT USER ---
+      // alert("Đã thêm sản phẩm vào giỏ hàng!");
+
       await fetchCart(false);
     } catch (error) {
       console.error("Lỗi thêm giỏ hàng:", error);
-      alert("Thêm thất bại! Vui lòng thử lại.");
+      // alert("Thêm thất bại! Vui lòng thử lại."); // Tắt luôn alert lỗi cho gọn
     }
   };
 
@@ -257,7 +259,7 @@ export const CartProvider = ({ children }) => {
       return true;
     } catch (error) {
       console.error("Lỗi dọn giỏ hàng:", error);
-      alert("Lỗi khi dọn giỏ hàng!");
+      // alert("Lỗi khi dọn giỏ hàng!"); // Đã tắt alert
       await fetchCart(false);
       return false;
     }
@@ -266,15 +268,15 @@ export const CartProvider = ({ children }) => {
   const value = {
     cartData,
     loading,
-    selectedItemIds, // Export state chọn
-    selectedStat, // Export tổng tiền đã chọn
+    selectedItemIds,
+    selectedStat,
     fetchCart,
     addToCart,
     updateQuantity,
     removeFromCart,
     clearCart,
-    toggleSelectItem, // Export hàm checkbox đơn
-    selectAllItems, // Export hàm checkbox all
+    toggleSelectItem,
+    selectAllItems,
   };
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;

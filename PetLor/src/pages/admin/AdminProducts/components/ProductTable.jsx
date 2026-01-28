@@ -1,12 +1,12 @@
 import React from "react";
-import useEscapeKey from "../../../../hooks/useEscapeKey";
+// import useEscapeKey from "../../../../hooks/useEscapeKey"; // Giữ nguyên import của bạn
 import {
   formatCurrency,
   StockBadge,
   getImageUrl,
 } from "../../components/utils";
 
-// Cập nhật SkeletonRow để thêm cột Trọng lượng
+// ... (Giữ nguyên component SkeletonRow của bạn)
 const SkeletonRow = () => (
   <tr className="animate-pulse border-b border-gray-100 last:border-0">
     <td className="px-6 py-4">
@@ -22,7 +22,6 @@ const SkeletonRow = () => (
     <td className="px-6 py-4">
       <div className="h-4 bg-gray-200 rounded w-20"></div>
     </td>
-    {/* Thêm Skeleton cho cột Trọng lượng */}
     <td className="px-6 py-4">
       <div className="h-4 bg-gray-200 rounded w-16"></div>
     </td>
@@ -51,6 +50,45 @@ const ProductTable = ({
   onEdit,
   onDelete,
 }) => {
+  // --- LOGIC PHÂN TRANG MỚI ---
+  const renderPageNumbers = () => {
+    const pageNumbers = [];
+    const maxVisibleButtons = 3; // Bạn muốn hiện 3 nút (1 2 3)
+
+    // Tính toán trang bắt đầu (start)
+    // Mặc định là (trang hiện tại - 1) để trang hiện tại nằm giữa
+    let startPage = Math.max(1, currentPage - 1);
+
+    // Tính toán trang kết thúc (end)
+    let endPage = Math.min(totalPages, startPage + maxVisibleButtons - 1);
+
+    // ĐIỀU CHỈNH:
+    // Nếu endPage chạm trần (totalPages), ta phải lùi startPage lại
+    // để đảm bảo vẫn đủ 3 nút (trừ khi tổng số trang < 3)
+    if (endPage === totalPages) {
+      startPage = Math.max(1, endPage - maxVisibleButtons + 1);
+    }
+
+    // Tạo mảng các số trang
+    for (let i = startPage; i <= endPage; i++) {
+      pageNumbers.push(i);
+    }
+
+    return pageNumbers.map((number) => (
+      <button
+        key={number}
+        onClick={() => onPageChange(number)}
+        className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${
+          currentPage === number
+            ? "z-10 bg-primary border-primary text-white"
+            : "bg-white border-gray-300 text-gray-500 hover:bg-gray-50"
+        }`}
+      >
+        {number}
+      </button>
+    ));
+  };
+
   return (
     <div className="bg-white shadow-sm rounded-xl border border-gray-200 overflow-hidden mt-6">
       <div className="overflow-x-auto">
@@ -66,7 +104,6 @@ const ProductTable = ({
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Giá bán
               </th>
-              {/* Thêm cột Trọng lượng */}
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Trọng lượng
               </th>
@@ -87,112 +124,113 @@ const ProductTable = ({
                   <SkeletonRow key={idx} />
                 ))
               : products.length > 0
-              ? products.map((product, index) => {
-                  const stockStatus = StockBadge(product.soLuongTonKho);
-                  return (
-                    <tr
-                      key={product.sanPhamId || index}
-                      className="hover:bg-gray-50 transition-colors"
-                    >
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        #{product.sanPhamId}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center">
-                          <div className="h-10 w-10 flex-shrink-0">
-                            <img
-                              className="h-10 w-10 rounded-md object-cover border border-gray-200"
-                              src={getImageUrl(product.hinhAnh)}
-                              alt={product.tenSanPham}
-                              onError={(e) => {
-                                e.target.onerror = null;
-                                e.target.src =
-                                  "https://placehold.co/40?text=Pet";
-                              }}
-                            />
-                          </div>
-                          <div className="ml-4">
-                            <div
-                              className="text-sm font-medium text-gray-900 max-w-[200px] truncate"
-                              title={product.tenSanPham}
-                            >
-                              {product.tenSanPham}
-                            </div>
-                            <div className="text-xs text-gray-500">
-                              Danh mục:{" "}
-                              <span className="font-semibold">
-                                {product.categoryName}
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-gray-900">
-                        {formatCurrency(product.gia)}
-                      </td>
-                      {/* Hiển thị dữ liệu Trọng lượng */}
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {product.trongLuong ? `${product.trongLuong} g` : "N/A"}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm text-gray-900 font-medium">
-                            {product.soLuongTonKho}
-                          </span>
-
-                          <StockBadge quantity={product.soLuongTonKho} />
-                        </div>
-                      </td>
-                      <td
-                        className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 max-w-[200px] truncate"
-                        title={product.moTaChiTiet}
+                ? products.map((product, index) => {
+                    // const stockStatus = StockBadge(product.soLuongTonKho); // Dòng này có thể thừa vì bạn dùng Component <StockBadge /> bên dưới
+                    return (
+                      <tr
+                        key={product.sanPhamId || index}
+                        className="hover:bg-gray-50 transition-colors"
                       >
-                        {product.moTaChiTiet || "Chưa có mô tả"}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                        <div className="flex items-center justify-end space-x-2">
-                          <button
-                            title="Xem chi tiết"
-                            className="text-gray-400 hover:text-green-600 transition-colors"
-                            onClick={() => onViewDetail(product.sanPhamId)}
-                          >
-                            <span className="material-symbols-outlined text-base">
-                              visibility
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          #{product.sanPhamId}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="flex items-center">
+                            <div className="h-10 w-10 flex-shrink-0">
+                              <img
+                                className="h-10 w-10 rounded-md object-cover border border-gray-200"
+                                src={getImageUrl(product.hinhAnh)}
+                                alt={product.tenSanPham}
+                                onError={(e) => {
+                                  e.target.onerror = null;
+                                  e.target.src =
+                                    "https://placehold.co/40?text=Pet";
+                                }}
+                              />
+                            </div>
+                            <div className="ml-4">
+                              <div
+                                className="text-sm font-medium text-gray-900 max-w-[200px] truncate"
+                                title={product.tenSanPham}
+                              >
+                                {product.tenSanPham}
+                              </div>
+                              <div className="text-xs text-gray-500">
+                                Danh mục:{" "}
+                                <span className="font-semibold">
+                                  {product.categoryName}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-gray-900">
+                          {formatCurrency(product.gia)}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          {product.trongLuong
+                            ? `${product.trongLuong} g`
+                            : "N/A"}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm text-gray-900 font-medium">
+                              {product.soLuongTonKho}
                             </span>
-                          </button>
-                          <button
-                            title="Chỉnh sửa"
-                            className="text-gray-400 hover:text-blue-500 transition-colors"
-                            onClick={() => onEdit(product)}
-                          >
-                            <span className="material-symbols-outlined text-base">
-                              edit_note
-                            </span>
-                          </button>
-                          <button
-                            title="Xóa"
-                            className="text-gray-400 hover:text-red-500 transition-colors"
-                            onClick={() => onDelete(product.sanPhamId)}
-                          >
-                            <span className="material-symbols-outlined text-base">
-                              cancel
-                            </span>
-                          </button>
-                        </div>
+
+                            <StockBadge quantity={product.soLuongTonKho} />
+                          </div>
+                        </td>
+                        <td
+                          className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 max-w-[200px] truncate"
+                          title={product.moTaChiTiet}
+                        >
+                          {product.moTaChiTiet || "Chưa có mô tả"}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                          <div className="flex items-center justify-end space-x-2">
+                            <button
+                              title="Xem chi tiết"
+                              className="text-gray-400 hover:text-green-600 transition-colors"
+                              onClick={() => onViewDetail(product.sanPhamId)}
+                            >
+                              <span className="material-symbols-outlined text-base">
+                                visibility
+                              </span>
+                            </button>
+                            <button
+                              title="Chỉnh sửa"
+                              className="text-gray-400 hover:text-blue-500 transition-colors"
+                              onClick={() => onEdit(product)}
+                            >
+                              <span className="material-symbols-outlined text-base">
+                                edit_note
+                              </span>
+                            </button>
+                            <button
+                              title="Xóa"
+                              className="text-gray-400 hover:text-red-500 transition-colors"
+                              onClick={() => onDelete(product.sanPhamId)}
+                            >
+                              <span className="material-symbols-outlined text-base">
+                                cancel
+                              </span>
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })
+                : !loading && (
+                    <tr>
+                      <td
+                        colSpan="7"
+                        className="px-6 py-4 text-center text-gray-500"
+                      >
+                        Không tìm thấy sản phẩm nào phù hợp.
                       </td>
                     </tr>
-                  );
-                })
-              : !loading && (
-                  <tr>
-                    <td
-                      colSpan="7" // Cập nhật colSpan thành 7 vì thêm 1 cột
-                      className="px-6 py-4 text-center text-gray-500"
-                    >
-                      Không tìm thấy sản phẩm nào phù hợp.
-                    </td>
-                  </tr>
-                )}
+                  )}
           </tbody>
         </table>
       </div>
@@ -208,7 +246,7 @@ const ProductTable = ({
               </span>{" "}
               đến{" "}
               <span className="font-medium">
-                {indexOfFirstItem + products.length}
+                {Math.min(indexOfFirstItem + products.length, totalElements)}
               </span>{" "}
               trong số <span className="font-medium">{totalElements}</span> kết
               quả
@@ -222,32 +260,21 @@ const ProductTable = ({
               <button
                 onClick={() => onPageChange(currentPage - 1)}
                 disabled={currentPage === 1}
-                className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50"
+                className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <span className="sr-only">Previous</span>
                 <span className="material-symbols-outlined text-base">
                   chevron_left
                 </span>
               </button>
-              {Array.from({ length: totalPages }, (_, i) => i + 1).map(
-                (number) => (
-                  <button
-                    key={number}
-                    onClick={() => onPageChange(number)}
-                    className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${
-                      currentPage === number
-                        ? "z-10 bg-primary border-primary text-white"
-                        : "bg-white border-gray-300 text-gray-500 hover:bg-gray-50"
-                    }`}
-                  >
-                    {number}
-                  </button>
-                )
-              )}
+
+              {/* GỌI HÀM RENDER ĐÃ TẠO Ở TRÊN */}
+              {renderPageNumbers()}
+
               <button
                 onClick={() => onPageChange(currentPage + 1)}
                 disabled={currentPage === totalPages || totalPages === 0}
-                className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50"
+                className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <span className="sr-only">Next</span>
                 <span className="material-symbols-outlined text-base">

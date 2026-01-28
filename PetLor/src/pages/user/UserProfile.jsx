@@ -14,6 +14,10 @@ import {
 import AOS from "aos";
 import "aos/dist/aos.css";
 
+// --- 1. IMPORT TOAST ---
+import { ToastContainer, toast, Slide } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
+
 const UserProfile = () => {
   const [user] = useOutletContext();
   const [pets, setPets] = useState([]);
@@ -34,7 +38,6 @@ const UserProfile = () => {
 
   const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8080";
 
-  // --- Logic kiểm tra vị trí cuộn để ẩn/hiện nút mũi tên ---
   const checkScroll = () => {
     if (scrollRef.current) {
       const { scrollLeft, scrollWidth, clientWidth } = scrollRef.current;
@@ -43,7 +46,6 @@ const UserProfile = () => {
     }
   };
 
-  // --- Logic cuộn khi bấm nút ---
   const handleScroll = (direction) => {
     if (scrollRef.current) {
       const { clientWidth } = scrollRef.current;
@@ -56,7 +58,6 @@ const UserProfile = () => {
     }
   };
 
-  // --- API Functions ---
   const fetchData = async () => {
     try {
       const [petRes, appRes, orderRes] = await Promise.all([
@@ -70,6 +71,8 @@ const UserProfile = () => {
       setOrders(Array.isArray(orderData) ? orderData : []);
     } catch (error) {
       console.error("Lỗi khi lấy dữ liệu:", error);
+      // --- 2. THÔNG BÁO LỖI ---
+      toast.error("Không thể tải thông tin hồ sơ.");
     } finally {
       setLoading(false);
       setTimeout(checkScroll, 500);
@@ -81,12 +84,11 @@ const UserProfile = () => {
     const newPets = Array.isArray(res) ? res : res.data || [];
     setPets(newPets);
     setTimeout(checkScroll, 300);
+    // Có thể thêm toast nếu muốn: toast.success("Đã làm mới danh sách thú cưng");
   };
 
-  // --- XỬ LÝ KHI UPDATE PROFILE THÀNH CÔNG ---
   const handleUpdateSuccess = () => {
-    // Cách đơn giản nhất để cập nhật lại thông tin User trên Header/Context
-    // là reload lại trang (vì user nằm trong Outlet Context)
+    // Reload lại trang để update context user
     window.location.reload();
   };
 
@@ -119,6 +121,12 @@ const UserProfile = () => {
 
   return (
     <main className="space-y-8 animate-fade-in pb-10">
+      {/* --- 3. TOAST CONTAINER --- */}
+      <ToastContainer
+        style={{ marginTop: "60px", zIndex: 9999 }}
+        transition={Slide}
+      />
+
       {/* 1. THÔNG TIN CÁ NHÂN */}
       <section
         className="bg-white rounded-3xl p-8 shadow-sm border border-gray-100"
@@ -250,6 +258,9 @@ const UserProfile = () => {
                           ? pet.hinhAnh
                           : `${API_URL}/uploads/${pet.hinhAnh}`
                       }
+                      onError={(e) =>
+                        (e.target.src = "https://placehold.co/200?text=Pet")
+                      }
                     />
                   </div>
                   <div className="flex justify-between items-start">
@@ -280,7 +291,7 @@ const UserProfile = () => {
         </div>
       </section>
 
-      {/* 3. LỊCH HẸN & ĐƠN HÀNG */}
+      {/* 3. LỊCH HẸN & ĐƠN HÀNG - GIỮ NGUYÊN CODE CŨ */}
       <div
         className="grid grid-cols-1 lg:grid-cols-2 gap-8"
         data-aos="fade-up"
@@ -423,7 +434,6 @@ const UserProfile = () => {
       </section>
 
       {/* MODALS */}
-      {/* SỬA LỖI Ở ĐÂY: Truyền hàm handleUpdateSuccess vào */}
       <EditProfileModal
         isOpen={isEditModalOpen}
         onClose={() => setIsEditModalOpen(false)}

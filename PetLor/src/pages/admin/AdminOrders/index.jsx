@@ -76,7 +76,6 @@ const AdminOrders = () => {
       if (!params.date) delete params.date;
 
       const response = await orderService.getAllOrders(params);
-
       // Xử lý dữ liệu trả về từ JSON mới
       let ordersList = [];
       let totalPagesCalc = 0;
@@ -110,15 +109,15 @@ const AdminOrders = () => {
 
       const formattedData = ordersList.map((order) => ({
         ...order,
-        // Map các trường từ JSON mới sang tên biến mà Frontend đang dùng
         donHangId: order.donHangId,
-        userName: order.tenNguoiDung || "Khách vãng lai", // JSON mới: tenNguoiDung
-        userId: order.userId,
-        tongTien: order.tongThanhToan || 0, // JSON mới: tongThanhToan
-        trangThai: order.trangThai || "Chờ xử lý", // Handle null từ backend
-        diaChi: order.diaChiGiaoHang || "Tại cửa hàng", // JSON mới: diaChiGiaoHang
 
-        // Lưu trữ sẵn chi tiết đơn hàng để dùng nhanh nếu cần
+        tenNguoiDung: order.tenNguoiNhan || "Khách vãng lai",
+        userName: order.tenNguoiNhan || "Khách vãng lai",
+        userId: order.userId,
+        tongTien: order.tongThanhToan || 0,
+        trangThai: order.trangThai || "Chờ xử lý",
+        diaChi: order.diaChiGiaoHang || "Tại cửa hàng",
+
         items: order.chiTietDonHangs || [],
       }));
 
@@ -165,11 +164,11 @@ const AdminOrders = () => {
 
         const totalRevenue = allOrders.reduce(
           (sum, order) => sum + (order.tongThanhToan || 0),
-          0
+          0,
         );
 
         const pendingOrders = allOrders.filter(
-          (o) => o.trangThai === "Chờ xử lý" || o.trangThai === "CHO_XU_LY"
+          (o) => o.trangThai === "Chờ xử lý" || o.trangThai === "CHO_XU_LY",
         ).length;
 
         setStatsData({ totalRevenue, pendingOrders });
@@ -189,7 +188,7 @@ const AdminOrders = () => {
 
   useEscapeKey(
     handleCloseModals,
-    isModalOpen || isDetailModalOpen || isConfirmDeleteModalOpen
+    isModalOpen || isDetailModalOpen || isConfirmDeleteModalOpen,
   );
 
   // --- Handlers ---
@@ -260,7 +259,7 @@ const AdminOrders = () => {
     if (!backendStatus) {
       console.error(
         "Không tìm thấy mã Enum cho trạng thái:",
-        formData.trangThai
+        formData.trangThai,
       );
       toast.error("Trạng thái không hợp lệ!");
       return;

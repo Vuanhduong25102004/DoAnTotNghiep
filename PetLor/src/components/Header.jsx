@@ -2,11 +2,16 @@ import React, { useState, useEffect } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import authService from "../services/authService";
 import userService from "../services/userService";
+// Import useCart hook
+import { useCart } from "../context/CartContext";
 
 const Header = () => {
   const [user, setUser] = useState(null);
   const navigate = useNavigate();
   const location = useLocation();
+
+  // Get cartData from CartContext
+  const { cartData } = useCart();
 
   // Logic active link
   const isActive = (path) => {
@@ -62,6 +67,10 @@ const Header = () => {
   const iconButtonClass =
     "w-10 h-10 flex items-center justify-center rounded-full transition-colors hover:bg-slate-100 text-slate-600";
 
+  // Calculate unique item count
+  // We use cartData?.items?.length to count distinct products, ignoring their individual quantities.
+  const cartItemCount = cartData?.items?.length || 0;
+
   return (
     <header
       className={`fixed top-0 left-0 z-50 w-full transition-all duration-300 ${
@@ -112,6 +121,12 @@ const Header = () => {
             >
               Bài viết
             </Link>
+            <Link
+              className={`${isActive("/profilepage")} transition-colors`}
+              to="/profilepage"
+            >
+              Thông tin cá nhân
+            </Link>
           </nav>
         </div>
 
@@ -119,9 +134,12 @@ const Header = () => {
         <div className="flex items-center gap-3">
           <Link to="/cart" className={`relative ${iconButtonClass}`}>
             <span className="material-symbols-outlined">shopping_cart</span>
-            <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-[10px] font-bold flex items-center justify-center rounded-full border-2 border-white">
-              2
-            </span>
+            {/* Render badge dynamically if count > 0 */}
+            {cartItemCount > 0 && (
+              <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-[10px] font-bold flex items-center justify-center rounded-full border-2 border-white">
+                {cartItemCount > 99 ? "99+" : cartItemCount}
+              </span>
+            )}
           </Link>
 
           {/* User Auth Logic */}

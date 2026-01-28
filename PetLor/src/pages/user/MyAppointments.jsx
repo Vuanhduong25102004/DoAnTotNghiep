@@ -3,12 +3,9 @@ import { useOutletContext } from "react-router-dom";
 import bookingService from "../../services/bookingService";
 import CancelAppointmentModal from "./modals/CancelAppointmentModal";
 import AppointmentDetailModal from "./modals/AppointmentDetailModal";
+import { toast } from "react-toastify"; // 1. Import toast
 
-import {
-  renderStatusBadge,
-  formatCurrency,
-  formatJustDate,
-} from "../../utils/formatters";
+import { renderStatusBadge } from "../../utils/formatters";
 import AOS from "aos";
 
 const MyAppointments = () => {
@@ -60,8 +57,6 @@ const MyAppointments = () => {
   const handleOpenDetail = async (id) => {
     setShowDetailModal(true);
     setLoadingDetail(true);
-
-    // Kích hoạt AOS cho phần tử mới xuất hiện
     setTimeout(() => AOS.refresh(), 50);
 
     try {
@@ -70,6 +65,7 @@ const MyAppointments = () => {
     } catch (error) {
       console.error(error);
       setShowDetailModal(false);
+      toast.error("Không thể tải chi tiết lịch hẹn."); // Thêm toast lỗi
     } finally {
       setLoadingDetail(false);
     }
@@ -79,8 +75,6 @@ const MyAppointments = () => {
     setAppointmentToCancel(appointment);
     setSelectedReason("");
     setShowCancelModal(true);
-
-    // Kích hoạt AOS cho phần tử mới xuất hiện
     setTimeout(() => AOS.refresh(), 50);
   };
 
@@ -93,21 +87,23 @@ const MyAppointments = () => {
       });
       setShowCancelModal(false);
       fetchData();
-      alert("Hủy lịch hẹn thành công!");
+      // 2. Thay alert bằng toast success
+      toast.success("Hủy lịch hẹn thành công!");
     } catch (error) {
-      alert(error.response?.data?.message || "Lỗi khi hủy");
+      // 3. Thay alert bằng toast error
+      toast.error(error.response?.data?.message || "Lỗi khi hủy lịch hẹn");
     } finally {
       setIsSubmitting(false);
     }
   };
 
   const filtered = appointments.filter(
-    (a) => a.trangThaiLichHen === statusMap[activeTab]
+    (a) => a.trangThaiLichHen === statusMap[activeTab],
   );
 
   return (
     <main className="flex-1 space-y-6 animate-fade-in pb-20">
-      {/* HEADER - Giữ nguyên */}
+      {/* HEADER */}
       <div
         className="bg-white rounded-3xl p-8 shadow-sm relative overflow-hidden border border-gray-100 isolate"
         data-aos="fade-down"
@@ -131,7 +127,7 @@ const MyAppointments = () => {
         </div>
       </div>
 
-      {/* TABS - Giữ nguyên */}
+      {/* TABS */}
       <div
         className="bg-white rounded-3xl p-2 shadow-sm border border-gray-100 inline-flex flex-wrap gap-1"
         data-aos="fade-up"

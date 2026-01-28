@@ -1,7 +1,12 @@
-import React, { useEffect, useState, useMemo } from "react"; // 1. Thêm useMemo
+import React, { useEffect, useState, useMemo } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import AOS from "aos";
 import "aos/dist/aos.css";
+
+// --- 1. IMPORT TOASTIFY ---
+import { ToastContainer, toast, Slide } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
+
 import { useCart } from "../context/CartContext";
 import { formatCurrency } from "../utils/formatters";
 import { SERVER_URL } from "../services/apiClient";
@@ -66,16 +71,17 @@ const CartPage = () => {
     if (appliedVoucher) {
       setAppliedVoucher(null);
       setDiscountAmount(0);
+      // Thông báo nhẹ khi voucher bị hủy do thay đổi giá
+      toast.info("Voucher đã bị hủy do thay đổi giỏ hàng.", {
+        autoClose: 2000,
+      });
     }
   }, [selectedStat.totalPrice]);
 
-  // --- 2. LOGIC SẮP XẾP: MỚI NHẤT LÊN ĐẦU ---
+  // LOGIC SẮP XẾP: MỚI NHẤT LÊN ĐẦU
   const sortedItems = useMemo(() => {
     if (!cartData?.items) return [];
-
-    // Tạo bản sao để không ảnh hưởng dữ liệu gốc
     return [...cartData.items].sort((a, b) => {
-      // So sánh ngày thêm (Giảm dần)
       const dateA = new Date(a.ngayThem);
       const dateB = new Date(b.ngayThem);
       return dateB - dateA;
@@ -84,13 +90,15 @@ const CartPage = () => {
 
   const finalDisplayPrice = Math.max(
     0,
-    selectedStat.totalPrice - discountAmount
+    selectedStat.totalPrice - discountAmount,
   );
 
-  // HÀM XỬ LÝ MÃ
+  // --- 2. HÀM XỬ LÝ MÃ VỚI TOAST ĐẸP ---
   const handleApplyVoucher = async (code) => {
     if (selectedStat.totalPrice === 0) {
-      alert("Vui lòng chọn sản phẩm trước khi áp mã!");
+      toast.warn("Vui lòng chọn sản phẩm trước khi áp mã!", {
+        position: "top-center",
+      });
       return;
     }
 
@@ -102,7 +110,7 @@ const CartPage = () => {
     try {
       const response = await promotionService.validateCoupon(
         payload.maCode,
-        payload.giaTriDonHang
+        payload.giaTriDonHang,
       );
       const discount = response?.soTienGiam || response?.data?.soTienGiam || 0;
 
@@ -110,16 +118,25 @@ const CartPage = () => {
         setAppliedVoucher(code);
         setDiscountAmount(discount);
         setIsVoucherModalOpen(false);
-        alert(`Áp dụng thành công! Giảm ${formatCurrency(discount)}`);
+
+        // Toast thành công đẹp
+        toast.success(
+          <div>
+            <div className="font-bold text-sm">Áp dụng mã thành công!</div>
+            <div className="text-xs">
+              Bạn được giảm {formatCurrency(discount)}
+            </div>
+          </div>,
+        );
       } else {
-        alert("Mã hợp lệ nhưng không được giảm giá (0đ).");
+        toast.info("Mã hợp lệ nhưng giá trị giảm là 0đ.");
         setAppliedVoucher(null);
         setDiscountAmount(0);
       }
     } catch (error) {
       const errorMsg =
         error.response?.data?.message || "Lỗi khi áp dụng mã khuyến mãi!";
-      alert(errorMsg);
+      toast.error(errorMsg); // Toast lỗi
       setAppliedVoucher(null);
       setDiscountAmount(0);
     }
@@ -127,12 +144,14 @@ const CartPage = () => {
 
   const handleCheckout = () => {
     if (selectedStat.countItems === 0) {
-      alert("Bạn chưa chọn sản phẩm nào để thanh toán!");
+      toast.warn("Bạn chưa chọn sản phẩm nào để thanh toán!", {
+        position: "top-center",
+      });
       return;
     }
-    // Lấy item từ danh sách đã lọc (sortedItems) hoặc gốc đều được vì ID không đổi
+
     const selectedItemsFullDetails = cartData.items.filter((item) =>
-      selectedItemIds.includes(item.id)
+      selectedItemIds.includes(item.id),
     );
 
     navigate("/checkout", {
@@ -151,7 +170,10 @@ const CartPage = () => {
   };
 
   const handleDeleteSelected = () => {
-    if (selectedItemIds.length === 0) return;
+    if (selectedItemIds.length === 0) {
+      toast.info("Vui lòng chọn sản phẩm cần xóa.");
+      return;
+    }
     setItemToDelete(null);
     setIsModalOpen(true);
   };
@@ -162,10 +184,12 @@ const CartPage = () => {
     if (itemToDelete) {
       await removeFromCart(itemToDelete.cartDetailId, itemToDelete.productId);
       setItemToDelete(null);
+      toast.success("Đã xóa sản phẩm khỏi giỏ hàng.");
     } else if (selectedItemIds.length > 0) {
       const isSelectingAll = selectedItemIds.length === cartData.items.length;
       if (isSelectingAll) {
         await clearCart();
+        toast.success("Đã làm sạch giỏ hàng.");
       } else {
         const idsToDelete = [...selectedItemIds];
         for (const detailId of idsToDelete) {
@@ -174,7 +198,7 @@ const CartPage = () => {
             await removeFromCart(item.id, item.sanPhamId);
           }
         }
-        alert("Đã xóa các sản phẩm đã chọn!");
+        toast.success(`Đã xóa ${idsToDelete.length} sản phẩm đã chọn.`);
       }
     }
   };
@@ -196,6 +220,22 @@ const CartPage = () => {
 
   return (
     <div className="w-full font-display bg-[#F5F5F5] text-gray-900 min-h-screen pt-24 pb-32">
+      {/* --- 3. ĐẶT TOAST CONTAINER --- */}
+      <ToastContainer
+        position="top-right"
+        autoClose={3000}
+        hideProgressBar={false}
+        newestOnTop={true}
+        closeOnClick
+        rtl={false}
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
+        theme="light"
+        transition={Slide}
+        style={{ zIndex: 99999, marginTop: "60px" }} // Tránh bị Header che
+      />
+
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         {/* --- THANH TÌM KIẾM --- */}
         <div className="mb-6 hidden md:block" data-aos="fade-down">
@@ -303,7 +343,6 @@ const CartPage = () => {
                 </span>
               </div>
 
-              {/* 3. SỬ DỤNG sortedItems THAY VÌ cartData.items */}
               {sortedItems.map((item, index) => (
                 <div
                   key={item.id}
@@ -549,8 +588,8 @@ const CartPage = () => {
           itemToDelete
             ? "Bạn có chắc chắn muốn xóa sản phẩm này khỏi giỏ hàng? Thao tác này không thể hoàn tác."
             : selectedItemIds.length === cartData.items.length
-            ? "Bạn đang chọn TẤT CẢ sản phẩm. Bạn có chắc muốn làm sạch giỏ hàng không?"
-            : `Bạn có chắc muốn xóa ${selectedItemIds.length} sản phẩm đang chọn khỏi giỏ hàng?`
+              ? "Bạn đang chọn TẤT CẢ sản phẩm. Bạn có chắc muốn làm sạch giỏ hàng không?"
+              : `Bạn có chắc muốn xóa ${selectedItemIds.length} sản phẩm đang chọn khỏi giỏ hàng?`
         }
         confirmText="Xóa bỏ"
         cancelText="Hủy"

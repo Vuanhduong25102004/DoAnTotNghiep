@@ -15,6 +15,7 @@ import LoginPage from "../pages/LoginPage";
 import RegisterPage from "../pages/RegisterPage";
 import ProductsPage from "../pages/ProductsPage";
 import BlogPostDetail from "../pages/BlogPostDetail";
+import ProfilePage from "../pages/ProfilePage";
 
 // Admin pages
 import AdminDashboard from "../pages/admin/AdminDashboard";
@@ -63,6 +64,8 @@ import PostForm from "../pages/staff/receptionist/components/PostForm";
 import CreatePrescription from "../pages/staff/receptionist/components/CreatePrescription";
 import ReceptionistPostDetail from "../pages/staff/receptionist/ReceptionistPostDetail";
 import BookingForm from "../pages/staff/receptionist/components/BookingForm";
+import ReceptionOrders from "../pages/staff/receptionist/ReceptionistOrders";
+import ReceptionistOrderDetail from "../pages/staff/receptionist/components/ReceptionistOrderDetail";
 
 import SpaDashboard from "../pages/staff/spa/SpaDashboard";
 import SpaSchedule from "../pages/staff/spa/SpaSchedule";
@@ -84,6 +87,7 @@ const AppRoutes = () => {
         <Route path="/cart" element={<CartPage />} />
         <Route path="/checkout" element={<Checkout />} />
         <Route path="/booking" element={<Booking />} />
+        <Route path="/profilepage" element={<ProfilePage />} />
 
         {/* Protected User Routes */}
         <Route element={<ProtectedRoute />}>
@@ -167,6 +171,14 @@ const AppRoutes = () => {
           <Route
             path="receptionist/prescriptions/create"
             element={<CreatePrescription />}
+          />
+          <Route
+            path="/staff/receptionist/orders"
+            element={<ReceptionOrders />}
+          />
+          <Route
+            path="receptionist/orders/:id"
+            element={<ReceptionistOrderDetail />}
           />
 
           {/* Khu vực Spa -> /staff/spa */}

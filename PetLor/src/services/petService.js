@@ -84,7 +84,9 @@ const petService = {
   return apiClient.get('/thu-cung/by-phone', {
     params: { phone }
   });
+  
 },
+deleteMyPet: (id) => apiClient.delete(`/thu-cung/me/${id}`),
 };
 
 export default petService;

@@ -17,12 +17,13 @@ public class LichHenResponse {
     private String trangThaiLichHen;
     private String loaiLichHen;
     private String ghiChuKhachHang;
+    private String ghiChuBacSi; // Thêm trường này
     private String lyDoHuy;
     
     private Integer userId;
     private String tenKhachHang;
     private String soDienThoaiKhachHang;
-    private String anhKhachHang; // Thêm trường này
+    private String anhKhachHang;
     
     private Integer thuCungId;
     private String tenThuCung;

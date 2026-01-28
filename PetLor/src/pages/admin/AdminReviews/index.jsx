@@ -10,7 +10,7 @@ import ReviewDetailModal from "./components/modals/ReviewDetailModal";
 import ConfirmDeleteModal from "../components/ConfirmDeleteModal";
 
 const AdminReviews = () => {
-  // State
+  // --- State ---
   const [reviews, setReviews] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -22,7 +22,7 @@ const AdminReviews = () => {
     hiddenCount: 0,
   });
 
-  // Modal State
+  // Modals
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [isConfirmDeleteModalOpen, setIsConfirmDeleteModalOpen] =
     useState(false);
@@ -31,14 +31,16 @@ const AdminReviews = () => {
   const [selectedReview, setSelectedReview] = useState(null);
   const [reviewToDeleteId, setReviewToDeleteId] = useState(null);
 
-  // Filter & Pagination
+  // Filters & Pagination
   const [searchTerm, setSearchTerm] = useState("");
-  const [ratingFilter, setRatingFilter] = useState("0"); // "0" = All
-  const [typeFilter, setTypeFilter] = useState("ALL"); // ALL, PRODUCT, SERVICE
+  const [ratingFilter, setRatingFilter] = useState("0");
+  const [typeFilter, setTypeFilter] = useState("ALL");
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(0);
   const [totalElements, setTotalElements] = useState(0);
-  const ITEMS_PER_PAGE = 20;
+
+  // --- CẤU HÌNH SỐ LƯỢNG ITEM ---
+  const ITEMS_PER_PAGE = 5; // Đã đổi thành 5 theo yêu cầu
 
   // --- Fetch Data ---
   const fetchReviews = async () => {
@@ -50,41 +52,77 @@ const AdminReviews = () => {
       };
 
       const response = await reviewService.getAllReviewsForAdmin(params);
-      let content = response.content || [];
+      const rawContent = response.content || [];
 
-      // --- Client-side Filtering (Nếu API chưa hỗ trợ filter sâu) ---
-      // 1. Search
+      // --- Mapping Data (Flat to Nested) ---
+      let mappedContent = rawContent.map((item) => {
+        // Map Sản phẩm
+        let sanPhamObj = null;
+        if (item.sanPhamId) {
+          sanPhamObj = {
+            id: item.sanPhamId,
+            tenSanPham: item.tenSanPham,
+            hinhAnh: item.hinhAnhSanPham,
+          };
+        }
+
+        // Map Dịch vụ
+        let dichVuObj = null;
+        if (item.dichVuId) {
+          dichVuObj = {
+            id: item.dichVuId,
+            tenDichVu: item.tenDichVu,
+            hinhAnh: item.hinhAnhDichVu,
+          };
+        }
+
+        return {
+          danhGiaId: item.danhGiaId,
+          soSao: item.soSao,
+          noiDung: item.noiDung,
+          ngayTao: item.ngayDanhGia,
+          trangThai: item.trangThai !== undefined ? item.trangThai : true,
+          phanHoi: item.phanHoi || null,
+          nguoiDung: {
+            hoTen: item.tenNguoiDung,
+            anhDaiDien: item.anhDaiDien,
+            email: item.email || "",
+          },
+          sanPham: sanPhamObj,
+          dichVu: dichVuObj,
+        };
+      });
+
+      // --- Client-side Filtering ---
       if (searchTerm) {
         const lowerTerm = searchTerm.toLowerCase();
-        content = content.filter(
+        mappedContent = mappedContent.filter(
           (r) =>
             (r.nguoiDung?.hoTen || "").toLowerCase().includes(lowerTerm) ||
-            (r.noiDung || "").toLowerCase().includes(lowerTerm)
+            (r.noiDung || "").toLowerCase().includes(lowerTerm) ||
+            (r.sanPham?.tenSanPham || "").toLowerCase().includes(lowerTerm),
         );
       }
 
-      // 2. Rating
       if (ratingFilter !== "0") {
-        content = content.filter((r) => r.soSao === parseInt(ratingFilter));
+        mappedContent = mappedContent.filter(
+          (r) => r.soSao === parseInt(ratingFilter),
+        );
       }
 
-      // 3. Type
       if (typeFilter === "PRODUCT") {
-        content = content.filter((r) => r.sanPham !== null);
+        mappedContent = mappedContent.filter((r) => r.sanPham !== null);
       } else if (typeFilter === "SERVICE") {
-        content = content.filter((r) => r.dichVu !== null);
+        mappedContent = mappedContent.filter((r) => r.dichVu !== null);
       }
 
-      setReviews(content);
-      setTotalPages(response.totalPages); // Lưu ý: Nếu client filter nhiều quá thì totalPages từ API sẽ không chính xác cho list đã filter. Ở đây tạm chấp nhận.
+      setReviews(mappedContent);
+      setTotalPages(response.totalPages);
       setTotalElements(response.totalElements);
-
-      // --- Calculate Stats ---
-      // Lưu ý: Tính trên tập data hiện tại hoặc gọi API thống kê riêng
-      calculateStats(content);
+      calculateStats(mappedContent);
     } catch (error) {
       console.error("Fetch reviews error", error);
-      toast.error("Không thể tải danh sách đánh giá");
+      toast.error("Lỗi tải danh sách đánh giá");
     } finally {
       setLoading(false);
     }
@@ -95,25 +133,18 @@ const AdminReviews = () => {
       setStats({ total: 0, avgRating: 0, pendingReply: 0, hiddenCount: 0 });
       return;
     }
-
     const total = data.length;
     const totalStars = data.reduce((acc, curr) => acc + curr.soSao, 0);
-    const avgRating = (totalStars / total).toFixed(1);
+    const avgRating = total > 0 ? (totalStars / total).toFixed(1) : 0;
     const pendingReply = data.filter((r) => !r.phanHoi).length;
-    // Giả sử API trả về null là ẩn hoặc false là ẩn.
-    // Trong JSON mẫu: trangThai = null hoặc true. Ta coi !trangThai là ẩn/chờ duyệt.
     const hiddenCount = data.filter((r) => !r.trangThai).length;
 
-    setStats({
-      total,
-      avgRating,
-      pendingReply,
-      hiddenCount,
-    });
+    setStats({ total, avgRating, pendingReply, hiddenCount });
   };
 
   useEffect(() => {
     fetchReviews();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentPage, searchTerm, ratingFilter, typeFilter]);
 
   // --- Handlers ---
@@ -127,8 +158,8 @@ const AdminReviews = () => {
       await reviewService.updateReviewStatus(review.danhGiaId, {
         trangThai: newStatus,
       });
-      toast.success(`Đã ${newStatus ? "hiện" : "ẩn"} đánh giá thành công`);
-      fetchReviews(); // Refresh list
+      toast.success(`Đã ${newStatus ? "hiện" : "ẩn"} đánh giá`);
+      fetchReviews();
     } catch (error) {
       toast.error("Cập nhật trạng thái thất bại");
     }
@@ -137,6 +168,7 @@ const AdminReviews = () => {
   const handleReplyReview = async (reviewId, replyContent) => {
     try {
       await reviewService.replyToReview(reviewId, { phanHoi: replyContent });
+
       toast.success("Gửi phản hồi thành công!");
       setIsDetailModalOpen(false);
       fetchReviews();
@@ -166,8 +198,8 @@ const AdminReviews = () => {
 
   return (
     <>
-      <div className="flex flex-wrap justify-between gap-3">
-        <p className="text-gray-900 text-4xl font-black leading-tight tracking-[-0.033em] min-w-72">
+      <div className="flex flex-wrap justify-between gap-3 mb-6">
+        <p className="text-gray-900 text-4xl font-black leading-tight tracking-[-0.033em]">
           Quản lý Đánh giá
         </p>
       </div>
@@ -206,7 +238,6 @@ const AdminReviews = () => {
         onDelete={handleDeleteClick}
       />
 
-      {/* Modals */}
       <ReviewDetailModal
         isOpen={isDetailModalOpen}
         onClose={() => setIsDetailModalOpen(false)}
@@ -219,7 +250,7 @@ const AdminReviews = () => {
         onClose={() => setIsConfirmDeleteModalOpen(false)}
         onConfirm={confirmDelete}
         title="Xóa đánh giá?"
-        message="Hành động này không thể hoàn tác. Đánh giá này sẽ bị xóa vĩnh viễn khỏi hệ thống."
+        message="Hành động này không thể hoàn tác."
       />
     </>
   );

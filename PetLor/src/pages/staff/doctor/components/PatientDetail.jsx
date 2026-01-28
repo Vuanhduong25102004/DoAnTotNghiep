@@ -1,14 +1,16 @@
 import React, { useState, useEffect, useRef } from "react";
 import bookingService from "../../../../services/bookingService";
 import productService from "../../../../services/productService";
+import { toast, ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
-// --- COMPONENT CON: Ô TÌM KIẾM THUỐC (GIỮ NGUYÊN) ---
+// --- COMPONENT CON: Ô TÌM KIẾM THUỐC ---
 const MedicineSearchInput = ({ value, onSelect, placeholder }) => {
   const [query, setQuery] = useState(value || "");
   const [suggestions, setSuggestions] = useState([]);
   const [showDropdown, setShowDropdown] = useState(false);
   const wrapperRef = useRef(null);
-  const MEDICINE_CATEGORY_ID = 9; // ID danh mục thuốc
+  const MEDICINE_CATEGORY_ID = 9;
 
   useEffect(() => {
     setQuery(value || "");
@@ -104,8 +106,7 @@ const MedicineSearchInput = ({ value, onSelect, placeholder }) => {
 // --- COMPONENT CHÍNH ---
 const PatientDetail = ({
   appointment,
-  petDetail, // Dữ liệu thú cưng + lịch sử từ API
-  history, // Prop này có thể không cần dùng nữa nếu ta tự xử lý trong useEffect
+  petDetail,
   loadingDetail,
   onRefresh,
   titleHistory = "Lịch sử điều trị",
@@ -114,13 +115,32 @@ const PatientDetail = ({
   const [isProcessing, setIsProcessing] = useState(false);
   const isSpa = titleHistory === "Lịch sử làm đẹp";
 
-  // State hiển thị lịch sử tổng hợp (Vaccine + Thuốc)
+  // --- 1. STATE QUẢN LÝ MODAL XÁC NHẬN (THAY CHO WINDOW.CONFIRM) ---
+  const [confirmModal, setConfirmModal] = useState({
+    isOpen: false,
+    message: "",
+    onConfirm: null, // Hàm sẽ chạy khi bấm "Đồng ý"
+  });
+
+  // Helper mở modal xác nhận
+  const triggerConfirm = (message, action) => {
+    setConfirmModal({
+      isOpen: true,
+      message,
+      onConfirm: () => action(),
+    });
+  };
+
+  // Helper đóng modal xác nhận
+  const closeConfirm = () => {
+    setConfirmModal({ isOpen: false, message: "", onConfirm: null });
+  };
+
+  // --- 2. XỬ LÝ LỊCH SỬ ---
   const [combinedHistory, setCombinedHistory] = useState([]);
 
-  // --- LOGIC MỚI: XỬ LÝ DỮ LIỆU LỊCH SỬ ---
   useEffect(() => {
     if (petDetail) {
-      // 1. Xử lý Lịch sử Tiêm chủng
       const vaccines = (petDetail.lichSuTiemChung || []).map((v) => ({
         type: "VACCINE",
         date: v.ngayTiem,
@@ -128,23 +148,21 @@ const PatientDetail = ({
         note: `${v.ghiChu || "Không có ghi chú"} (BS: ${v.bacSi || "N/A"})`,
       }));
 
-      // 2. Xử lý Lịch sử Đơn thuốc (MỚI)
       const prescriptions = (petDetail.lichSuDonThuoc || []).map((p) => {
-        // Tạo chuỗi mô tả thuốc gọn gàng
         const medicineList = (p.danhSachThuoc || [])
           .map((m) => `${m.tenThuoc} (${m.soLuong})`)
           .join(", ");
 
         return {
           type: "PRESCRIPTION",
-          date: p.ngayKe, // Sử dụng ngày kê đơn
-          title: `Kê đơn: ${p.chanDoan}`, // Tiêu đề là chẩn đoán
-          // Nội dung hiển thị chi tiết
-          note: `BS: ${p.bacSi} • Lời dặn: ${p.loiDan} • Thuốc: ${medicineList || "Không có thuốc"}`,
+          date: p.ngayKe,
+          title: `Kê đơn: ${p.chanDoan}`,
+          note: `BS: ${p.bacSi} • Lời dặn: ${p.loiDan} • Thuốc: ${
+            medicineList || "Không có thuốc"
+          }`,
         };
       });
 
-      // 3. Gộp và Sắp xếp theo ngày giảm dần (Mới nhất lên đầu)
       const merged = [...vaccines, ...prescriptions].sort(
         (a, b) => new Date(b.date) - new Date(a.date),
       );
@@ -153,9 +171,8 @@ const PatientDetail = ({
     } else {
       setCombinedHistory([]);
     }
-  }, [petDetail]); // Chạy lại khi petDetail thay đổi
+  }, [petDetail]);
 
-  // --- STATE QUẢN LÝ MODAL HOÀN THÀNH ---
   const [showCompleteModal, setShowCompleteModal] = useState(false);
   const [completeData, setCompleteData] = useState({
     coKeDon: false,
@@ -166,9 +183,9 @@ const PatientDetail = ({
     tenVacXin: "",
     ngayTaiChung: "",
     ghiChu: "",
+    ghiChuBacSi: "",
   });
 
-  // --- HELPERS THUỐC (Modal) ---
   const handleAddMedicine = () => {
     setCompleteData({
       ...completeData,
@@ -209,72 +226,84 @@ const PatientDetail = ({
     setCompleteData({ ...completeData, danhSachThuoc: newList });
   };
 
-  // --- XỬ LÝ API ---
+  // --- XỬ LÝ API (SỬ DỤNG TRIGGERCONFIRM THAY CHO WINDOW.CONFIRM) ---
+
+  // 1. Tiếp nhận lịch hẹn
   const handleConfirmAppointment = async () => {
     if (!appointment?.lichHenId) return;
-    if (
-      window.confirm(`Xác nhận tiếp nhận lịch hẹn #${appointment.lichHenId}?`)
-    ) {
-      setIsProcessing(true);
-      try {
-        await bookingService.confirmDoctorAppointment(appointment.lichHenId);
-        alert("Đã tiếp nhận lịch hẹn thành công!");
-        if (onRefresh) onRefresh();
-      } catch (error) {
-        alert("Lỗi xác nhận.");
-      } finally {
-        setIsProcessing(false);
-      }
-    }
-  };
 
-  const handleCompleteClick = async () => {
-    if (!appointment?.lichHenId) return;
-    if (isSpa) {
-      if (
-        window.confirm(
-          `Xác nhận hoàn thành Spa cho #${appointment.tenThuCung}?`,
-        )
-      ) {
+    // Thay thế window.confirm bằng triggerConfirm
+    triggerConfirm(
+      `Xác nhận tiếp nhận lịch hẹn #${appointment.lichHenId}?`,
+      async () => {
         setIsProcessing(true);
         try {
-          await bookingService.completeDoctorAppointment(
-            appointment.lichHenId,
-            { coKeDon: false, coTiemPhong: false },
-          );
-          alert("Dịch vụ Spa đã hoàn thành!");
-          if (onRefresh) onRefresh("DA_XONG");
+          await bookingService.confirmDoctorAppointment(appointment.lichHenId);
+          toast.success("Đã tiếp nhận lịch hẹn thành công!");
+          if (onRefresh) onRefresh();
         } catch (error) {
-          alert("Lỗi khi hoàn thành.");
+          toast.error("Lỗi xác nhận lịch hẹn.");
         } finally {
           setIsProcessing(false);
+          closeConfirm(); // Đóng modal sau khi xong
         }
-      }
+      },
+    );
+  };
+
+  // 2. Hoàn thành (Spa hoặc Doctor)
+  const handleCompleteClick = async () => {
+    if (!appointment?.lichHenId) return;
+
+    if (isSpa) {
+      // Logic hoàn thành cho Spa
+      triggerConfirm(
+        `Xác nhận hoàn thành Spa cho #${appointment.tenThuCung}?`,
+        async () => {
+          setIsProcessing(true);
+          try {
+            await bookingService.completeDoctorAppointment(
+              appointment.lichHenId,
+              { coKeDon: false, coTiemPhong: false },
+            );
+            toast.success("Dịch vụ Spa đã hoàn thành!");
+            if (onRefresh) onRefresh("DA_XONG");
+          } catch (error) {
+            toast.error("Lỗi khi hoàn thành dịch vụ.");
+          } finally {
+            setIsProcessing(false);
+            closeConfirm();
+          }
+        },
+      );
     } else {
+      // Logic Doctor mở modal nhập liệu
       setShowCompleteModal(true);
     }
   };
 
+  // 3. Xác nhận trong modal Bác sĩ
   const handleFinalCompleteDoctor = async () => {
     if (completeData.coTiemPhong && !completeData.tenVacXin) {
-      alert("Vui lòng nhập tên vắc xin!");
+      toast.warn("Vui lòng nhập tên vắc xin!");
       return;
     }
     if (completeData.coKeDon) {
       if (!completeData.chanDoan) {
-        alert("Vui lòng nhập chẩn đoán bệnh!");
+        toast.warn("Vui lòng nhập chẩn đoán bệnh!");
         return;
       }
       if (completeData.danhSachThuoc.length === 0) {
-        alert("Vui lòng thêm ít nhất 1 loại thuốc!");
+        toast.warn("Vui lòng thêm ít nhất 1 loại thuốc!");
         return;
       }
       if (completeData.danhSachThuoc.some((m) => !m.thuocId || !m.lieuDung)) {
-        alert("Vui lòng chọn thuốc và nhập liều dùng đầy đủ.");
+        toast.warn("Vui lòng chọn thuốc và nhập liều dùng đầy đủ.");
         return;
       }
     }
 
+    // Logic này không cần confirm lần nữa vì đang trong modal rồi
     setIsProcessing(true);
     try {
       const payload = {
@@ -287,12 +316,15 @@ const PatientDetail = ({
             }))
           : [],
       };
+
       await bookingService.completeDoctorAppointment(
         appointment.lichHenId,
         payload,
       );
-      alert("Hoàn thành lịch hẹn thành công!");
+
+      toast.success("Hoàn thành lịch hẹn thành công!");
       setShowCompleteModal(false);
+
       setCompleteData({
         coKeDon: false,
         chanDoan: "",
@@ -302,23 +334,27 @@ const PatientDetail = ({
         tenVacXin: "",
         ngayTaiChung: "",
         ghiChu: "",
+        ghiChuBacSi: "",
       });
+
       if (onRefresh) onRefresh("DA_XONG");
     } catch (error) {
-      alert("Có lỗi xảy ra khi lưu kết quả.");
+      toast.error("Có lỗi xảy ra khi lưu kết quả.");
     } finally {
       setIsProcessing(false);
     }
   };
 
-  // --- HELPERS HIỂN THỊ ---
   const getPetImage = () => {
     if (petDetail?.hinhAnh)
       return petDetail.hinhAnh.startsWith("http")
         ? petDetail.hinhAnh
         : `${API_URL}${petDetail.hinhAnh}`;
-    return `https://ui-avatars.com/api/?name=${appointment?.tenThuCung || "Pet"}&background=random&size=300`;
+    return `https://ui-avatars.com/api/?name=${
+      appointment?.tenThuCung || "Pet"
+    }&background=random&size=300`;
   };
+
   const formatDate = (iso) =>
     iso
       ? new Date(iso).toLocaleDateString("vi-VN", {
@@ -327,6 +363,7 @@ const PatientDetail = ({
           year: "numeric",
         })
       : "";
+
   const calculateAge = (dob) => {
     if (!dob) return "N/A";
     const years = Math.abs(
@@ -344,9 +381,14 @@ const PatientDetail = ({
 
   return (
     <section className="flex-1 bg-white flex flex-col overflow-hidden min-w-0 font-sans relative">
+      <ToastContainer
+        position="top-right"
+        autoClose={3000}
+        style={{ zIndex: 999999 }}
+      />
       <div className="flex-1 overflow-y-auto custom-scrollbar">
         <div className="max-w-4xl mx-auto p-8 py-10 space-y-8">
-          {/* 1. HEADER INFO */}
+          {/* HEADER INFO */}
           <div className="flex items-start gap-8">
             <div className="relative shrink-0">
               <div className="absolute -inset-4 bg-[#007A7A]/5 rounded-[40px] rotate-6"></div>
@@ -408,7 +450,7 @@ const PatientDetail = ({
 
           <hr className="border-gray-100" />
 
-          {/* 2. HISTORY TIMELINE (ĐÃ CẬP NHẬT ĐỂ HIỂN THỊ CẢ 2 LOẠI) */}
+          {/* HISTORY TIMELINE */}
           <div>
             <div className="flex items-center justify-between mb-6">
               <h3 className="text-lg font-extrabold flex items-center gap-2 text-[#0c1d1d]">
@@ -427,17 +469,26 @@ const PatientDetail = ({
                 combinedHistory.map((rec, i) => (
                   <div key={i} className="flex gap-6 group">
                     <div className="flex flex-col items-center">
-                      {/* LOGIC MÀU SẮC DOT: Teal cho Vaccine, Amber cho Đơn thuốc */}
                       <div
                         className={`size-3 rounded-full border-[2px] bg-white z-10 shadow-sm 
-                        ${rec.type === "VACCINE" ? "border-[#007A7A]" : rec.type === "PRESCRIPTION" ? "border-amber-500" : "border-gray-300"}`}
+                        ${
+                          rec.type === "VACCINE"
+                            ? "border-[#007A7A]"
+                            : rec.type === "PRESCRIPTION"
+                              ? "border-amber-500"
+                              : "border-gray-300"
+                        }`}
                       ></div>
                       <div className="w-[1px] h-full bg-gray-100 group-last:hidden"></div>
                     </div>
                     <div className="pb-8 flex-1">
                       <div className="flex justify-between items-baseline mb-2">
                         <h4
-                          className={`text-sm font-bold uppercase tracking-wide ${rec.type === "PRESCRIPTION" ? "text-amber-700" : "text-gray-900"}`}
+                          className={`text-sm font-bold uppercase tracking-wide ${
+                            rec.type === "PRESCRIPTION"
+                              ? "text-amber-700"
+                              : "text-gray-900"
+                          }`}
                         >
                           {rec.title}
                         </h4>
@@ -463,7 +514,7 @@ const PatientDetail = ({
         </div>
       </div>
 
-      {/* 4. FOOTER ACTIONS */}
+      {/* FOOTER ACTIONS */}
       <div className="h-20 flex items-center justify-between px-8 bg-white border-t border-gray-100 shrink-0">
         <div className="flex gap-3">
           {appointment.trangThaiLichHen === "CHO_XAC_NHAN" && (
@@ -490,7 +541,40 @@ const PatientDetail = ({
         </div>
       </div>
 
-      {/* --- MODAL HOÀN THÀNH --- */}
+      {/* --- MODAL CONFIRM (THAY THẾ WINDOW.CONFIRM) --- */}
+      {confirmModal.isOpen && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in zoom-in-95 duration-200">
+          <div className="bg-white w-full max-w-sm rounded-[24px] shadow-2xl p-6 relative">
+            <div className="flex flex-col items-center text-center">
+              <div className="w-12 h-12 bg-amber-100 rounded-full flex items-center justify-center mb-4 text-amber-600">
+                <span className="material-symbols-outlined text-2xl">
+                  warning
+                </span>
+              </div>
+              <h3 className="text-lg font-bold text-gray-900 mb-2">Xác nhận</h3>
+              <p className="text-sm text-gray-500 mb-6">
+                {confirmModal.message}
+              </p>
+              <div className="flex gap-3 w-full">
+                <button
+                  onClick={closeConfirm}
+                  className="flex-1 h-10 rounded-xl font-bold text-gray-500 hover:bg-gray-100 transition-colors"
+                >
+                  Hủy
+                </button>
+                <button
+                  onClick={confirmModal.onConfirm}
+                  className="flex-1 h-10 bg-[#007A7A] text-white rounded-xl font-bold hover:bg-[#005f5f] transition-colors shadow-lg shadow-teal-500/30"
+                >
+                  Đồng ý
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* --- MODAL HOÀN THÀNH (BÁC SĨ NHẬP LIỆU) --- */}
       {!isSpa && showCompleteModal && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4 animate-in fade-in duration-200">
           <div className="bg-white w-full max-w-2xl max-h-[90vh] rounded-[32px] shadow-2xl relative flex flex-col">
@@ -507,7 +591,23 @@ const PatientDetail = ({
             </div>
 
             <div className="px-8 overflow-y-auto custom-scrollbar space-y-6 pb-6">
-              {/* 1. KÊ ĐƠN THUỐC */}
+              <div className="bg-white p-0">
+                <label className="block text-sm font-black text-gray-700 uppercase tracking-wide mb-2">
+                  Kết luận / Ghi chú của Bác sĩ
+                </label>
+                <textarea
+                  className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm focus:bg-white focus:border-[#007A7A] outline-none transition-all placeholder:text-gray-400 font-medium min-h-[80px]"
+                  placeholder="Ví dụ: Đã khám, viêm phổi nhẹ, cần theo dõi thêm..."
+                  value={completeData.ghiChuBacSi}
+                  onChange={(e) =>
+                    setCompleteData({
+                      ...completeData,
+                      ghiChuBacSi: e.target.value,
+                    })
+                  }
+                />
+              </div>
+
               <div className="bg-gray-50/50 p-6 rounded-[24px] border border-gray-100">
                 <label className="flex items-center gap-3 cursor-pointer w-fit mb-4 group">
                   <input
@@ -632,7 +732,6 @@ const PatientDetail = ({
                 )}
               </div>
 
-              {/* 2. TIÊM PHÒNG */}
               <div className="bg-gray-50/50 p-6 rounded-[24px] border border-gray-100">
                 <label className="flex items-center gap-3 cursor-pointer w-fit mb-4 group">
                   <input

@@ -1,19 +1,11 @@
 package com.example.petlorshop.dto;
 
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.Data;
 
-@Getter
-@Setter
-@NoArgsConstructor
-@AllArgsConstructor
+@Data
 public class DanhGiaRequest {
-    private Integer userId;
     private Integer sanPhamId;
-    private Integer dichVuId;
+    private Integer donHangId;
     private Integer soSao;
     private String noiDung;
-    private String hinhAnh;
 }

@@ -436,6 +436,11 @@ public class LichHenService {
         
         lichHen.setTrangThai(LichHen.TrangThai.DA_HOAN_THANH);
         
+        // Cập nhật ghi chú bác sĩ nếu có
+        if (request != null && request.getGhiChuBacSi() != null) {
+            lichHen.setGhiChuBacSi(request.getGhiChuBacSi());
+        }
+        
         // Xử lý tạo sổ tiêm chủng nếu có yêu cầu
         if (request != null && request.isCoTiemPhong()) {
             if (lichHen.getThuCung() == null) {
@@ -597,6 +602,7 @@ public class LichHenService {
                 lichHen.getTrangThai().name(),
                 lichHen.getLoaiLichHen() != null ? lichHen.getLoaiLichHen().getDisplayName() : null, // Hiển thị loại lịch hẹn
                 lichHen.getGhiChu(),
+                lichHen.getGhiChuBacSi(), // Thêm ghi chú bác sĩ
                 lichHen.getLyDoHuy(),
                 nguoiDung != null ? nguoiDung.getUserId() : null, 
                 tenKhachHang, // Tên hiển thị

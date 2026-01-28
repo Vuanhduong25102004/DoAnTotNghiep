@@ -1,7 +1,10 @@
 import React, { useState, useEffect } from "react";
 import { useOutletContext, Link } from "react-router-dom";
 import OrderDetailModal from "./modals/OrderDetailModal";
+import ReviewModal from "./modals/ReviewModal";
 import orderService from "../../services/orderService";
+import reviewService from "../../services/reviewService";
+import { toast } from "react-toastify"; // 1. Import toast
 import {
   formatCurrency,
   formatJustDate,
@@ -13,51 +16,38 @@ const MyOrders = () => {
   const [user] = useOutletContext();
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState("Chờ xử lý");
-  const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8080";
-  const tabs = ["Chờ xử lý", "Đang giao", "Đã giao", "Đã hủy"];
 
-  // --- States cho chức năng hủy đơn ---
+  const [activeTab, setActiveTab] = useState("Chờ xử lý");
+  const tabs = ["Chờ xử lý", "Đã xác nhận", "Đang giao", "Đã giao", "Đã hủy"];
+
+  const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8080";
+
+  // State Modals
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [cancelReasons, setCancelReasons] = useState([]);
   const [selectedReason, setSelectedReason] = useState("");
   const [orderToCancel, setOrderToCancel] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Thêm states cho Chi tiết đơn hàng
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [orderDetail, setOrderDetail] = useState(null);
   const [loadingDetail, setLoadingDetail] = useState(false);
 
-  // Thêm Handler mở Chi tiết
-  const handleOpenDetail = async (id) => {
-    setShowDetailModal(true);
-    setLoadingDetail(true);
-    setTimeout(() => AOS.refresh(), 50); // Refresh AOS cho modal
+  const [showReviewModal, setShowReviewModal] = useState(false);
+  const [orderToReview, setOrderToReview] = useState(null);
+  const [isSubmittingReview, setIsSubmittingReview] = useState(false);
 
-    try {
-      const res = await orderService.getOrderById(id); // get api/don-hang/me/id
-      setOrderDetail(res.data || res);
-    } catch (error) {
-      console.error(error);
-      setShowDetailModal(false);
-    } finally {
-      setLoadingDetail(false);
-    }
-  };
-
+  // --- FETCH DATA ---
   const fetchOrders = async () => {
     setLoading(true);
     try {
       const res = await orderService.getMyOrders();
       const data = res.data || res;
       let list = Array.isArray(data) ? data : [];
-
       list.sort((a, b) => new Date(b.ngayDatHang) - new Date(a.ngayDatHang));
-
       setOrders(list);
     } catch (error) {
-      console.error("Lỗi khi lấy danh sách đơn hàng:", error);
+      console.error(error);
     } finally {
       setLoading(false);
     }
@@ -69,7 +59,7 @@ const MyOrders = () => {
       const data = res.data || res;
       setCancelReasons(Array.isArray(data) ? data : []);
     } catch (error) {
-      console.error("Lỗi khi lấy lý do hủy:", error);
+      console.error(error);
     }
   };
 
@@ -79,7 +69,42 @@ const MyOrders = () => {
     AOS.init({ duration: 800 });
   }, []);
 
-  // --- Handlers cho Hủy đơn ---
+  // --- HANDLERS ---
+  const handleOpenDetail = async (id) => {
+    setShowDetailModal(true);
+    setLoadingDetail(true);
+    try {
+      const res = await orderService.getOrderById(id);
+      setOrderDetail(res.data || res);
+    } catch (error) {
+      setShowDetailModal(false);
+      toast.error("Không thể tải chi tiết đơn hàng."); // Thêm toast
+    } finally {
+      setLoadingDetail(false);
+    }
+  };
+
+  const handleOpenReview = (order) => {
+    setOrderToReview(order);
+    setShowReviewModal(true);
+  };
+
+  const handleSubmitReview = async (payload) => {
+    setIsSubmittingReview(true);
+    try {
+      await reviewService.createBulkReviews(payload);
+      setShowReviewModal(false);
+      // 2. Thay alert bằng toast
+      toast.success("Cảm ơn bạn đã đánh giá!");
+      fetchOrders();
+    } catch (error) {
+      // 3. Thay alert bằng toast
+      toast.error(error.response?.data?.message || "Lỗi khi gửi đánh giá");
+    } finally {
+      setIsSubmittingReview(false);
+    }
+  };
+
   const handleOpenCancelModal = (order) => {
     setOrderToCancel(order);
     setSelectedReason("");
@@ -95,21 +120,23 @@ const MyOrders = () => {
       });
       setShowCancelModal(false);
       fetchOrders();
-      alert("Hủy đơn hàng thành công!");
+      // 4. Thay alert bằng toast
+      toast.success("Hủy đơn hàng thành công!");
     } catch (error) {
-      alert(error.response?.data?.message || "Lỗi khi hủy đơn hàng");
+      // 5. Thay alert bằng toast
+      toast.error(error.response?.data?.message || "Lỗi khi hủy đơn hàng");
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const filteredOrders = orders.filter((order) => {
-    return order.trangThai === activeTab;
-  });
+  const filteredOrders = orders.filter(
+    (order) => order.trangThai === activeTab,
+  );
 
   return (
     <main className="flex-1 space-y-6 animate-fade-in pb-20">
-      {/* --- HEADER --- */}
+      {/* HEADER */}
       <div
         className="bg-white rounded-3xl p-8 shadow-sm relative overflow-hidden border border-gray-100 isolate"
         data-aos="fade-down"
@@ -137,7 +164,7 @@ const MyOrders = () => {
         </div>
       </div>
 
-      {/* --- TABS --- */}
+      {/* TABS */}
       <div
         className="bg-white rounded-3xl p-2 shadow-sm border border-gray-100 inline-flex flex-wrap gap-1"
         data-aos="fade-up"
@@ -157,7 +184,7 @@ const MyOrders = () => {
         ))}
       </div>
 
-      {/* --- DANH SÁCH ĐƠN HÀNG --- */}
+      {/* DANH SÁCH ĐƠN HÀNG */}
       <div className="space-y-8" data-aos="fade-up">
         {loading ? (
           <div className="flex flex-col items-center py-20 text-gray-400">
@@ -174,6 +201,10 @@ const MyOrders = () => {
                 0,
               ) || 0;
 
+            const hasUnratedItems = order.chiTietDonHangs?.some(
+              (item) => !item.daDanhGia,
+            );
+
             return (
               <div
                 key={order.donHangId}
@@ -181,7 +212,7 @@ const MyOrders = () => {
               >
                 <div className={`h-1.5 w-full ${ui.topBarColor}`}></div>
                 <div className="p-6">
-                  {/* ID & Status Section (ID Hidden) */}
+                  {/* Card Header */}
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
                     <div className="flex items-center gap-4">
                       <div
@@ -195,8 +226,6 @@ const MyOrders = () => {
                         <p className="text-xs text-gray-500 font-medium uppercase tracking-wider mb-0.5">
                           Đặt ngày {formatJustDate(order.ngayDatHang)}
                         </p>
-
-                        {/* H3 hiển thị Lý do hủy hoặc Tên sản phẩm thay cho ID */}
                         <h3 className="text-xl font-bold text-gray-900 truncate max-w-[250px] md:max-w-[400px]">
                           {order.trangThai === "Đã hủy" ? (
                             <span className="text-red-500">
@@ -229,7 +258,7 @@ const MyOrders = () => {
                     </div>
                   </div>
 
-                  {/* Stepper (Ẩn nếu đã hủy) */}
+                  {/* STEPPER */}
                   {order.trangThai !== "Đã hủy" && (
                     <div className="hidden sm:flex items-center justify-between relative mb-12 px-10">
                       <div className="absolute left-0 top-4 w-full h-1.5 bg-gray-100 rounded-full"></div>
@@ -248,25 +277,30 @@ const MyOrders = () => {
                       <StepItem
                         icon="thumb_up"
                         label="Xác nhận"
-                        active={ui.step >= 2}
+                        active={
+                          ui.step >= 2 || order.trangThai === "Đã xác nhận"
+                        }
+                        current={order.trangThai === "Đã xác nhận"}
                       />
                       <StepItem
                         icon="inventory_2"
                         label="Xử lý"
                         active={ui.step >= 3}
-                        current={ui.step === 3}
+                        current={
+                          order.trangThai === "Chờ xử lý" ? false : false
+                        }
                       />
                       <StepItem
                         icon="local_shipping"
                         label="Vận chuyển"
                         active={ui.step >= 4}
-                        current={ui.step === 4}
+                        current={order.trangThai === "Đang giao"}
                       />
                       <StepItem
                         icon="home"
                         label="Thành công"
                         active={ui.step >= 5}
-                        current={ui.step === 5}
+                        current={order.trangThai === "Đã giao"}
                       />
                     </div>
                   )}
@@ -275,9 +309,9 @@ const MyOrders = () => {
                   <div className="bg-gray-50 rounded-2xl p-5 mb-6 flex flex-col md:flex-row gap-6 border border-gray-100">
                     <div className="flex-grow flex items-center gap-4">
                       <div className="h-20 w-20 rounded-xl bg-white border border-gray-200 overflow-hidden flex-shrink-0">
-                        {firstItem?.hinhAnhUrl ? (
+                        {firstItem?.hinhAnh ? (
                           <img
-                            src={`${API_URL}/uploads/${firstItem.hinhAnhUrl}`}
+                            src={`${API_URL}/uploads/${firstItem.hinhAnh}`}
                             className="w-full h-full object-cover"
                             alt="product"
                           />
@@ -308,7 +342,7 @@ const MyOrders = () => {
                     </div>
                   </div>
 
-                  {/* Actions */}
+                  {/* LOGIC NÚT BẤM */}
                   <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
                     <div className="flex items-center gap-2 text-sm bg-blue-50 px-4 py-2 rounded-lg text-blue-700 font-medium">
                       <span className="material-icons-outlined text-base">
@@ -316,10 +350,41 @@ const MyOrders = () => {
                       </span>
                       {order.trangThai === "Đã hủy"
                         ? "Đơn hàng đã bị hủy bỏ."
-                        : "Dự kiến nhận hàng sau 2-3 ngày."}
+                        : order.trangThai === "Đã giao"
+                          ? "Giao hàng thành công."
+                          : order.trangThai === "Đã xác nhận"
+                            ? "Đơn hàng đã được xác nhận, đang đóng gói."
+                            : order.trangThai === "Đang giao"
+                              ? "Đơn hàng đang trên đường đến bạn."
+                              : "Dự kiến nhận hàng sau 2-3 ngày."}
                     </div>
+
                     <div className="flex gap-3 w-full sm:w-auto">
-                      {/* Nút Mua lại cho Đã hủy hoặc Đã giao */}
+                      {/* Nút Đánh giá */}
+                      {order.trangThai === "Đã giao" &&
+                        (hasUnratedItems ? (
+                          <button
+                            onClick={() => handleOpenReview(order)}
+                            className="flex-1 sm:flex-none px-6 py-2.5 rounded-xl text-sm font-bold bg-amber-400 text-white hover:bg-amber-500 shadow-lg shadow-amber-100 transition flex items-center justify-center gap-2"
+                          >
+                            <span className="material-icons text-sm">
+                              stars
+                            </span>{" "}
+                            Đánh giá
+                          </button>
+                        ) : (
+                          <button
+                            disabled
+                            className="flex-1 sm:flex-none px-6 py-2.5 rounded-xl text-sm font-bold bg-gray-100 text-gray-400 cursor-not-allowed flex items-center justify-center gap-2"
+                          >
+                            <span className="material-icons text-sm">
+                              check_circle
+                            </span>{" "}
+                            Đã đánh giá
+                          </button>
+                        ))}
+
+                      {/* Nút Mua lại */}
                       {(order.trangThai === "Đã hủy" ||
                         order.trangThai === "Đã giao") && (
                         <Link
@@ -333,6 +398,7 @@ const MyOrders = () => {
                         </Link>
                       )}
 
+                      {/* Nút Hủy */}
                       {order.trangThai === "Chờ xử lý" && (
                         <button
                           onClick={() => handleOpenCancelModal(order)}
@@ -366,7 +432,7 @@ const MyOrders = () => {
         )}
       </div>
 
-      {/* --- CANCEL MODAL --- */}
+      {/* --- MODAL HỦY --- */}
       {showCancelModal && (
         <div className="fixed inset-0 z-[999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
           <div className="bg-white rounded-[32px] w-full max-w-md overflow-hidden shadow-2xl animate-scale-up">
@@ -383,7 +449,6 @@ const MyOrders = () => {
                 Vui lòng chọn lý do để chúng tôi cải thiện dịch vụ.
               </p>
             </div>
-
             <div className="p-8 pt-4 space-y-3">
               {cancelReasons.map((reason, index) => (
                 <button
@@ -395,7 +460,7 @@ const MyOrders = () => {
                       : "border-gray-100 text-gray-600 hover:border-gray-200"
                   }`}
                 >
-                  {reason}
+                  {reason}{" "}
                   {selectedReason === reason && (
                     <span className="material-icons text-red-500">
                       check_circle
@@ -404,7 +469,6 @@ const MyOrders = () => {
                 </button>
               ))}
             </div>
-
             <div className="p-8 pt-0 flex gap-3">
               <button
                 disabled={isSubmitting}
@@ -428,11 +492,21 @@ const MyOrders = () => {
           </div>
         </div>
       )}
+
+      {/* --- OTHER MODALS --- */}
       <OrderDetailModal
         isOpen={showDetailModal}
         onClose={() => setShowDetailModal(false)}
         detail={orderDetail}
         loading={loadingDetail}
+      />
+
+      <ReviewModal
+        isOpen={showReviewModal}
+        onClose={() => setShowReviewModal(false)}
+        order={orderToReview}
+        onSubmit={handleSubmitReview}
+        isSubmitting={isSubmittingReview}
       />
     </main>
   );

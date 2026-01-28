@@ -31,6 +31,12 @@ public class AuthenticationService {
         if (nguoiDungRepository.findByEmail(request.getEmail()).isPresent()) {
             throw new IllegalArgumentException("Email đã được sử dụng.");
         }
+        
+        if (request.getSoDienThoai() != null && !request.getSoDienThoai().isEmpty() && 
+            nguoiDungRepository.findBySoDienThoai(request.getSoDienThoai()).isPresent()) {
+            throw new IllegalArgumentException("Số điện thoại đã được sử dụng.");
+        }
+
         NguoiDung user = new NguoiDung();
         user.setHoTen(request.getHoTen());
         user.setEmail(request.getEmail());
@@ -57,8 +63,11 @@ public class AuthenticationService {
     public JwtAuthenticationResponse login(LoginRequest request) {
         authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword()));
+        
         var user = nguoiDungRepository.findByEmail(request.getEmail())
+                .or(() -> nguoiDungRepository.findBySoDienThoai(request.getEmail()))
                 .orElseThrow(() -> new IllegalArgumentException("Email hoặc mật khẩu không hợp lệ."));
+                
         var jwt = jwtService.generateToken(user);
         return new JwtAuthenticationResponse(jwt);
     }

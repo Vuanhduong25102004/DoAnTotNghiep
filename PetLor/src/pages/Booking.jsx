@@ -5,6 +5,10 @@ import bookingService from "../services/bookingService";
 import authService from "../services/authService";
 import petService from "../services/petService";
 
+// --- 1. IMPORT TOASTIFY ---
+import { ToastContainer, toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
+
 // --- CONSTANTS ---
 const API_BASE_URL = "http://localhost:8080";
 const IMAGE_BASE_URL = "http://localhost:8080/uploads";
@@ -12,7 +16,7 @@ const IMAGE_BASE_URL = "http://localhost:8080/uploads";
 const Booking = () => {
   const navigate = useNavigate();
 
-  // --- 1. STATE MANAGEMENT (GOM NHÓM) ---
+  // --- STATE MANAGEMENT ---
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
 
@@ -42,14 +46,14 @@ const Booking = () => {
     month: new Date().getMonth() + 1,
     year: new Date().getFullYear(),
     time: "",
-    viewDate: new Date(), // Dùng cho lịch hiển thị
+    viewDate: new Date(),
   });
 
   // Auth Logic
   const [currentUserId] = useState(authService.getCurrentUserId());
   const isGuest = !currentUserId;
 
-  // --- 2. FETCH DATA ---
+  // --- FETCH DATA ---
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -78,6 +82,7 @@ const Booking = () => {
         });
       } catch (error) {
         console.error("Init Error:", error);
+        toast.error("Lỗi kết nối máy chủ!"); // Thay alert nếu có lỗi init
       } finally {
         setInitialLoading(false);
       }
@@ -85,17 +90,13 @@ const Booking = () => {
     fetchData();
   }, [isGuest]);
 
-  // --- 3. LOGIC & HELPERS ---
-
-  // Update Form Helper
+  // --- LOGIC & HELPERS ---
   const updateForm = (field, value) => {
     setForm((prev) => ({ ...prev, [field]: value }));
   };
 
-  // Logic chọn Pet
   const handleSelectPet = (pet) => {
     if (form.selectedPetId === pet.thuCungId) {
-      // Bỏ chọn (Reset)
       setForm((prev) => ({
         ...prev,
         selectedPetId: null,
@@ -103,7 +104,6 @@ const Booking = () => {
         petType: "Chó",
       }));
     } else {
-      // Chọn mới
       setForm((prev) => ({
         ...prev,
         selectedPetId: pet.thuCungId,
@@ -113,32 +113,29 @@ const Booking = () => {
     }
   };
 
-  // Logic nhập tên Pet (Reset ID nếu đang chọn)
   const handlePetNameChange = (e) => {
     updateForm("petName", e.target.value);
     if (form.selectedPetId) updateForm("selectedPetId", null);
   };
 
-  // Lọc dịch vụ
   const filteredServices = useMemo(() => {
     if (form.activeCategory === "ALL") return apiData.services;
     return apiData.services.filter(
-      (s) => s.danhMucDvId === form.activeCategory
+      (s) => s.danhMucDvId === form.activeCategory,
     );
   }, [apiData.services, form.activeCategory]);
 
   const selectedServiceObj = apiData.services.find(
-    (s) => s.dichVuId === form.serviceId
+    (s) => s.dichVuId === form.serviceId,
   );
   const finalPrice = selectedServiceObj ? selectedServiceObj.giaDichVu : 0;
 
-  // Lấy ảnh pet đang chọn
   const selectedPetImg = useMemo(() => {
     const pet = apiData.myPets.find((p) => p.thuCungId === form.selectedPetId);
     return pet?.hinhAnh ? `${IMAGE_BASE_URL}/${pet.hinhAnh}` : null;
   }, [form.selectedPetId, apiData.myPets]);
 
-  // --- 4. CALENDAR LOGIC ---
+  // --- CALENDAR LOGIC ---
   const viewYear = dateTime.viewDate.getFullYear();
   const viewMonth = dateTime.viewDate.getMonth();
 
@@ -165,10 +162,10 @@ const Booking = () => {
       month: viewMonth + 1,
       year: viewYear,
       time: null,
-    })); // Reset giờ khi đổi ngày
+    }));
   };
 
-  // --- 5. TIME SLOT LOGIC ---
+  // --- TIME SLOT LOGIC ---
   const timeSlots = useMemo(() => {
     const slots = [];
     for (let i = 8; i <= 18; i++) {
@@ -183,36 +180,39 @@ const Booking = () => {
     const targetDate = new Date(
       dateTime.year,
       dateTime.month - 1,
-      dateTime.date
+      dateTime.date,
     );
     const now = new Date();
-
-    // So sánh ngày
     const targetZero = new Date(targetDate).setHours(0, 0, 0, 0);
     const todayZero = new Date().setHours(0, 0, 0, 0);
 
-    if (targetZero < todayZero) return false; // Quá khứ
-    if (targetZero > todayZero) return true; // Tương lai
+    if (targetZero < todayZero) return false;
+    if (targetZero > todayZero) return true;
 
-    // Nếu là hôm nay -> check giờ
     const [h, m] = slot.split(":").map(Number);
     const slotTime = new Date().setHours(h, m, 0, 0);
     return slotTime > now.getTime();
   };
 
-  // --- 6. SUBMIT ---
+  // --- 6. SUBMIT (ĐÃ SỬA DÙNG TOAST) ---
   const handleBooking = async (e) => {
     e.preventDefault();
-    if (!form.serviceId) return alert("Vui lòng chọn dịch vụ!");
-    if (isGuest && (!form.guestName || !form.guestPhone))
-      return alert("Vui lòng nhập thông tin liên hệ!");
-    if (!dateTime.time) return alert("Vui lòng chọn khung giờ!");
+    // Thay alert bằng toast.warn cho validation
+    if (!form.serviceId) {
+      return toast.warn("Vui lòng chọn dịch vụ! 🛠️");
+    }
+    if (isGuest && (!form.guestName || !form.guestPhone)) {
+      return toast.warn("Vui lòng nhập thông tin liên hệ! 📞");
+    }
+    if (!dateTime.time) {
+      return toast.warn("Vui lòng chọn khung giờ! ⏰");
+    }
 
     setLoading(true);
     try {
       const formattedDate = `${dateTime.year}-${String(dateTime.month).padStart(
         2,
-        "0"
+        "0",
       )}-${String(dateTime.date).padStart(2, "0")}`;
       const thoiGianBatDau = `${formattedDate}T${dateTime.time}:00`;
 
@@ -230,7 +230,7 @@ const Booking = () => {
           tenKhachHang: form.guestName,
           soDienThoaiKhachHang: form.guestPhone,
           emailKhachHang: form.guestEmail,
-          ghiChu: form.note,
+          ghiChuKhachHang: form.note,
         });
       } else {
         await bookingService.createBookingUser({
@@ -240,10 +240,20 @@ const Booking = () => {
           ghiChuKhachHang: form.note,
         });
       }
-      alert("Đặt lịch thành công!");
-      navigate("/");
+
+      // Thay alert bằng toast.success
+      toast.success("Đặt lịch thành công! 🐾", {
+        position: "top-center",
+        autoClose: 2000,
+        onClose: () => navigate("/"), // Chuyển trang sau khi toast đóng
+      });
+
+      // Hoặc nếu muốn chuyển ngay:
+      // navigate("/");
     } catch (error) {
-      alert(error.response?.data?.message || "Có lỗi xảy ra.");
+      // Thay alert bằng toast.error
+      const errorMsg = error.response?.data?.message || "Có lỗi xảy ra.";
+      toast.error(errorMsg);
     } finally {
       setLoading(false);
     }
@@ -264,6 +274,8 @@ const Booking = () => {
 
   return (
     <div className="min-h-screen bg-stone-50 font-sans text-gray-900">
+      <ToastContainer position="top-right" autoClose={3000} />
+
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-32">
         {/* HEADER */}
         <div className="mb-8 flex flex-col md:flex-row md:items-end justify-between gap-4 mt-15">
@@ -287,6 +299,11 @@ const Booking = () => {
 
         <div className="bg-white rounded-3xl shadow-xl border border-gray-100 p-6 lg:p-10">
           <form className="space-y-10">
+            {/* ... (Phần nội dung Form giữ nguyên không đổi) ... */}
+
+            {/* Code form quá dài nên tôi rút gọn hiển thị ở đây để tập trung vào logic thay đổi */}
+            {/* Bạn hãy giữ nguyên toàn bộ nội dung JSX bên trong form như code cũ */}
+
             {/* SECTION 1: GUEST INFO */}
             {isGuest ? (
               <section className="space-y-6">
@@ -669,7 +686,7 @@ const Booking = () => {
                             0,
                             0,
                             0,
-                            0
+                            0,
                           ) < new Date().setHours(0, 0, 0, 0);
                         return (
                           <button
@@ -681,14 +698,14 @@ const Booking = () => {
                               isSelected
                                 ? "bg-primary text-white font-bold shadow-md"
                                 : isPast
-                                ? "text-gray-300 cursor-not-allowed"
-                                : "hover:bg-white hover:shadow-sm"
+                                  ? "text-gray-300 cursor-not-allowed"
+                                  : "hover:bg-white hover:shadow-sm"
                             }`}
                           >
                             {day}
                           </button>
                         );
-                      }
+                      },
                     )}
                   </div>
                 </div>
@@ -714,8 +731,8 @@ const Booking = () => {
                             dateTime.time === t
                               ? "border-primary bg-primary/5 text-primary"
                               : available
-                              ? "border-gray-100 text-gray-600 hover:border-primary/30"
-                              : "border-gray-100 text-gray-300 bg-gray-100 cursor-not-allowed"
+                                ? "border-gray-100 text-gray-600 hover:border-primary/30"
+                                : "border-gray-100 text-gray-300 bg-gray-100 cursor-not-allowed"
                           }`}
                         >
                           {t}

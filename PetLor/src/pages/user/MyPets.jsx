@@ -6,40 +6,46 @@ import PetDetailModal from "./modals/PetDetailModal";
 import AOS from "aos";
 import "aos/dist/aos.css";
 
-const MyPets = () => {
-  // Lấy dữ liệu user từ UserLayout thông qua context
-  const [user] = useOutletContext();
+// 1. Import Toast
+import { ToastContainer, toast, Slide } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
+import ConfirmDeleteModal from "../admin/components/ConfirmDeleteModal";
+
+const MyPets = () => {
+  const [user] = useOutletContext();
   const [pets, setPets] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [loading, setLoading] = useState(true);
 
-  // Modal states
+  // Modal States cho Form & Detail
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [selectedPet, setSelectedPet] = useState(null);
 
+  // --- 3. STATE CHO MODAL XÓA ---
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [petIdToDelete, setPetIdToDelete] = useState(null);
+
   const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8080";
 
-  // --- API Functions ---
   const fetchPets = async () => {
     try {
       const res = await petService.getMyPets();
       setPets(Array.isArray(res) ? res : res.data || []);
     } catch (error) {
       console.error("Lỗi tải danh sách thú cưng:", error);
+      toast.error("Không thể tải danh sách thú cưng.");
     } finally {
       setLoading(false);
     }
   };
 
-  // --- Effects ---
   useEffect(() => {
     fetchPets();
     AOS.init({ duration: 800, once: true });
   }, []);
 
-  // --- Handlers ---
   const handleViewDetail = (pet) => {
     setSelectedPet(pet);
     setIsDetailOpen(true);
@@ -50,26 +56,55 @@ const MyPets = () => {
     setIsFormOpen(true);
   };
 
-  // Logic xử lý Edit: Chặn nổi bọt sự kiện để không mở Detail Modal
   const handleEditPet = (e, pet) => {
     if (e && e.stopPropagation) e.stopPropagation();
-
-    // Nếu đang mở detail thì đóng lại trước
     setIsDetailOpen(false);
-
     setSelectedPet(pet);
-    // Timeout nhỏ để UI mượt hơn nếu cần
     setTimeout(() => setIsFormOpen(true), 50);
   };
 
-  // Logic lọc thú cưng
+  // --- 4. LOGIC MỞ MODAL XÓA (Được gọi từ nút Xóa trong DetailModal) ---
+  const handleDeleteClick = (petId) => {
+    setPetIdToDelete(petId);
+    setIsDeleteModalOpen(true);
+  };
+
+  // --- 5. LOGIC XÁC NHẬN XÓA (Gọi API thật) ---
+  const handleConfirmDelete = async () => {
+    if (!petIdToDelete) return;
+
+    try {
+      await petService.deleteMyPet(petIdToDelete);
+
+      toast.success("Đã xóa thú cưng thành công!");
+
+      // Đóng tất cả modal liên quan
+      setIsDeleteModalOpen(false);
+      setIsDetailOpen(false);
+      setPetIdToDelete(null);
+
+      // Reload danh sách
+      fetchPets();
+    } catch (error) {
+      console.error("Lỗi xóa pet:", error);
+      toast.error(
+        error.response?.data?.message || "Xóa thất bại. Vui lòng thử lại.",
+      );
+      setIsDeleteModalOpen(false); // Đóng modal xác nhận dù lỗi
+    }
+  };
+
+  const handleSuccess = () => {
+    fetchPets();
+    toast.success("Cập nhật hồ sơ thành công!");
+  };
+
   const filteredPets = pets.filter(
     (p) =>
       p.tenThuCung?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       p.giongLoai?.toLowerCase().includes(searchTerm.toLowerCase()),
   );
 
-  // --- Helpers ---
   const getPetAvatarUrl = (pet) => {
     if (pet?.hinhAnh) {
       return pet.hinhAnh.startsWith("http")
@@ -107,6 +142,11 @@ const MyPets = () => {
 
   return (
     <main className="space-y-8 animate-fade-in">
+      <ToastContainer
+        style={{ marginTop: "60px", zIndex: 99999 }}
+        transition={Slide}
+      />
+
       {/* Header Section */}
       <div
         className="relative overflow-hidden bg-white rounded-3xl p-8 shadow-sm border border-gray-100 isolate"
@@ -170,6 +210,9 @@ const MyPets = () => {
                 alt={pet.tenThuCung}
                 className="w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-500"
                 src={getPetAvatarUrl(pet)}
+                onError={(e) =>
+                  (e.target.src = "https://placehold.co/300x200?text=Pet")
+                }
               />
               <div className="absolute top-3 right-3 flex gap-2">
                 <span className="px-2.5 py-1 rounded-md bg-green-100 text-green-700 text-xs font-semibold backdrop-blur-sm shadow-sm flex items-center gap-1 h-fit">
@@ -252,19 +295,31 @@ const MyPets = () => {
         </div>
       </div>
 
-      {/* MODALS */}
-      {/* Đảo thứ tự hoặc dùng z-index trong CSS để đảm bảo Form luôn đè lên Detail nếu cần */}
+      {/* --- MODALS --- */}
       <PetFormModal
         isOpen={isFormOpen}
         onClose={() => setIsFormOpen(false)}
         initialData={selectedPet}
-        onSuccess={fetchPets}
+        onSuccess={handleSuccess}
       />
+
       <PetDetailModal
         isOpen={isDetailOpen}
         onClose={() => setIsDetailOpen(false)}
         pet={selectedPet}
-        onEdit={(pet) => handleEditPet(null, pet)} // Truyền hàm edit vào Modal Chi tiết
+        onEdit={(pet) => handleEditPet(null, pet)}
+        onDelete={handleDeleteClick} // Truyền hàm xóa (kích hoạt modal confirm) xuống
+      />
+
+      {/* --- 6. CONFIRM DELETE MODAL --- */}
+      <ConfirmDeleteModal
+        isOpen={isDeleteModalOpen}
+        onClose={() => setIsDeleteModalOpen(false)}
+        onConfirm={handleConfirmDelete}
+        title="Xóa thú cưng?"
+        message="Hành động này sẽ xóa hoàn toàn hồ sơ của bé và không thể khôi phục. Bạn chắc chắn chứ?"
+        confirmText="Xóa luôn"
+        cancelText="Để lại"
       />
     </main>
   );

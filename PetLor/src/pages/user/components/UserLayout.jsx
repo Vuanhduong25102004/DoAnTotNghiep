@@ -2,6 +2,8 @@ import React, { useState, useEffect } from "react";
 import { Outlet } from "react-router-dom";
 import userService from "../../../services/userService";
 import UserProfileSidebar from "./UserProfileSidebar";
+import { ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 import AOS from "aos";
 import "aos/dist/aos.css";
 
@@ -43,6 +45,7 @@ const UserLayout = () => {
         {/* Nội dung các trang con (MyPets, Appointments,...) thay đổi ở đây */}
         <div className="flex-1 min-w-0">
           <Outlet context={[user]} />
+          <ToastContainer position="top-right" autoClose={3000} />
         </div>
       </div>
     </div>

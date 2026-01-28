@@ -1,10 +1,30 @@
 import React from "react";
-import {
-  formatDate,
-  StarRating,
-  getReviewTargetInfo,
-  getImageUrl,
-} from "../../components/utils";
+import { formatDate, StarRating, getImageUrl } from "../../components/utils";
+
+const getSafeTargetInfo = (review) => {
+  if (review.sanPham) {
+    return {
+      image: getImageUrl(review.sanPham.hinhAnh),
+      name: review.sanPham.tenSanPham,
+      type: "Sản phẩm",
+      badgeColor: "bg-blue-100 text-blue-800",
+    };
+  }
+  if (review.dichVu) {
+    return {
+      image: getImageUrl(review.dichVu.hinhAnh),
+      name: review.dichVu.tenDichVu,
+      type: "Dịch vụ",
+      badgeColor: "bg-purple-100 text-purple-800",
+    };
+  }
+  return {
+    image: null,
+    name: "Không xác định",
+    type: "Hệ thống",
+    badgeColor: "bg-gray-100 text-gray-800",
+  };
+};
 
 const SkeletonRow = () => (
   <tr className="animate-pulse border-b border-gray-100 last:border-0">
@@ -47,6 +67,71 @@ const ReviewTable = ({
   onToggleStatus,
   onDelete,
 }) => {
+  // Logic hiển thị nút phân trang thông minh (Rút gọn nếu có quá nhiều trang)
+  const renderPageNumbers = () => {
+    const pages = [];
+    const maxVisiblePages = 5; // Chỉ hiển thị tối đa 5 nút số
+
+    if (totalPages <= maxVisiblePages) {
+      for (let i = 1; i <= totalPages; i++) {
+        pages.push(i);
+      }
+    } else {
+      // Luôn hiện trang 1
+      pages.push(1);
+
+      // Tính toán khoảng giữa
+      let start = Math.max(2, currentPage - 1);
+      let end = Math.min(totalPages - 1, currentPage + 1);
+
+      if (currentPage <= 3) {
+        start = 2;
+        end = 4;
+      } else if (currentPage >= totalPages - 2) {
+        start = totalPages - 3;
+        end = totalPages - 1;
+      }
+
+      if (start > 2) {
+        pages.push("...");
+      }
+
+      for (let i = start; i <= end; i++) {
+        pages.push(i);
+      }
+
+      if (end < totalPages - 1) {
+        pages.push("...");
+      }
+
+      // Luôn hiện trang cuối
+      pages.push(totalPages);
+    }
+
+    return pages.map((page, index) => {
+      if (page === "...") {
+        return (
+          <span key={`dots-${index}`} className="px-2 py-2 text-gray-400">
+            ...
+          </span>
+        );
+      }
+      return (
+        <button
+          key={page}
+          onClick={() => onPageChange(page)}
+          className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${
+            currentPage === page
+              ? "z-10 bg-primary border-primary text-white"
+              : "bg-white border-gray-300 text-gray-500 hover:bg-gray-50"
+          }`}
+        >
+          {page}
+        </button>
+      );
+    });
+  };
+
   return (
     <div className="bg-white shadow-sm rounded-xl border border-gray-200 overflow-hidden mt-6">
       <div className="overflow-x-auto">
@@ -83,7 +168,7 @@ const ReviewTable = ({
               ))
             ) : reviews.length > 0 ? (
               reviews.map((review) => {
-                const target = getReviewTargetInfo(review);
+                const target = getSafeTargetInfo(review);
                 const avatarUrl = getImageUrl(review.nguoiDung?.anhDaiDien);
 
                 return (
@@ -94,9 +179,10 @@ const ReviewTable = ({
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       #{review.danhGiaId}
                     </td>
+
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
-                        <div className="h-8 w-8 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden border border-gray-300 relative">
+                        <div className="h-8 w-8 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden border border-gray-300 relative shrink-0">
                           {avatarUrl ? (
                             <img
                               src={avatarUrl}
@@ -106,7 +192,11 @@ const ReviewTable = ({
                                 e.target.style.display = "none";
                               }}
                             />
-                          ) : null}
+                          ) : (
+                            <span className="text-xs text-gray-500 font-bold">
+                              {review.nguoiDung?.hoTen?.charAt(0) || "?"}
+                            </span>
+                          )}
                         </div>
                         <div className="ml-3">
                           <div className="text-sm font-medium text-gray-900">
@@ -118,24 +208,30 @@ const ReviewTable = ({
                         </div>
                       </div>
                     </td>
+
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center gap-2">
-                        {/* Hiển thị ảnh nhỏ sản phẩm/dịch vụ nếu có */}
-                        {target.image && (
+                      <div className="flex items-center gap-3">
+                        {target.image ? (
                           <img
                             src={target.image}
                             alt=""
-                            className="w-8 h-8 rounded object-cover border border-gray-200"
+                            className="w-10 h-10 rounded-md object-cover border border-gray-200 shrink-0"
                           />
+                        ) : (
+                          <div className="w-10 h-10 rounded-md bg-gray-100 flex items-center justify-center border border-gray-200 shrink-0">
+                            <span className="material-symbols-outlined text-gray-400 text-sm">
+                              image_not_supported
+                            </span>
+                          </div>
                         )}
-                        <div>
+                        <div className="flex flex-col">
                           <span
-                            className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${target.badgeColor} mb-1`}
+                            className={`self-start inline-flex items-center px-2 py-0.5 rounded-[4px] text-[10px] font-bold uppercase tracking-wider ${target.badgeColor} mb-1`}
                           >
                             {target.type}
                           </span>
                           <div
-                            className="text-sm text-gray-900 truncate max-w-[120px]"
+                            className="text-sm text-gray-900 font-medium truncate max-w-[150px]"
                             title={target.name}
                           >
                             {target.name}
@@ -143,23 +239,26 @@ const ReviewTable = ({
                         </div>
                       </div>
                     </td>
-                    <td className="px-6 py-4">
+
+                    <td className="px-6 py-4 min-w-[250px]">
                       <div className="mb-1">{StarRating(review.soSao)}</div>
-                      <p className="text-sm text-gray-600 line-clamp-2 max-w-xs">
+                      <p className="text-sm text-gray-600 line-clamp-2">
                         {review.noiDung}
                       </p>
                       {review.phanHoi && (
-                        <div className="mt-1 flex items-center gap-1 text-xs text-green-600">
+                        <div className="mt-2 flex items-center gap-1.5 text-xs text-green-700 bg-green-50 px-2 py-1 rounded w-fit">
                           <span className="material-symbols-outlined text-[14px]">
                             reply
                           </span>
-                          Đã phản hồi
+                          <span>Đã phản hồi</span>
                         </div>
                       )}
                     </td>
+
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       {formatDate(review.ngayTao)}
                     </td>
+
                     <td className="px-6 py-4 whitespace-nowrap">
                       <button
                         onClick={() => onToggleStatus(review)}
@@ -172,23 +271,22 @@ const ReviewTable = ({
                         {review.trangThai ? "Hiển thị" : "Đang ẩn"}
                       </button>
                     </td>
+
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                      <div className="flex items-center justify-end space-x-2">
+                      <div className="flex items-center justify-end space-x-3">
                         <button
                           onClick={() => onViewDetail(review)}
-                          className="text-gray-400 hover:text-blue-600"
-                          title="Xem & Phản hồi"
+                          className="text-gray-400 hover:text-blue-600 transition-colors p-1 rounded-full hover:bg-blue-50"
                         >
-                          <span className="material-symbols-outlined text-base">
+                          <span className="material-symbols-outlined text-[20px]">
                             rate_review
                           </span>
                         </button>
                         <button
                           onClick={() => onDelete(review.danhGiaId)}
-                          className="text-gray-400 hover:text-red-500"
-                          title="Xóa"
+                          className="text-gray-400 hover:text-red-500 transition-colors p-1 rounded-full hover:bg-red-50"
                         >
-                          <span className="material-symbols-outlined text-base">
+                          <span className="material-symbols-outlined text-[20px]">
                             delete
                           </span>
                         </button>
@@ -199,8 +297,11 @@ const ReviewTable = ({
               })
             ) : (
               <tr>
-                <td colSpan="7" className="px-6 py-4 text-center text-gray-500">
-                  Không tìm thấy đánh giá nào.
+                <td
+                  colSpan="7"
+                  className="px-6 py-12 text-center text-gray-500"
+                >
+                  <p>Không tìm thấy đánh giá nào phù hợp.</p>
                 </td>
               </tr>
             )}
@@ -208,7 +309,7 @@ const ReviewTable = ({
         </table>
       </div>
 
-      {/* Pagination (Giữ nguyên code phân trang) */}
+      {/* Pagination Controls */}
       <div className="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6">
         <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
           <div>
@@ -241,21 +342,10 @@ const ReviewTable = ({
                     chevron_left
                   </span>
                 </button>
-                {Array.from({ length: totalPages }, (_, i) => i + 1).map(
-                  (number) => (
-                    <button
-                      key={number}
-                      onClick={() => onPageChange(number)}
-                      className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${
-                        currentPage === number
-                          ? "z-10 bg-primary border-primary text-white"
-                          : "bg-white border-gray-300 text-gray-500 hover:bg-gray-50"
-                      }`}
-                    >
-                      {number}
-                    </button>
-                  )
-                )}
+
+                {/* Render danh sách số trang thông minh */}
+                {renderPageNumbers()}
+
                 <button
                   onClick={() => onPageChange(currentPage + 1)}
                   disabled={currentPage === totalPages}

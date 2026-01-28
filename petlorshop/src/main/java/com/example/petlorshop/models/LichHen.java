@@ -37,7 +37,10 @@ public class LichHen {
     private LoaiLichHen loaiLichHen = LoaiLichHen.THUONG_LE; // Mặc định là thường lệ
 
     @Column(name = "ghi_chu", columnDefinition = "TEXT")
-    private String ghiChu;
+    private String ghiChu; // Ghi chú của khách hàng/lễ tân
+
+    @Column(name = "ghi_chu_bac_si", columnDefinition = "TEXT")
+    private String ghiChuBacSi; // Ghi chú chuyên môn của bác sĩ
 
     @Column(name = "ly_do_huy", columnDefinition = "TEXT")
     private String lyDoHuy;

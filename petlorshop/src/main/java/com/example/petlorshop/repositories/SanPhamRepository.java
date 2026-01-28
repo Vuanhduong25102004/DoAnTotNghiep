@@ -22,4 +22,7 @@ public interface SanPhamRepository extends JpaRepository<SanPham, Integer> {
 
     // Filter by Category
     Page<SanPham> findByDanhMucSanPham_DanhMucId(Integer danhMucId, Pageable pageable);
+
+    // Search by Name AND Category
+    Page<SanPham> findByTenSanPhamContainingIgnoreCaseAndDanhMucSanPham_DanhMucId(String tenSanPham, Integer danhMucId, Pageable pageable);
 }

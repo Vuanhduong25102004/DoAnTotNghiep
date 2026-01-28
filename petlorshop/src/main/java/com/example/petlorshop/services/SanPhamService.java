@@ -43,38 +43,23 @@ public class SanPhamService {
 
     @Transactional(readOnly = true)
     public Page<SanPhamResponse> getAllSanPham(Pageable pageable, String keyword, Integer categoryId) {
-        // Trường hợp 1: Có keyword (Ưu tiên tìm kiếm trước, sau đó lọc danh mục nếu có)
-        if (StringUtils.hasText(keyword)) {
-            List<SanPham> allMatches = sanPhamRepository.searchByKeyword(keyword);
-            
-            String lowerKeyword = keyword.toLowerCase();
-            List<SanPhamResponse> filteredList = allMatches.stream()
-                    .filter(sp -> sp.getTenSanPham().toLowerCase().contains(lowerKeyword))
-                    // Lọc thêm theo danh mục nếu có
-                    .filter(sp -> categoryId == null || (sp.getDanhMucSanPham() != null && sp.getDanhMucSanPham().getDanhMucId().equals(categoryId)))
-                    .map(this::convertToResponse)
-                    .collect(Collectors.toList());
+        Page<SanPham> sanPhamPage;
 
-            int start = (int) pageable.getOffset();
-            int end = Math.min((start + pageable.getPageSize()), filteredList.size());
-            
-            if (start > filteredList.size()) {
-                return new PageImpl<>(List.of(), pageable, filteredList.size());
-            }
-            
-            List<SanPhamResponse> pageContent = filteredList.subList(start, end);
-            return new PageImpl<>(pageContent, pageable, filteredList.size());
-        }
-        
-        // Trường hợp 2: Không có keyword, chỉ có categoryId
-        if (categoryId != null) {
-            return sanPhamRepository.findByDanhMucSanPham_DanhMucId(categoryId, pageable)
-                    .map(this::convertToResponse);
+        if (StringUtils.hasText(keyword) && categoryId != null) {
+            // Tìm theo tên VÀ danh mục
+            sanPhamPage = sanPhamRepository.findByTenSanPhamContainingIgnoreCaseAndDanhMucSanPham_DanhMucId(keyword, categoryId, pageable);
+        } else if (StringUtils.hasText(keyword)) {
+            // Chỉ tìm theo tên
+            sanPhamPage = sanPhamRepository.findByTenSanPhamContainingIgnoreCase(keyword, pageable);
+        } else if (categoryId != null) {
+            // Chỉ lọc theo danh mục
+            sanPhamPage = sanPhamRepository.findByDanhMucSanPham_DanhMucId(categoryId, pageable);
+        } else {
+            // Lấy tất cả
+            sanPhamPage = sanPhamRepository.findAll(pageable);
         }
 
-        // Trường hợp 3: Không có gì cả -> Lấy tất cả
-        return sanPhamRepository.findAll(pageable)
-                .map(this::convertToResponse);
+        return sanPhamPage.map(this::convertToResponse);
     }
 
     @Transactional(readOnly = true)

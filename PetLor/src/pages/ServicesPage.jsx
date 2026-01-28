@@ -2,12 +2,10 @@ import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import AOS from "aos";
 import "aos/dist/aos.css";
-// Import services
-import productService from "../services/productService"; // Hoặc petService tùy bạn đặt tên file
-import petService from "../services/petService"; // Import file vừa sửa ở Bước 1
+import productService from "../services/productService";
+import petService from "../services/petService";
 import searchService from "../services/searchService";
 
-// Helper: Format tiền tệ
 const formatCurrency = (amount) => {
   if (typeof amount !== "number") {
     return "Liên hệ";
@@ -21,19 +19,16 @@ const formatCurrency = (amount) => {
 const ServicesPage = () => {
   const [services, setServices] = useState([]);
   const [loading, setLoading] = useState(true);
-
-  // --- STATE MỚI ---
-  const [categories, setCategories] = useState([]); // Lưu danh sách danh mục
+  const [categories, setCategories] = useState([]);
   const [keyword, setKeyword] = useState("");
-  const [selectedCategoryId, setSelectedCategoryId] = useState(null); // Lưu ID danh mục đang chọn
+  const [selectedCategoryId, setSelectedCategoryId] = useState(null);
+  const [sortOrder, setSortOrder] = useState("");
 
-  // --- 1. LẤY DANH MỤC DỊCH VỤ TỪ API ---
   useEffect(() => {
     const fetchCategories = async () => {
       try {
         const response = await petService.getAllServiceCategories();
         let data = [];
-        // Xử lý các trường hợp trả về của API (Mảng hoặc Object Pageable)
         if (Array.isArray(response)) data = response;
         else if (response?.data) data = response.data;
         else if (response?.content) data = response.content;
@@ -46,22 +41,22 @@ const ServicesPage = () => {
     fetchCategories();
   }, []);
 
-  // --- 2. HÀM FETCH DỊCH VỤ (CÓ LỌC) ---
-  const fetchServices = async (searchQuery = "", catId = null) => {
+  const fetchServices = async (
+    searchQuery = "",
+    catId = null,
+    sortValue = "",
+  ) => {
     setLoading(true);
     try {
       let response;
+      const params = sortValue ? { sort: sortValue } : {};
 
-      // LOGIC: Nếu có keyword HOẶC có categoryId -> Gọi API Search
       if (searchQuery.trim() || catId !== null) {
-        // Gọi searchServices với cả 2 tham số
         response = await searchService.searchServices(searchQuery, catId);
       } else {
-        // Mặc định lấy tất cả
-        response = await productService.getAllServices();
+        response = await productService.getAllServices(params);
       }
 
-      // Xử lý kết quả trả về
       let data = [];
       if (Array.isArray(response)) data = response;
       else if (response?.data && Array.isArray(response.data))
@@ -80,28 +75,32 @@ const ServicesPage = () => {
     }
   };
 
-  // --- HANDLERS ---
   const handleSearch = () => {
-    fetchServices(keyword, selectedCategoryId);
+    fetchServices(keyword, selectedCategoryId, sortOrder);
   };
 
   const handleKeyDown = (e) => {
     if (e.key === "Enter") {
-      fetchServices(keyword, selectedCategoryId);
+      fetchServices(keyword, selectedCategoryId, sortOrder);
     }
   };
 
-  // Click chọn danh mục
   const handleCategoryClick = (catId) => {
     setSelectedCategoryId(catId);
-    fetchServices(keyword, catId);
+    fetchServices(keyword, catId, sortOrder);
   };
 
-  // Reset tất cả
   const handleReset = () => {
     setKeyword("");
     setSelectedCategoryId(null);
-    fetchServices("", null);
+    setSortOrder("");
+    fetchServices("", null, "");
+  };
+
+  const handleSortChange = (e) => {
+    const newSortValue = e.target.value;
+    setSortOrder(newSortValue);
+    fetchServices(keyword, selectedCategoryId, newSortValue);
   };
 
   useEffect(() => {
@@ -116,11 +115,10 @@ const ServicesPage = () => {
       });
       AOS.refresh();
     }, 100);
-    fetchServices(); // Gọi lần đầu
+    fetchServices();
     return () => clearTimeout(aosInit);
   }, []);
 
-  // Style cho background pattern
   const heroPatternStyle = {
     backgroundColor: "#0fb478",
     backgroundImage:
@@ -133,7 +131,6 @@ const ServicesPage = () => {
   return (
     <div className="w-full min-h-screen font-display bg-gray-50 text-gray-900 overflow-x-hidden">
       <main>
-        {/* ================= HERO SECTION ================= */}
         <section className="bg-primary relative overflow-hidden pt-28 pb-16 lg:pb-24">
           <div
             className="absolute inset-0 pointer-events-none"
@@ -170,13 +167,11 @@ const ServicesPage = () => {
           </div>
         </section>
 
-        {/* ================= FILTER & SEARCH SECTION ================= */}
         <section
           className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-8 relative z-20 mb-12"
           data-aos="fade-up"
         >
           <div className="bg-white p-4 rounded-full border border-gray-100 shadow-xl flex flex-col lg:flex-row gap-6 items-center justify-between">
-            {/* INPUT TÌM KIẾM */}
             <div className="relative w-full lg:w-96">
               <span
                 className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 cursor-pointer hover:text-primary transition-colors"
@@ -194,9 +189,7 @@ const ServicesPage = () => {
               />
             </div>
 
-            {/* DANH SÁCH DANH MỤC (ĐỘNG TỪ API) */}
             <div className="flex items-center gap-2 overflow-x-auto pb-2 lg:pb-0 no-scrollbar w-full lg:w-auto">
-              {/* Nút Tất cả */}
               <button
                 onClick={handleReset}
                 className={`px-6 py-2.5 rounded-full font-bold whitespace-nowrap transition-all ${
@@ -208,9 +201,7 @@ const ServicesPage = () => {
                 Tất cả
               </button>
 
-              {/* Render danh mục từ State */}
               {categories.map((cat) => {
-                // Lưu ý: Kiểm tra kỹ tên trường trả về từ API (danhMucDvId / id, tenDanhMucDv / name)
                 const catId = cat.danhMucDvId || cat.id;
                 const catName = cat.tenDanhMucDv || cat.tenDanhMuc || cat.name;
 
@@ -230,18 +221,20 @@ const ServicesPage = () => {
               })}
             </div>
 
-            {/* Sort Dropdown */}
             <div className="w-full lg:w-48">
-              <select className="w-full py-3 px-4 bg-gray-50 border-none rounded-full focus:ring-2 focus:ring-primary outline-none text-sm font-medium cursor-pointer">
-                <option>Phổ biến nhất</option>
-                <option>Giá thấp đến cao</option>
-                <option>Giá cao đến thấp</option>
+              <select
+                className="w-full py-3 px-4 bg-gray-50 border-none rounded-full focus:ring-2 focus:ring-primary outline-none text-sm font-medium cursor-pointer"
+                value={sortOrder}
+                onChange={handleSortChange}
+              >
+                <option value="">Phổ biến nhất</option>
+                <option value="giaDichVu,asc">Giá thấp đến cao</option>
+                <option value="giaDichVu,desc">Giá cao đến thấp</option>
               </select>
             </div>
           </div>
         </section>
 
-        {/* ================= SERVICES GRID ================= */}
         <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-20 pt-8">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
             {loading ? (
@@ -316,10 +309,7 @@ const ServicesPage = () => {
           </div>
         </section>
 
-        {/* ... (Phần Contact Section giữ nguyên) ... */}
-        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 mb-24">
-          {/* ... */}
-        </section>
+        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 mb-24"></section>
       </main>
     </div>
   );

@@ -31,36 +31,23 @@ public class DichVuService {
     private FileStorageService fileStorageService;
 
     public Page<DichVuResponse> getAllDichVu(Pageable pageable, String keyword, Integer categoryId) {
-        if (StringUtils.hasText(keyword)) {
-            List<DichVu> allMatches = dichVuRepository.searchByKeyword(keyword);
-            
-            String lowerKeyword = keyword.toLowerCase();
-            List<DichVuResponse> filteredList = allMatches.stream()
-                    .filter(dv -> (dv.getTenDichVu() != null && dv.getTenDichVu().toLowerCase().contains(lowerKeyword)) || 
-                                  (dv.getMoTa() != null && dv.getMoTa().toLowerCase().contains(lowerKeyword)))
-                    // Lọc thêm theo danh mục nếu có
-                    .filter(dv -> categoryId == null || (dv.getDanhMucDichVu() != null && dv.getDanhMucDichVu().getDanhMucDvId().equals(categoryId)))
-                    .map(this::convertToResponse)
-                    .collect(Collectors.toList());
+        Page<DichVu> dichVuPage;
 
-            int start = (int) pageable.getOffset();
-            int end = Math.min((start + pageable.getPageSize()), filteredList.size());
-            
-            if (start > filteredList.size()) {
-                return new PageImpl<>(List.of(), pageable, filteredList.size());
-            }
-            
-            List<DichVuResponse> pageContent = filteredList.subList(start, end);
-            return new PageImpl<>(pageContent, pageable, filteredList.size());
+        if (StringUtils.hasText(keyword) && categoryId != null) {
+            // Tìm theo từ khóa VÀ danh mục
+            dichVuPage = dichVuRepository.searchByKeywordAndCategory(keyword, categoryId, pageable);
+        } else if (StringUtils.hasText(keyword)) {
+            // Chỉ tìm theo từ khóa
+            dichVuPage = dichVuRepository.searchByKeyword(keyword, pageable);
+        } else if (categoryId != null) {
+            // Chỉ lọc theo danh mục
+            dichVuPage = dichVuRepository.findByDanhMucDichVu_DanhMucDvId(categoryId, pageable);
+        } else {
+            // Lấy tất cả
+            dichVuPage = dichVuRepository.findAll(pageable);
         }
 
-        if (categoryId != null) {
-            return dichVuRepository.findByDanhMucDichVu_DanhMucDvId(categoryId, pageable)
-                    .map(this::convertToResponse);
-        }
-
-        return dichVuRepository.findAll(pageable)
-                .map(this::convertToResponse);
+        return dichVuPage.map(this::convertToResponse);
     }
 
     public Optional<DichVuResponse> getDichVuById(Integer id) {

@@ -4,6 +4,7 @@ import {
   formatDate,
   StarRating,
   getReviewTargetInfo,
+  getImageUrl,
 } from "../../../components/utils";
 import useEscapeKey from "../../../../../hooks/useEscapeKey";
 
@@ -83,7 +84,7 @@ const ReviewDetailModal = ({ isOpen, onClose, review, onReply }) => {
                 <div className="h-14 w-14 rounded-full bg-white border border-slate-200 shadow-sm overflow-hidden flex-shrink-0 flex items-center justify-center">
                   {review.nguoiDung?.anhDaiDien ? (
                     <img
-                      src={review.nguoiDung.anhDaiDien}
+                      src={getImageUrl(review.nguoiDung.anhDaiDien)}
                       alt=""
                       className="w-full h-full object-cover"
                     />
@@ -155,7 +156,7 @@ const ReviewDetailModal = ({ isOpen, onClose, review, onReply }) => {
                     <div className="mt-3 pt-3 border-t border-slate-50">
                       <p className={labelClass}>Hình ảnh đính kèm</p>
                       <img
-                        src={review.hinhAnh}
+                        src={getImageUrl(review.hinhAnh)}
                         alt="Review attachment"
                         className="h-32 w-auto rounded-xl border border-slate-200 object-cover hover:scale-105 transition-transform cursor-pointer shadow-sm"
                       />

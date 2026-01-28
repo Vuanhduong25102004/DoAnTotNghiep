@@ -28,6 +28,14 @@ const OrderTable = ({
   onEdit,
   onDelete,
 }) => {
+  // --- ADDED LOG ---
+  console.log("➡️ OrderTable props received:", {
+    loading,
+    ordersCount: orders?.length,
+    ordersData: orders,
+  });
+  // -----------------
+
   return (
     <div className="bg-white shadow-sm rounded-xl border border-gray-200 overflow-hidden mt-6">
       <div className="overflow-x-auto">
@@ -76,7 +84,7 @@ const OrderTable = ({
                 const totalQty =
                   order.chiTietDonHangs?.reduce(
                     (sum, item) => sum + item.soLuong,
-                    0
+                    0,
                   ) || 0;
                 return (
                   <tr
@@ -201,7 +209,7 @@ const OrderTable = ({
                   >
                     {number}
                   </button>
-                )
+                ),
               )}
 
               <button

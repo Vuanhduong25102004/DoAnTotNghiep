@@ -104,6 +104,14 @@ public class ThuCungController {
         ThuCung updatedThuCung = thuCungService.updateMyPet(userEmail, id, request, hinhAnh);
         return ResponseEntity.ok(toThuCungResponse(updatedThuCung));
     }
+    
+    @DeleteMapping("/me/{id}")
+    public ResponseEntity<Map<String, String>> deleteMyPet(@PathVariable Integer id) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String userEmail = authentication.getName();
+        thuCungService.deleteMyPet(userEmail, id);
+        return ResponseEntity.ok(Map.of("message", "Xóa thú cưng thành công"));
+    }
 
     @PostMapping(consumes = { MediaType.MULTIPART_FORM_DATA_VALUE })
     public ResponseEntity<ThuCungResponse> createThuCung(@RequestPart("thuCung") String thuCungJson,

@@ -2,6 +2,11 @@ import React, { useEffect, useState } from "react";
 import { useLocation, useNavigate, Link } from "react-router-dom";
 import axios from "axios";
 import Select from "react-select";
+
+// --- 1. IMPORT TOASTIFY ---
+import { ToastContainer, toast, Slide } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
+
 import { formatCurrency } from "../utils/formatters";
 import { SERVER_URL } from "../services/apiClient";
 import orderService from "../services/orderService";
@@ -73,7 +78,10 @@ const Checkout = () => {
   // Check cart items
   useEffect(() => {
     if (!selectedItems || selectedItems.length === 0) {
-      alert("Vui lòng chọn sản phẩm từ giỏ hàng trước!");
+      // --- THAY ALERT ---
+      toast.warn("Vui lòng chọn sản phẩm từ giỏ hàng trước!", {
+        position: "top-center",
+      });
       navigate("/cart");
     }
   }, [selectedItems, navigate]);
@@ -95,11 +103,18 @@ const Checkout = () => {
               email: userData.email || "",
               diaChi: userData.diaChi || "",
             }));
+            // Nếu là User đăng nhập thành công, có thể cho phép chọn lại COD (nếu muốn chắc chắn)
+            // setPaymentMethod("COD");
           }
         } catch (error) {
           console.error("Lỗi lấy thông tin user:", error);
           setCurrentUser(null);
+          // Token lỗi -> Coi như Guest -> Chuyển về MOMO
+          setPaymentMethod("MOMO");
         }
+      } else {
+        // Không có token -> Guest -> Chuyển về MOMO
+        setPaymentMethod("MOMO");
       }
     };
     fillUserData();
@@ -123,7 +138,7 @@ const Checkout = () => {
       const fetchDistricts = async () => {
         try {
           const res = await axios.get(
-            `https://esgoo.net/api-tinhthanh/2/${selectedProvinceId}.htm`
+            `https://esgoo.net/api-tinhthanh/2/${selectedProvinceId}.htm`,
           );
           if (res.data.error === 0) {
             setDistricts(res.data.data);
@@ -142,7 +157,7 @@ const Checkout = () => {
       const fetchWards = async () => {
         try {
           const res = await axios.get(
-            `https://esgoo.net/api-tinhthanh/3/${selectedDistrictId}.htm`
+            `https://esgoo.net/api-tinhthanh/3/${selectedDistrictId}.htm`,
           );
           if (res.data.error === 0) setWards(res.data.data);
         } catch (error) {
@@ -190,7 +205,7 @@ const Checkout = () => {
   const handlePlaceOrder = async () => {
     // Log kiểm tra form có hợp lệ không
     if (!isFormValid) {
-      console.warn("Form chưa hợp lệ! Dữ liệu hiện tại:", formData);
+      toast.error("Vui lòng điền đầy đủ thông tin giao hàng!");
       return;
     }
 
@@ -221,20 +236,19 @@ const Checkout = () => {
       if (!currentUser) {
         // --- GUEST ---
         if (paymentMethod === "COD") {
-          alert("Khách vãng lai vui lòng chọn thanh toán Online (VNPAY/MOMO)!");
+          // --- THAY ALERT ---
+          toast.warn(
+            "Khách vãng lai vui lòng chọn thanh toán Online (VNPAY/MOMO)!",
+            {
+              icon: "💳",
+            },
+          );
           setLoading(false);
           return;
         }
 
-        const guestPayload = { ...basePayload, email: formData.email }; // [LOG] Xem dữ liệu Guest gửi đi
-        console.log(
-          "📦 PAYLOAD GUEST GỬI ĐI:",
-          JSON.stringify(guestPayload, null, 2)
-        ); // Gọi API tạo đơn guest
-
-        const res = await orderService.createOrder(guestPayload, true); // [LOG] Xem server trả về gì
-        console.log("✅ SERVER PHẢN HỒI (GUEST):", res);
-
+        const guestPayload = { ...basePayload, email: formData.email };
+        const res = await orderService.createOrder(guestPayload, true);
         orderResponse = res.data || res;
       } else {
         // --- USER ---
@@ -242,49 +256,52 @@ const Checkout = () => {
           ...basePayload,
           userId: currentUser.userId,
           hoTen: formData.fullName,
-        }; // [LOG] Xem dữ liệu User gửi đi
-
-        console.log(
-          "📦 PAYLOAD USER GỬI ĐI:",
-          JSON.stringify(userPayload, null, 2)
-        );
-
-        const res = await orderService.createOrder(userPayload, false); // [LOG] Xem server trả về gì
-
-        console.log("✅ SERVER PHẢN HỒI (USER):", res);
-
+        };
+        const res = await orderService.createOrder(userPayload, false);
         orderResponse = res.data || res;
-      } // --- XỬ LÝ SAU KHI TẠO ĐƠN ---
+      }
 
+      // --- XỬ LÝ SAU KHI TẠO ĐƠN ---
       if (paymentMethod === "COD") {
-        console.log("👉 Thanh toán COD -> Hoàn tất ngay.");
         finishOrderProcess();
       } else {
-        console.log("👉 Thanh toán Online -> Mở Modal QR."); // Giả lập lấy ID đơn hàng từ response
         const newOrderId = orderResponse?.id || "MDH" + Date.now();
-        console.log("🆔 Order ID mới tạo:", newOrderId);
         setCreatedOrderId(newOrderId);
         setShowPaymentModal(true);
         setLoading(false);
+        toast.info("Đơn hàng đã tạo! Vui lòng quét mã QR để thanh toán.");
       }
     } catch (error) {
-      // [LOG] Xem lỗi chi tiết
       console.error("❌ LỖI KHI GỌI API:", error);
-      if (error.response) {
-        console.error("Chi tiết lỗi từ Server:", error.response.data);
-      }
-
-      alert("Đặt hàng thất bại. Vui lòng thử lại!");
+      const errorMsg =
+        error.response?.data?.message || "Đặt hàng thất bại. Vui lòng thử lại!";
+      // --- THAY ALERT ---
+      toast.error(errorMsg);
       setLoading(false);
     }
   };
 
-  // Hàm dọn dẹp và chuyển trang (dùng khi COD xong hoặc User ấn "Đã thanh toán" trên Modal)
+  // Hàm dọn dẹp và chuyển trang
   const finishOrderProcess = async () => {
     localStorage.removeItem("cart");
     await fetchCart();
-    alert("Đặt hàng thành công!");
-    navigate("/");
+
+    // --- THAY ALERT ---
+    toast.success(
+      <div>
+        <div className="font-bold">Đặt hàng thành công!</div>
+        <div className="text-xs">Cảm ơn bạn đã mua sắm tại PetLor.</div>
+      </div>,
+      {
+        autoClose: 2500,
+        onClose: () => navigate("/"), // Chuyển trang sau khi toast đóng hoặc hết giờ
+      },
+    );
+
+    // Fallback chuyển trang nếu user không tương tác toast
+    setTimeout(() => {
+      navigate("/");
+    }, 2800);
   };
 
   // --- STYLE REACT-SELECT ---
@@ -318,6 +335,22 @@ const Checkout = () => {
 
   return (
     <main className="max-w-screen-xl mx-auto mt-16 px-4 pb-10 relative">
+      {/* --- 2. THÊM TOAST CONTAINER --- */}
+      <ToastContainer
+        position="top-right"
+        autoClose={3000}
+        hideProgressBar={false}
+        newestOnTop={true}
+        closeOnClick
+        rtl={false}
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
+        theme="light"
+        transition={Slide}
+        style={{ zIndex: 99999, marginTop: "60px" }}
+      />
+
       {/* Breadcrumb */}
       <div className="flex items-center gap-2 mb-8 text-sm">
         <Link className="text-gray-500 hover:text-primary" to="/cart">
@@ -409,7 +442,7 @@ const Checkout = () => {
                     options={provinceOptions}
                     value={
                       provinceOptions.find(
-                        (opt) => opt.value === selectedProvinceId
+                        (opt) => opt.value === selectedProvinceId,
                       ) || null
                     }
                     onChange={handleSelectProvince}
@@ -429,7 +462,7 @@ const Checkout = () => {
                     options={districtOptions}
                     value={
                       districtOptions.find(
-                        (opt) => opt.value === selectedDistrictId
+                        (opt) => opt.value === selectedDistrictId,
                       ) || null
                     }
                     onChange={handleSelectDistrict}
@@ -450,7 +483,7 @@ const Checkout = () => {
                     options={wardOptions}
                     value={
                       wardOptions.find(
-                        (opt) => opt.label === formData.phuongXa
+                        (opt) => opt.label === formData.phuongXa,
                       ) || null
                     }
                     onChange={handleSelectWard}
@@ -660,7 +693,10 @@ const Checkout = () => {
                 />
                 <button
                   type="button"
-                  onClick={() => alert("Tính năng đang phát triển")}
+                  // --- THAY ALERT ---
+                  onClick={() =>
+                    toast.info("Tính năng đang phát triển", { autoClose: 1500 })
+                  }
                   className="bg-primary/10 hover:bg-primary/20 text-primary font-bold px-4 rounded-lg text-sm transition-colors"
                 >
                   Áp dụng
@@ -743,13 +779,7 @@ const Checkout = () => {
             {/* QR Image */}
             <div className="p-8 flex flex-col items-center justify-center space-y-4">
               <div className="relative group">
-                {/* Sử dụng API VietQR để tạo mã QR động.
-                  - BankID: 970422 (MBBank) - Bạn hãy đổi thành ID ngân hàng của bạn.
-                  - AccountNo: 123456789 - Bạn hãy đổi thành số tài khoản của bạn.
-                  - Template: compact2
-                  - Amount: Số tiền đơn hàng
-                  - AddInfo: Nội dung chuyển khoản
-                */}
+                {/* QR Code */}
                 <img
                   src={`https://img.vietqr.io/image/MB-0969696969-compact2.png?amount=${FINAL_TOTAL}&addInfo=${paymentMethod}%20${
                     createdOrderId || "DONHANG"

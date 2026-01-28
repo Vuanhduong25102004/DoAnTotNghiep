@@ -50,6 +50,11 @@ const StaffSidebar = ({ user }) => {
         label: "Đơn thuốc",
         icon: "medication",
       },
+      {
+        path: "/staff/receptionist/orders",
+        label: "Quản lý đơn hàng",
+        icon: "receipt_long",
+      },
     ],
     SPA: [
       { path: "/staff/spa", label: "Tổng quan", icon: "grid_view" },
@@ -65,10 +70,10 @@ const StaffSidebar = ({ user }) => {
   const getRoleDisplayName = () => {
     switch (user?.role) {
       case "DOCTOR":
-        return "Doctor";
+        return "Bác sĩ";
       case "RECEPTIONIST":
-        return "Reception";
-      case "SPA_STAFF":
+        return "Lễ tân";
+      case "SPA":
         return "Spa";
       default:
         return "Staff";
@@ -77,9 +82,6 @@ const StaffSidebar = ({ user }) => {
 
   // Hàm kiểm tra xem menu này có đang Active không (Dựa vào URL)
   const isActive = (path) => {
-    // So sánh chính xác hoặc path con (nếu cần)
-    // Ví dụ: đang ở /staff/doctor thì tab Tổng quan sáng
-    // Lưu ý: Logic này có thể tùy chỉnh nếu bạn muốn strict mode
     return location.pathname === path;
   };
 

@@ -19,8 +19,11 @@ const reviewService = {
     apiClient.put(`/danh-gia/admin/${reviewId}/trang-thai`, body),
 
   replyToReview: (reviewId, body) => 
-    apiClient.put(`/danh-gia/admin/${reviewId}/phan-hoi`, body),
+    apiClient.post(`/danh-gia/${reviewId}/reply`, body),
   deleteReview: (reviewId) => apiClient.delete(`/danh-gia/admin/${reviewId}`),
+
+createBulkReviews: (data) => apiClient.post('/danh-gia/bulk', data),
+
 };
 
 export default reviewService;

@@ -1,21 +1,21 @@
 package com.example.petlorshop.dto;
 
 import lombok.AllArgsConstructor;
-import lombok.Getter;
+import lombok.Data;
 import lombok.NoArgsConstructor;
-import lombok.Setter;
 
 import java.math.BigDecimal;
 
-@Getter
-@Setter
-@NoArgsConstructor
+@Data
 @AllArgsConstructor
+@NoArgsConstructor
 public class ChiTietDonHangResponse {
     private Integer id;
     private Integer soLuong;
     private BigDecimal donGia;
     private Integer sanPhamId;
     private String tenSanPham;
-    private String hinhAnhUrl;
+    private String tenDanhMuc; // Thêm trường tên danh mục
+    private String hinhAnh;
+    private boolean daDanhGia;
 }

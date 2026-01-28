@@ -2,6 +2,10 @@ import React, { useState, useEffect } from "react";
 import { useOutletContext } from "react-router-dom";
 import AOS from "aos";
 
+// --- 1. IMPORT TOAST ---
+import { ToastContainer, toast, Slide } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
+
 const UserSettings = () => {
   const [user] = useOutletContext();
   const [notifications, setNotifications] = useState({
@@ -14,6 +18,14 @@ const UserSettings = () => {
     AOS.init({ duration: 800 });
   }, []);
 
+  // --- 2. HÀM XỬ LÝ LƯU (DEMO) ---
+  const handleSaveSettings = () => {
+    // Giả lập lưu thành công
+    toast.success("Đã cập nhật cài đặt thành công!", {
+      icon: "⚙️",
+    });
+  };
+
   const getAvatarUrl = (u) =>
     u?.anhDaiDien?.startsWith("http")
       ? u.anhDaiDien
@@ -21,6 +33,12 @@ const UserSettings = () => {
 
   return (
     <main className="flex-1 space-y-8 animate-fade-in pb-10">
+      {/* --- 3. TOAST CONTAINER --- */}
+      <ToastContainer
+        style={{ marginTop: "60px", zIndex: 9999 }}
+        transition={Slide}
+      />
+
       <div data-aos="fade-down">
         <h1 className="text-2xl font-bold text-gray-900">Cài đặt</h1>
         <p className="text-gray-500">Quản lý bảo mật và cấu hình ứng dụng.</p>
@@ -72,7 +90,10 @@ const UserSettings = () => {
           </div>
         </div>
         <div className="flex justify-end">
-          <button className="bg-[#111827] text-white px-8 py-2.5 rounded-xl font-bold shadow-lg hover:bg-gray-800 transition-all">
+          <button
+            onClick={handleSaveSettings}
+            className="bg-[#111827] text-white px-8 py-2.5 rounded-xl font-bold shadow-lg hover:bg-gray-800 transition-all active:scale-95"
+          >
             Lưu thay đổi
           </button>
         </div>
@@ -96,12 +117,17 @@ const UserSettings = () => {
                   {key === "orders" ? "Cập nhật đơn hàng" : "Nhắc nhở lịch hẹn"}
                 </p>
                 <button
-                  onClick={() =>
+                  onClick={() => {
                     setNotifications({
                       ...notifications,
                       [key]: !notifications[key],
-                    })
-                  }
+                    });
+                    // Thêm feedback nhỏ khi toggle
+                    toast.info(
+                      `Đã ${!notifications[key] ? "bật" : "tắt"} thông báo`,
+                      { autoClose: 1000 },
+                    );
+                  }}
                   className={`w-11 h-6 rounded-full transition-all relative ${
                     notifications[key] ? "bg-[#2a9d8f]" : "bg-gray-300"
                   }`}
